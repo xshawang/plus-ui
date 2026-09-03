@@ -338,7 +338,7 @@ import {
   delRole,
   getRole,
   listRole,
-  updateRolePermission,
+  dataScope,
   updateRole,
   deptTreeSelect
 } from '@/api/system/role';
@@ -1017,10 +1017,11 @@ const handleDataScope = async (row: Partial<RoleVO>) => {
 /** 提交按钮（数据权限） */
 const submitDataScope = async () => {
   if (form.value.roleId) {
-    // 权限信息统一提交：菜单权限 + 数据权限。
+    // 权限信息统一提交：菜单权限走角色更新接口，数据权限走数据范围接口。
     syncFormMenuPermissionIds();
     form.value.deptIds = getDeptAllCheckedKeys();
-    await updateRolePermission(form.value);
+    await updateRole(form.value);
+    await dataScope(form.value);
     modal.msgSuccess('修改成功');
     openDataScope.value = false;
     getList();

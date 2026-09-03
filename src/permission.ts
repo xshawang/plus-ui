@@ -46,6 +46,10 @@ router.beforeEach(async (to, from) => {
           // 根据roles权限生成可访问的路由表
           accessRoutes.forEach(route => {
             if (!isHttp(route.path)) {
+              // 兼容后端返回缺少 / 前缀的顶级路由 path，如 "system" -> "/system"
+              if (route.path && !route.path.startsWith('/')) {
+                route.path = `/${route.path}`;
+              }
               router.addRoute(route); // 动态添加可访问路由表
             }
           });

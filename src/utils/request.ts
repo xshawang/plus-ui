@@ -245,6 +245,11 @@ service.interceptors.response.use(
       ElNotification.error({ title: msg });
       return Promise.reject(createHandledError(msg));
     } else {
+      // 兼容后端 TableDataInfo 顶层 rows 结构 { code, msg, rows, total }
+      const body = res.data;
+      if (body && !Object.prototype.hasOwnProperty.call(body, 'data') && Array.isArray(body.rows)) {
+        body.data = { rows: body.rows, total: body.total };
+      }
       return Promise.resolve(res.data);
     }
   },

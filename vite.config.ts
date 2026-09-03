@@ -29,11 +29,22 @@ export default defineConfig(({ mode, command }) => {
       port: Number(env.VITE_APP_PORT),
       open: true,
       proxy: {
-        [env.VITE_APP_BASE_API]: {
-          target: 'http://localhost:8080',
+        // infra 管理面（/infra、/catalog）直连本地 go88-service-infra，去掉 /dev-api 前缀
+        [env.VITE_APP_BASE_API + '/infra']: {
+          target: 'http://127.0.0.1:9202',
           changeOrigin: true,
-          ws: true,
           rewrite: path => path.replace(new RegExp('^' + env.VITE_APP_BASE_API), '')
+        },
+        [env.VITE_APP_BASE_API + '/catalog']: {
+          target: 'http://127.0.0.1:9202',
+          changeOrigin: true,
+          rewrite: path => path.replace(new RegExp('^' + env.VITE_APP_BASE_API), '')
+        },
+        // 其余后台接口仍走远程 admin.g318.com
+        [env.VITE_APP_BASE_API]: {
+          target: 'http://admin.g318.com',
+          changeOrigin: true,
+          ws: true
         }
       }
     },

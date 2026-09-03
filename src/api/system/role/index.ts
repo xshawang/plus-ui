@@ -57,11 +57,12 @@ export const updateRole = (data: any) => {
 };
 
 /**
- * 修改角色权限（菜单权限 + 数据权限）
+ * 修改角色数据权限（数据范围 + 部门数据）
+ * @param data
  */
-export const updateRolePermission = (data: any) => {
+export const dataScope = (data: any) => {
   return request({
-    url: '/system/role/permission',
+    url: '/system/role/dataScope',
     method: 'put',
     data: data
   });

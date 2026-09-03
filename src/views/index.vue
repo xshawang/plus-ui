@@ -2,64 +2,17 @@
   <div class="home">
     <section class="hero-panel">
       <div class="hero-copy">
-        <h1>RuoYi-Vue-Plus 控制台</h1>
+        <h1>Go88控制台</h1>
         <p>
-          企业级后台管理系统 重写 RuoYi-Vue 所有功能 集成 Sa-Token、Mybatis-Plus、WarmFlow、SpringDoc、Hutool、OSS
-          等组件
+
         </p>
         <div class="hero-actions">
-          <el-button type="primary" @click="goTarget('https://gitee.com/dromara/RuoYi-Vue-Plus')">查看源码</el-button>
-          <el-button plain @click="goTarget('https://plus-doc.dromara.org/#/ruoyi-vue-plus/changlog')">
-            更新日志
-          </el-button>
         </div>
       </div>
     </section>
 
     <div class="content-grid">
-      <section class="section-card">
-        <div class="section-head">
-          <div>
-            <h2>项目矩阵</h2>
-          </div>
-        </div>
-        <div class="product-list">
-          <article v-for="product in products" :key="product.name" class="product-card">
-            <div class="product-top">
-              <div>
-                <h3>{{ product.name }}</h3>
-                <p>{{ product.summary }}</p>
-              </div>
-              <span class="product-version">{{ product.version }}</span>
-            </div>
-            <div class="product-tags">
-              <el-tag v-for="tag in product.tags" :key="tag" effect="plain">{{ tag }}</el-tag>
-            </div>
-            <div class="product-actions">
-              <el-button type="primary" plain @click="goTarget(product.primaryUrl)">
-                {{ product.primaryLabel }}
-              </el-button>
-              <el-button plain @click="goTarget(product.secondaryUrl)">{{ product.secondaryLabel }}</el-button>
-            </div>
-          </article>
-        </div>
-      </section>
 
-      <section class="section-card capability-card">
-        <div class="section-head">
-          <div>
-            <h2>能力地图</h2>
-          </div>
-        </div>
-        <div class="capability-groups">
-          <article v-for="group in capabilityGroups" :key="group.title" class="capability-group">
-            <h3>{{ group.title }}</h3>
-            <ul>
-              <li v-for="item in group.items" :key="item">{{ item }}</li>
-            </ul>
-          </article>
-        </div>
-      </section>
     </div>
   </div>
 </template>
