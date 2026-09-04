@@ -1,8 +1,8 @@
 <template>
   <div class="login">
     <div class="login-shell">
-      <section class="login-brand">
-        <span class="brand-pill">Plus UI Workspace</span>
+      <!-- <section class="login-brand">
+       <span class="brand-pill">Plus UI Workspace</span>
         <h1 class="brand-title">企业级后台管理系统</h1>
         <p class="brand-desc">
           真正面向企业级的应用框架 组件化 模块化 轻耦合 高扩展 针对企业痛点 业界一流技术栈
@@ -18,14 +18,14 @@
             <span>{{ item.label }}</span>
           </article>
         </div>
-      </section>
+      </section> -->
 
       <el-form ref="loginRef" :model="loginForm" :rules="loginRules" class="login-form">
         <div class="title-box">
           <div>
-            <p class="eyebrow">Workspace Sign In</p>
+            <!-- <p class="eyebrow">Workspace Sign In</p> -->
             <h3 class="title">{{ title }}</h3>
-            <p class="subtitle">使用当前账号体系登录到业务工作台。</p>
+            <!-- <p class="subtitle">使用当前账号体系登录到业务工作台。</p> -->
           </div>
           <lang-select />
         </div>
@@ -77,7 +77,7 @@
           </router-link>
         </div>
 
-        <div class="social-panel">
+        <!-- <div class="social-panel">
           <span class="social-label">第三方登录</span>
           <div class="social-actions">
             <el-button circle :title="$t('login.social.wechat')" @click="doSocialLogin('wechat')">
@@ -96,7 +96,7 @@
               <svg-icon icon-class="github" />
             </el-button>
           </div>
-        </div>
+        </div> -->
 
         <el-form-item class="submit-row">
           <el-button :loading="loading" size="large" type="primary" class="submit-button" @click.prevent="handleLogin">
@@ -108,7 +108,7 @@
     </div>
 
     <div class="el-login-footer">
-      <span>Copyright © 2018-{{ currentYear }} 疯狂的狮子Li All Rights Reserved.</span>
+      <span>Copyright © 2026-{{ currentYear }}  All Rights Reserved.</span>
     </div>
   </div>
 </template>
@@ -135,8 +135,8 @@ const router = useRouter();
 const { t } = useI18n();
 
 const loginForm = ref<LoginData>({
-  username: 'admin',
-  password: 'admin123',
+  username: '',
+  password: '',
   rememberMe: false,
   code: '',
   uuid: ''
