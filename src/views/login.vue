@@ -262,11 +262,11 @@ onMounted(() => {
 }
 
 .login-shell {
-  width: min(440px, 100%);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 26px;
-  align-items: stretch;
+  width: min(440px, 92%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .login-brand,
@@ -537,10 +537,6 @@ onMounted(() => {
     padding: 24px 14px 80px;
   }
 
-  .login-shell {
-    grid-template-columns: 1fr;
-  }
-
   .login-brand {
     padding: 28px 24px;
   }
@@ -574,6 +570,12 @@ onMounted(() => {
 
   .captcha-row :deep(.el-form-item__content) {
     grid-template-columns: 1fr;
+  }
+
+  .login-code {
+    /* 单列布局下避免被拉伸到整行宽度导致验证码放大模糊 */
+    width: 122px;
+    justify-self: start;
   }
 }
 </style>

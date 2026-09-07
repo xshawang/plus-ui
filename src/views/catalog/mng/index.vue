@@ -170,7 +170,7 @@
             <div class="toolbar-shell">
               <div class="table-heading">
                 <h3>配置项</h3>
-                <span class="text-gray-400 text-sm">{{ info.filePath }}</span>
+                <!-- <span class="text-gray-400 text-sm">{{ info.filePath }}</span> -->
               </div>
               <div class="toolbar-actions">
                 <el-button type="warning" plain icon="Refresh" :loading="syncing" @click="handleSync">从配置同步</el-button>
@@ -181,11 +181,11 @@
             </div>
           </template>
 
-          <div class="mb-3 flex flex-wrap items-center gap-4 text-sm">
+         <!-- <div class="mb-3 flex flex-wrap items-center gap-4 text-sm">
             <el-tag :type="info.exists ? 'success' : 'danger'">{{ info.exists ? '文件存在' : '文件不存在' }}</el-tag>
             <span>大小：{{ info.size ?? '-' }}</span>
             <span>库内配置项：{{ items.length }}</span>
-          </div>
+          </div> -->
 
           <el-table v-loading="configLoading" border class="data-table" :data="items" max-height="600">
             <el-table-column label="键" align="left" prop="configKey" min-width="220" show-overflow-tooltip>

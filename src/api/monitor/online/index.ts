@@ -6,7 +6,7 @@ import type { OnlineQuery, OnlineVO } from './types';
 // 查询在线用户列表
 export function list(query: OnlineQuery): AxiosPromise<PageResult<OnlineVO>> {
   return request({
-    url: '/monitor/online/list',
+    url: '/system/monitor/online/list',
     method: 'get',
     params: query
   });
@@ -15,7 +15,7 @@ export function list(query: OnlineQuery): AxiosPromise<PageResult<OnlineVO>> {
 // 强退用户
 export function forceLogout(tokenId: string) {
   return request({
-    url: '/monitor/online/' + tokenId,
+    url: '/system/monitor/online/' + tokenId,
     method: 'delete'
   });
 }
@@ -23,7 +23,7 @@ export function forceLogout(tokenId: string) {
 // 获取当前用户登录在线设备
 export function getOnline() {
   return request({
-    url: '/monitor/online',
+    url: '/system/monitor/online',
     method: 'get'
   });
 }
@@ -31,7 +31,7 @@ export function getOnline() {
 // 删除当前在线设备
 export function delOnline(tokenId: string) {
   return request({
-    url: '/monitor/online/myself/' + tokenId,
+    url: '/system/monitor/online/myself/' + tokenId,
     method: 'delete'
   });
 }
