@@ -173,9 +173,9 @@
                 <!-- <span class="text-gray-400 text-sm">{{ info.filePath }}</span> -->
               </div>
               <div class="toolbar-actions">
-                <el-button type="warning" plain icon="Refresh" :loading="syncing" @click="handleSync">从配置同步</el-button>
+                <el-button type="warning" plain icon="Refresh" :loading="syncing" @click="handleSync">同步</el-button>
                 <el-button v-hasPermi="['catalog:client-config:save']" type="primary" icon="Check" :loading="savingFile" @click="handleSaveFile">
-                  保存并加密回写
+                  保存
                 </el-button>
               </div>
             </div>
