@@ -262,9 +262,9 @@ onMounted(() => {
 }
 
 .login-shell {
-  width: min(1180px, 100%);
+  width: min(440px, 100%);
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 440px);
+  grid-template-columns: minmax(0, 1fr);
   gap: 26px;
   align-items: stretch;
 }
