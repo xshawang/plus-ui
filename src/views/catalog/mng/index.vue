@@ -163,17 +163,17 @@
         </el-dialog>
       </el-tab-pane>
 
-      <!-- ============ 8go88 客户端配置 ============ -->
-      <el-tab-pane label="8go88 客户端配置" name="config">
+      <!-- ============  客户端配置 ============ -->
+      <el-tab-pane label=" 客户端配置" name="config">
         <el-card shadow="hover" class="table-panel">
           <template #header>
             <div class="toolbar-shell">
               <div class="table-heading">
-                <h3>8go88.bin 配置项</h3>
+                <h3>配置项</h3>
                 <span class="text-gray-400 text-sm">{{ info.filePath }}</span>
               </div>
               <div class="toolbar-actions">
-                <el-button type="warning" plain icon="Refresh" :loading="syncing" @click="handleSync">从 8go88.bin 同步</el-button>
+                <el-button type="warning" plain icon="Refresh" :loading="syncing" @click="handleSync">从配置同步</el-button>
                 <el-button v-hasPermi="['catalog:client-config:save']" type="primary" icon="Check" :loading="savingFile" @click="handleSaveFile">
                   保存并加密回写
                 </el-button>
