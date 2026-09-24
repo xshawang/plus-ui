@@ -226,7 +226,7 @@
               <el-date-picker
                 v-model="taskForm.scheduledAt"
                 type="datetime"
-                value-format="YYYY-MM-DDTHH:mm:ss"
+                value-format="YYYY-MM-DD HH:mm:ss"
                 style="width: 100%"
               />
             </el-form-item>
