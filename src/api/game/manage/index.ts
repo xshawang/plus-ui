@@ -39,6 +39,14 @@ export const updatePlatformMaintenance = (data: any): AxiosPromise<void> =>
 export const sortPlatform = (rows: any[]): AxiosPromise<void> =>
   request({ url: '/infra/game/platform/sort', method: 'put', data: rows, headers: { repeatSubmit: false } });
 
+/** 平台置顶 / 取消置顶 */
+export const topPlatform = (data: { id: number; isTop: number }): AxiosPromise<void> =>
+  request({ url: '/infra/game/platform/top', method: 'put', data });
+
+/** 平台批量排序（含置顶标记） */
+export const batchSortPlatform = (rows: any[]): AxiosPromise<void> =>
+  request({ url: '/infra/game/platform/batch-sort', method: 'put', data: rows, headers: { repeatSubmit: false } });
+
 export const delPlatform = (id: number | string): AxiosPromise<void> =>
   request({ url: `/infra/game/platform/${id}`, method: 'delete' });
 
@@ -71,6 +79,18 @@ export const updateGameType = (data: any): AxiosPromise<void> =>
 
 export const switchGameTypeField = (data: { id: number; field: string; value: number }): AxiosPromise<void> =>
   request({ url: '/infra/game/type/switch', method: 'put', data });
+
+/** 类型置顶 / 取消置顶 */
+export const topGameType = (data: { id: number; isTop: number }): AxiosPromise<void> =>
+  request({ url: '/infra/game/type/top', method: 'put', data });
+
+/** 类型批量排序（含置顶标记） */
+export const sortGameType = (rows: any[]): AxiosPromise<void> =>
+  request({ url: '/infra/game/type/sort', method: 'put', data: rows, headers: { repeatSubmit: false } });
+
+/** 子游戏批量排序（含置顶标记） */
+export const sortSubGame = (rows: any[]): AxiosPromise<void> =>
+  request({ url: '/infra/game/subgame/sort', method: 'put', data: rows, headers: { repeatSubmit: false } });
 
 export const delGameType = (id: number | string): AxiosPromise<void> =>
   request({ url: `/infra/game/type/${id}`, method: 'delete' });

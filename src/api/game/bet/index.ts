@@ -33,6 +33,14 @@ export const gameStatList = (query?: any): AxiosPromise<any[]> =>
 export const memberBetDetailList = (query?: any): AxiosPromise<any[]> =>
   request({ url: '/infra/game/bet/member-detail/list', method: 'get', params: query });
 
+/**
+ * 会员投注细目（分页 + 6 维度筛选；截图「会员投注细目」）。
+ * accountField：EXACT_ACCOUNT 精准账号 / FUZZY_ACCOUNT 模糊账号 / UID 会员ID /
+ *               PARENT_AGENT 上级代理ID / MEMBER_LEVEL 会员层级 / CHANNEL 渠道名称(ID)
+ */
+export const memberBetDetailPage = (query?: any): AxiosPromise<PageResult<any>> =>
+  request({ url: '/infra/game/bet/member-detail/page', method: 'get', params: query });
+
 /** 默认统计区间（近 7 天，对齐截图 2026-09-08 ~ 2026-09-14） */
 export const gameBetDefaultRange = (): AxiosPromise<string[]> =>
   request({ url: '/infra/game/bet/default-range', method: 'get' });

@@ -28,6 +28,19 @@ export const saveLotteryPlay = (data: any): AxiosPromise<number> =>
 export const saveLotteryPlaySort = (rows: any[]): AxiosPromise<void> =>
   request({ url: '/infra/game/lottery/play/sort', method: 'put', data: rows, headers: { repeatSubmit: false } });
 
+/** 档位备注保存（截图玩法配置页底部「档位备注」） */
+export const saveTierNote = (data: { lotteryCode?: string; currency?: string; tierNo?: number; note: string }): AxiosPromise<void> =>
+  request({ url: '/infra/game/lottery/play/tier-note', method: 'put', data });
+
+/**
+ * 操盘「快速选择号码」：把按钮规则标识交给服务端解析成号码项编码。
+ * 规则标识：DAN/SHUANG/DA/XIAO/DA_DAN/DA_SHUANG/XIAO_DAN/XIAO_SHUANG、HE_DAN/HE_SHUANG、
+ * TE_WEI_DA/TE_WEI_XIAO、HE_WEI_DA/HE_WEI_XIAO、RED/GREEN/BLUE、RED_DAN…BLUE_XIAO、
+ * POULTRY/WILD、ZODIAC:生肖、TAIL:0-9、WUXING:五行、ALL/FIRST5/FIRST10/CANCEL
+ */
+export const lotteryQuickSelect = (data: any): AxiosPromise<string[]> =>
+  request({ url: '/infra/game/lottery/operate/quick-select', method: 'post', data });
+
 /** 操盘管理 */
 export const lotteryOperateHeader = (query?: any): AxiosPromise<any> =>
   request({ url: '/infra/game/lottery/operate/header', method: 'get', params: query });
@@ -50,6 +63,10 @@ export const autoReduceList = (query?: any): AxiosPromise<any[]> =>
 
 export const saveAutoReduce = (data: any): AxiosPromise<void> =>
   request({ url: '/infra/game/lottery/auto-reduce', method: 'put', data });
+
+/** 自动降赔「多阶调赔」全局开关 */
+export const setAutoReduceMultiLevel = (enabled: boolean): AxiosPromise<void> =>
+  request({ url: '/infra/game/lottery/auto-reduce/multi-level', method: 'put', data: { enabled } });
 
 export const autoReduceLogs = (query?: any): AxiosPromise<PageResult<any>> =>
   request({ url: '/infra/game/lottery/auto-reduce/logs', method: 'get', params: query });

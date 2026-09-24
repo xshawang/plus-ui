@@ -85,6 +85,15 @@
     <el-card shadow="hover" class="table-panel">
       <template #header><div class="table-heading"><h3>子游戏管理</h3></div></template>
       <el-table v-loading="loading" border :data="rows">
+        <!-- 排序：置顶 + 排序号（截图「排序 / 批量排序」） -->
+        <el-table-column label="排序" align="center" width="130">
+          <template #default="{ row }">
+            <el-tooltip content="置顶" placement="top">
+              <el-icon class="top-icon" :class="{ active: row.isTop === 1 }" @click="toggleTop(row)"><Top /></el-icon>
+            </el-tooltip>
+            <el-input-number v-model="row.sortOrder" :min="0" size="small" controls-position="right" style="width: 70px" />
+          </template>
+        </el-table-column>
         <el-table-column label="平台名称" align="center" prop="platformName" width="130" />
         <el-table-column label="子类别" align="center" prop="subCategory" width="110" />
         <el-table-column label="子游戏ID" align="center" prop="gameCode" width="120" />
@@ -148,6 +157,9 @@
           </template>
         </el-table-column>
       </el-table>
+      <div class="batch-bar">
+        <el-button v-hasPermi="['game:subgame:edit']" type="primary" plain icon="Sort" @click="saveBatchSort">批量排序</el-button>
+      </div>
       <pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="getList" />
     </el-card>
 
@@ -183,11 +195,13 @@
 import { reactive, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { Top } from '@element-plus/icons-vue';
 import {
   listSubGame,
   switchSubGameField,
   updateSubGameMaintenance,
   updateSubGameRemark,
+  sortSubGame,
   platformOptions as fetchPlatformOptions,
   gameTypeOptions
 } from '@/api/game/manage';
@@ -279,6 +293,25 @@ function openRemark(row: any) {
   remarkDialog.visible = true;
 }
 
+/** 置顶 / 取消置顶（只改排序列，不回写其它运营字段） */
+async function toggleTop(row: any) {
+  row.isTop = row.isTop === 1 ? 0 : 1;
+  await sortSubGame([{ id: row.id, sortOrder: row.sortOrder ?? 0, isTop: row.isTop }]);
+  ElMessage.success(row.isTop === 1 ? '已置顶' : '已取消置顶');
+  getList();
+}
+
+/** 批量排序（截图「批量排序」） */
+async function saveBatchSort() {
+  if (!rows.value.length) {
+    ElMessage.warning('当前页没有可排序数据');
+    return;
+  }
+  await sortSubGame(rows.value.map((r) => ({ id: r.id, sortOrder: r.sortOrder ?? 0, isTop: r.isTop ?? 0 })));
+  ElMessage.success('批量排序已保存');
+  getList();
+}
+
 async function submitRemark() {
   await updateSubGameRemark({ id: remarkDialog.id, remark: remarkDialog.remark, sysRemark: remarkDialog.sysRemark });
   remarkDialog.visible = false;
@@ -297,5 +330,16 @@ onMounted(async () => {
 .table-heading h3 {
   margin: 0;
   font-size: 15px;
+}
+.top-icon {
+  cursor: pointer;
+  color: #c0c4cc;
+  margin-right: 6px;
+}
+.top-icon.active {
+  color: #409eff;
+}
+.batch-bar {
+  margin-top: 8px;
 }
 </style>

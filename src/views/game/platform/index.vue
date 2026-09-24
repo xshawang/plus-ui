@@ -69,6 +69,7 @@
         <div class="toolbar-shell">
           <div class="table-heading"><h3>平台管理</h3></div>
           <div class="toolbar-actions">
+            <el-button v-hasPermi="['game:platform:edit']" type="primary" plain icon="Sort" @click="saveBatchSort">批量排序</el-button>
             <el-button v-hasPermi="['game:common:edit']" type="primary" plain icon="Setting" @click="openCommonConfig">
               游戏公共配置
             </el-button>
@@ -81,10 +82,15 @@
 
       <el-table v-loading="loading" border :data="rows" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="50" align="center" />
-        <el-table-column label="排序" align="center" width="90">
+        <!-- 排序：置顶图标 + 排序号（截图「排序 / 批量排序」） -->
+        <el-table-column label="排序" align="center" width="130">
           <template #default="{ row }">
-            <el-input-number v-model="row.sortOrder" :min="0" size="small" controls-position="right" style="width: 80px"
-                             @change="handleSort(row)" />
+            <el-tooltip content="置顶" placement="top">
+              <el-icon class="top-icon" :class="{ active: row.isTop === 1 }" @click="toggleTop(row)">
+                <Top />
+              </el-icon>
+            </el-tooltip>
+            <el-input-number v-model="row.sortOrder" :min="0" size="small" controls-position="right" style="width: 70px" />
           </template>
         </el-table-column>
         <el-table-column label="平台ID" align="center" prop="platformId" width="90" />
@@ -163,6 +169,58 @@
                   @pagination="getList" />
     </el-card>
 
+    <!-- 平台修改（截图列全部可维护字段：宣传图/跳转方式/赔付/最低准入/开关） -->
+    <el-dialog v-model="editDialog.visible" title="修改平台" width="680px" append-to-body>
+      <el-form :model="editForm" label-width="150px">
+        <el-form-item label="平台ID"><el-input v-model="editForm.platformId" disabled /></el-form-item>
+        <el-form-item label="平台名称"><el-input v-model="editForm.platformName" /></el-form-item>
+        <el-form-item label="币种"><el-input v-model="editForm.currency" disabled /></el-form-item>
+        <el-form-item label="宣传图">
+          <el-input v-model="editForm.bannerUrl" placeholder="图片地址（png/jpg）" />
+          <el-image v-if="editForm.bannerUrl" :src="editForm.bannerUrl" style="width: 90px; height: 40px; margin-top: 6px" fit="cover" />
+        </el-form-item>
+        <el-form-item label="最低准入余额">
+          <el-input-number v-model="editForm.minEntry" :min="0" :precision="2" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="平台跳转方式">
+          <div class="jump-row">
+            IOS:<el-select v-model="editForm.jumpIos" style="width: 110px; margin: 0 6px">
+              <el-option label="外链" :value="1" /><el-option label="内嵌" :value="2" />
+            </el-select>
+            Android:<el-select v-model="editForm.jumpAndroid" style="width: 110px; margin: 0 6px">
+              <el-option label="外链" :value="1" /><el-option label="内嵌" :value="2" />
+            </el-select>
+            H5:<el-select v-model="editForm.jumpH5" style="width: 110px; margin-left: 6px">
+              <el-option label="外链" :value="1" /><el-option label="内嵌" :value="2" />
+            </el-select>
+          </div>
+        </el-form-item>
+        <el-form-item label="故障损失赔付">
+          <el-select v-model="editForm.faultCompensation" style="width: 100%">
+            <el-option label="支持(恶意或不合理除外)" :value="1" />
+            <el-option label="未知或不支持" :value="2" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="平台开关">
+          <el-switch v-model="editForm.platformStatus" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="展示给主播">
+          <el-switch v-model="editForm.showToStreamer" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="算有效投注">
+          <el-switch v-model="editForm.countValidBet" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="风险人工锁">
+          <el-switch v-model="editForm.riskManualLock" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="备注"><el-input v-model="editForm.remark" type="textarea" :rows="2" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button type="primary" :loading="editDialog.loading" @click="submitEdit">确 定</el-button>
+        <el-button @click="editDialog.visible = false">取 消</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 平台维护 -->
     <el-dialog v-model="maintenanceDialog.visible" title="平台维护" width="520px" append-to-body>
       <el-form label-width="100px">
@@ -217,10 +275,57 @@
           </el-form>
         </el-tab-pane>
         <el-tab-pane label="强制下载APP设置" name="download">
-          <el-empty description="该页签字段以客户提供的截图/字段清单为准，本次仅保留配置容器" />
+          <!-- 截图未展开该页签：按默认口径给出可维护字段，存 game_common_config.app_download_setting(JSON) -->
+          <el-form label-width="180px">
+            <el-form-item label="是否强制下载APP">
+              <el-switch v-model="appSetting.enabled" />
+            </el-form-item>
+            <el-form-item label="触发场景">
+              <el-select v-model="appSetting.scene" style="width: 100%">
+                <el-option label="进入游戏时" value="ENTER_GAME" />
+                <el-option label="进入大厅时" value="ENTER_LOBBY" />
+                <el-option label="全站" value="GLOBAL" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="是否二次确认">
+              <el-switch v-model="appSetting.confirmRequired" />
+            </el-form-item>
+            <el-form-item label="可跳过次数（0=不可跳过）">
+              <el-input-number v-model="appSetting.skipLimit" :min="0" controls-position="right" />
+            </el-form-item>
+            <el-form-item label="Android 下载地址"><el-input v-model="appSetting.androidUrl" /></el-form-item>
+            <el-form-item label="iOS 下载地址"><el-input v-model="appSetting.iosUrl" /></el-form-item>
+            <el-form-item label="H5/PWA 地址"><el-input v-model="appSetting.h5Url" /></el-form-item>
+            <el-form-item label="提示文案">
+              <el-input v-model="appSetting.tipText" type="textarea" :rows="2" />
+            </el-form-item>
+          </el-form>
         </el-tab-pane>
         <el-tab-pane label="WG体育赔率设置" name="sport">
-          <el-empty description="该页签字段以客户提供的截图/字段清单为准，本次仅保留配置容器" />
+          <!-- 截图未展开该页签：按默认口径给出可维护字段，存 game_common_config.wg_sport_odds_setting(JSON) -->
+          <el-form label-width="180px">
+            <el-form-item label="赔率来源">
+              <el-radio-group v-model="sportSetting.oddsSource">
+                <el-radio value="PLATFORM">平台设置</el-radio>
+                <el-radio value="OFFICIAL">官方赔率</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="赔率浮动(%)">
+              <el-input-number v-model="sportSetting.floatPercent" :min="-50" :max="50" :precision="2" controls-position="right" />
+            </el-form-item>
+            <el-form-item label="最小赔率">
+              <el-input-number v-model="sportSetting.minOdds" :min="0" :precision="2" controls-position="right" />
+            </el-form-item>
+            <el-form-item label="最大赔率">
+              <el-input-number v-model="sportSetting.maxOdds" :min="0" :precision="2" controls-position="right" />
+            </el-form-item>
+            <el-form-item label="低赔率不计算有效投注">
+              <el-switch v-model="sportSetting.lowOddsSkip" />
+            </el-form-item>
+            <el-form-item label="结算时差容忍(秒)">
+              <el-input-number v-model="sportSetting.settleToleranceSeconds" :min="0" controls-position="right" />
+            </el-form-item>
+          </el-form>
         </el-tab-pane>
       </el-tabs>
       <template #footer>
@@ -307,12 +412,17 @@
 import { reactive, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Top } from '@element-plus/icons-vue';
 import {
   listPlatform,
   platformOptions as fetchPlatformOptions,
   switchPlatformField,
   updatePlatformMaintenance,
   sortPlatform,
+  batchSortPlatform,
+  topPlatform,
+  updatePlatform,
+  getPlatform,
   gameTypeOptions,
   getCommonConfig,
   saveCommonConfig,
@@ -349,10 +459,27 @@ const query = reactive<any>({
 });
 
 const maintenanceDialog = reactive({ visible: false, id: 0, maintenance: 0, msg: '' });
+const editDialog = reactive({ visible: false, loading: false });
+const editForm = reactive<any>({});
 const commonDialog = reactive({ visible: false, tab: 'game', loading: false });
 const validBetDialog = reactive({ visible: false, tab: 'sport', loading: false });
 const commonForm = reactive<any>({});
 const validBetForm = reactive<any>({});
+/** 两个未展开页签的默认口径设置（JSON 存 game_common_config，页面可编辑） */
+const appSetting = reactive<any>({ enabled: false, scene: 'ENTER_GAME', confirmRequired: true, skipLimit: 0,
+  androidUrl: '', iosUrl: '', h5Url: '', tipText: '' });
+const sportSetting = reactive<any>({ oddsSource: 'PLATFORM', floatPercent: 0, minOdds: 0.66, maxOdds: 10,
+  lowOddsSkip: true, settleToleranceSeconds: 30 });
+
+/** JSON 列解析（历史数据可能为空串或非法 JSON，解析失败时保留默认值） */
+function parseJson(value: any, fallback: any) {
+  if (!value) return fallback;
+  try {
+    return typeof value === 'string' ? JSON.parse(value) : value;
+  } catch {
+    return fallback;
+  }
+}
 
 const otherRatioFields = [
   { field: 'ratioCard', label: '棋牌计入比例' },
@@ -448,8 +575,43 @@ function goSubGame(row: any) {
   router.push({ path: '/game/subgame', query: { providerCode: row.providerCode, platformName: row.platformName } });
 }
 
-function openEdit(row: any) {
-  ElMessage.info('平台修改入口：字段与截图一致，可通过接口 /infra/game/platform 提交整行（含跳转方式/赔付/最低准入）');
+/** 打开平台修改弹窗（取整行明细，避免列表裁剪字段导致误写） */
+async function openEdit(row: any) {
+  const detail: any = ((await getPlatform(row.id)) as unknown as any)?.data ?? row;
+  Object.assign(editForm, detail);
+  editDialog.visible = true;
+}
+
+async function submitEdit() {
+  editDialog.loading = true;
+  try {
+    await updatePlatform(editForm);
+    ElMessage.success('保存成功');
+    editDialog.visible = false;
+    getList();
+  } finally {
+    editDialog.loading = false;
+  }
+}
+
+/** 置顶 / 取消置顶（截图「排序」列的置顶图标） */
+async function toggleTop(row: any) {
+  const next = row.isTop === 1 ? 0 : 1;
+  await topPlatform({ id: row.id, isTop: next });
+  row.isTop = next;
+  ElMessage.success(next === 1 ? '已置顶' : '已取消置顶');
+  getList();
+}
+
+/** 批量排序（截图「批量排序」：一次提交当前页排序与置顶状态） */
+async function saveBatchSort() {
+  if (!rows.value.length) {
+    ElMessage.warning('当前页没有可排序数据');
+    return;
+  }
+  await batchSortPlatform(rows.value.map((r) => ({ id: r.id, sortOrder: r.sortOrder, isTop: r.isTop ?? 0 })));
+  ElMessage.success('批量排序已保存');
+  getList();
 }
 
 async function openCommonConfig() {
@@ -457,13 +619,21 @@ async function openCommonConfig() {
   // R<T> 类接口必须取 .data，否则会把包装对象当成业务数据（曾导致弹窗字段全空/页面一直 loading）。
   const res: any = await getCommonConfig(CURRENCY);
   Object.assign(commonForm, res.data ?? {});
+  Object.assign(appSetting, parseJson(res.data?.appDownloadSetting, appSetting));
+  Object.assign(sportSetting, parseJson(res.data?.wgSportOddsSetting, sportSetting));
   commonDialog.visible = true;
 }
 
 async function submitCommonConfig() {
   commonDialog.loading = true;
   try {
-    await saveCommonConfig({ ...commonForm, currency: CURRENCY });
+    await saveCommonConfig({
+      ...commonForm,
+      currency: CURRENCY,
+      // 两个页签以 JSON 字符串提交（后端列类型为 json）
+      appDownloadSetting: JSON.stringify(appSetting),
+      wgSportOddsSetting: JSON.stringify(sportSetting)
+    });
     ElMessage.success('保存成功');
     commonDialog.visible = false;
   } finally {
@@ -515,5 +685,18 @@ onMounted(async () => {
 }
 .ml-1 {
   margin-left: 4px;
+}
+.top-icon {
+  cursor: pointer;
+  color: #c0c4cc;
+  margin-right: 6px;
+}
+.top-icon.active {
+  color: #409eff;
+}
+.jump-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 }
 </style>

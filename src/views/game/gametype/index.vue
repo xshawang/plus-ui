@@ -10,6 +10,15 @@
         </div>
       </template>
       <el-table v-loading="loading" border :data="rows">
+        <!-- 排序：置顶 + 排序号（截图「排序 / 批量排序」） -->
+        <el-table-column label="排序" align="center" width="130">
+          <template #default="{ row }">
+            <el-tooltip content="置顶" placement="top">
+              <el-icon class="top-icon" :class="{ active: row.isTop === 1 }" @click="toggleTop(row)"><Top /></el-icon>
+            </el-tooltip>
+            <el-input-number v-model="row.sortOrder" :min="0" size="small" controls-position="right" style="width: 70px" />
+          </template>
+        </el-table-column>
         <el-table-column label="币种" align="center" prop="currency" width="120" />
         <el-table-column label="类型名称" align="center" prop="typeName" width="120" />
         <el-table-column label="类型开关" align="center" width="110">
@@ -44,6 +53,9 @@
         </el-table-column>
         <el-table-column label="操作时间" align="center" prop="updateTime" width="170" />
       </el-table>
+      <div class="batch-bar">
+        <el-button v-hasPermi="['game:type:edit']" type="primary" plain icon="Sort" @click="saveBatchSort">批量排序</el-button>
+      </div>
     </el-card>
 
     <el-dialog v-model="dialog.visible" :title="dialog.title" width="560px" append-to-body>
@@ -98,7 +110,8 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { listGameType, addGameType, updateGameType, switchGameTypeField } from '@/api/game/manage';
+import { Top } from '@element-plus/icons-vue';
+import { listGameType, addGameType, updateGameType, switchGameTypeField, topGameType, sortGameType } from '@/api/game/manage';
 
 defineOptions({ name: 'GameType' });
 
@@ -170,6 +183,26 @@ async function switchField(row: any, field: string, value: any) {
   ElMessage.success('操作成功');
 }
 
+/** 置顶 / 取消置顶 */
+async function toggleTop(row: any) {
+  const next = row.isTop === 1 ? 0 : 1;
+  await topGameType({ id: row.id, isTop: next });
+  row.isTop = next;
+  ElMessage.success(next === 1 ? '已置顶' : '已取消置顶');
+  getList();
+}
+
+/** 批量排序（截图「批量排序」） */
+async function saveBatchSort() {
+  if (!rows.value.length) {
+    ElMessage.warning('当前页没有可排序数据');
+    return;
+  }
+  await sortGameType(rows.value.map((r) => ({ id: r.id, sortOrder: r.sortOrder ?? 0, isTop: r.isTop ?? 0 })));
+  ElMessage.success('批量排序已保存');
+  getList();
+}
+
 onMounted(getList);
 </script>
 
@@ -182,5 +215,16 @@ onMounted(getList);
 .table-heading h3 {
   margin: 0;
   font-size: 15px;
+}
+.top-icon {
+  cursor: pointer;
+  color: #c0c4cc;
+  margin-right: 6px;
+}
+.top-icon.active {
+  color: #409eff;
+}
+.batch-bar {
+  margin-top: 8px;
 }
 </style>
