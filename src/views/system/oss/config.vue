@@ -83,7 +83,8 @@
         <el-table-column v-if="columns[0].visible" label="主建" align="center" prop="ossConfigId" />
         <el-table-column v-if="columns[1].visible" label="配置key" align="center" prop="configKey" />
         <el-table-column v-if="columns[2].visible" label="访问站点" align="center" prop="endpoint" width="200" />
-        <el-table-column v-if="columns[3].visible" label="自定义域名" align="center" prop="domainUrl" width="200" />
+        <!-- FIX: 2026-09-28 列字段名由 domainUrl 改为 domain，与后端实体/库列一致（原写法该列恒为空） -->
+        <el-table-column v-if="columns[3].visible" label="自定义域名" align="center" prop="domain" width="200" />
         <el-table-column v-if="columns[4].visible" label="桶名称" align="center" prop="bucketName" />
         <el-table-column v-if="columns[5].visible" label="前缀" align="center" prop="prefix" />
         <el-table-column v-if="columns[6].visible" label="域" align="center" prop="region" />
@@ -149,8 +150,8 @@
             </template>
           </el-input>
         </el-form-item>
-        <el-form-item label="自定义域名" prop="domainUrl">
-          <el-input v-model="form.domainUrl" placeholder="请输入自定义域名">
+        <el-form-item label="自定义域名" prop="domain">
+          <el-input v-model="form.domain" placeholder="请输入自定义域名">
             <template #prefix>
               <span style="color: #999">{{ protocol }}</span>
             </template>
@@ -246,7 +247,7 @@ const initFormData: OssConfigForm = {
   bucketName: '',
   prefix: '',
   endpoint: '',
-  domainUrl: '',
+  domain: '',
   isHttps: 'N',
   accessPolicy: '1',
   region: '',

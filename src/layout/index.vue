@@ -62,7 +62,13 @@ const settingRef = ref<InstanceType<typeof Settings>>();
 
 onMounted(async () => {
   try {
+    // FIX: 2026-09-28 站内信聚合接口（GET /resource/message/box）当前后端未实现（go88-resource 仅提供
+    // /oss、/oss/config、/email、/sms，go88-api-resource 也只暴露 publishMessage/publishAll），
+    // 该调用原先直接 await → 请求 reject 会冒到 layout 顶层，导致每次进后台都弹一次错误提示 + 控制台报错。
+    // 解决方案：捕获并降级为告警日志，接口补齐后此处无需再改（功能一旦可用即自动生效）。
     await initMessageBox();
+  } catch (error) {
+    console.warn('[layout] 站内信接口不可用，已跳过消息拉取：', error);
   } finally {
     initPush();
   }

@@ -73,7 +73,16 @@ export default defineConfig(({ mode, command }) => {
           changeOrigin: true,
           rewrite: path => path.replace(new RegExp('^' + env.VITE_APP_BASE_API + '/monitor'), '/system')
         },
-        // 兜底：其余后台接口落到本地 infra；如需 /resource（文件上传）、/tool（代码生成）等，请按上面形式补映射。
+        // FIX: 2026-09-28 系统管理「文件管理 / 文件配置管理」页面前端调 /resource/**，而 go88-resource（:9208）
+        // 的控制器映射只有 /oss/**、/oss/config/**（前缀 /resource 由网关 StripPrefix 处理，本地无网关），
+        // 原先无此映射时请求落到兜底 infra（:9202）→ 返回 {"code":404,"msg":"请求地址不存在"}（用户报障现场）。
+        // 解决方案：dev 代理层补一条 /resource 映射并剥掉该前缀；同时需保证 go88-resource 已启动（9208）。
+        [env.VITE_APP_BASE_API + '/resource']: {
+          target: 'http://127.0.0.1:9208',
+          changeOrigin: true,
+          rewrite: path => path.replace(new RegExp('^' + env.VITE_APP_BASE_API + '/resource'), '')
+        },
+        // 兜底：其余后台接口落到本地 infra；如需 /tool（代码生成）等，请按上面形式补映射。
         // 切勿再指回 admin.g318.com：该域名在本机指向 127.0.0.1，会代理回本 dev server 自身。
         [env.VITE_APP_BASE_API]: {
           target: 'http://127.0.0.1:9202',

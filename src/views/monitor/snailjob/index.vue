@@ -1,7 +1,7 @@
 <template>
   <div class="p-2 app-container iframe-page">
     <div class="iframe-page__inner">
-      <i-frame v-model:src="url"></i-frame>
+      <i-frame v-model:src="url" name="任务调度中心（SnailJob）"></i-frame>
     </div>
   </div>
 </template>
