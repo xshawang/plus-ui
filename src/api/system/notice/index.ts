@@ -1,7 +1,7 @@
 import type { PageResult } from '@/api/types';
 import type { AxiosPromise } from '@/utils/api-types';
 import request from '@/utils/request';
-import type { NoticeForm, NoticeQuery, NoticeVO } from './types';
+import type { NoticeDeliveryResult, NoticeForm, NoticeQuery, NoticeVO } from './types';
 // 查询公告列表
 export function listNotice(query: NoticeQuery): AxiosPromise<PageResult<NoticeVO>> {
   return request({
@@ -42,5 +42,17 @@ export function delNotice(noticeId: string | number | Array<string | number>) {
   return request({
     url: '/system/notice/' + noticeId,
     method: 'delete'
+  });
+}
+
+/**
+ * 通告送达/已读回执。
+ * 数据由玩家端在 /lobby/info.aspx 真实返回通告时写入（游戏端触发落库），后台只读展示。
+ */
+export function getNoticeDelivery(noticeId: string | number, limit = 50): AxiosPromise<NoticeDeliveryResult> {
+  return request({
+    url: '/system/notice/delivery/' + noticeId,
+    method: 'get',
+    params: { limit }
   });
 }

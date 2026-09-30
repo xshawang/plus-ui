@@ -32,6 +32,11 @@
               <el-option v-for="dict in sys_notice_type" :key="dict.value" :label="dict.label" :value="dict.value" />
             </el-select>
           </el-form-item>
+          <el-form-item label="投放范围" prop="targetScope">
+            <el-select v-model="queryParams.targetScope" placeholder="投放范围" clearable>
+              <el-option v-for="item in targetScopes" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
             <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -97,6 +102,21 @@
             <dict-tag :options="sys_notice_status" :value="scope.row.status" />
           </template>
         </el-table-column>
+        <el-table-column label="投放范围" align="center" width="110">
+          <template #default="scope">
+            <el-tag :type="scope.row.targetScope === 'PLAYER' ? 'success' : scope.row.targetScope === 'ALL' ? 'warning' : 'info'">
+              {{ scopeLabel(scope.row.targetScope) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="生效时间" align="center" width="200">
+          <template #default="scope">
+            <span class="muted small">
+              {{ scope.row.targetScope === 'ADMIN' ? '—'
+                : `${scope.row.effectiveStart ? fmt(scope.row.effectiveStart) : '立即'} ~ ${scope.row.effectiveEnd ? fmt(scope.row.effectiveEnd) : '长期'}` }}
+            </span>
+          </template>
+        </el-table-column>
         <el-table-column label="创建者" align="center" prop="createByName" width="100" />
         <el-table-column label="创建时间" align="center" prop="createTime" width="100">
           <template #default="scope">
@@ -107,6 +127,9 @@
           <template #default="scope">
             <el-tooltip content="详情" placement="top">
               <el-button link type="primary" icon="View" @click="handleDetail(scope.row)"></el-button>
+            </el-tooltip>
+            <el-tooltip content="送达回执" placement="top">
+              <el-button link type="primary" icon="DataLine" @click="openDelivery(scope.row)"></el-button>
             </el-tooltip>
             <el-tooltip content="修改" placement="top">
               <el-button
@@ -166,6 +189,55 @@
               </el-select>
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="投放范围" prop="targetScope">
+              <el-select v-model="form.targetScope" placeholder="请选择">
+                <el-option v-for="item in targetScopes" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="语言" prop="noticeLang">
+              <el-select v-model="form.noticeLang" placeholder="全部语言" clearable>
+                <el-option label="全部语言" value="" />
+                <el-option label="越南语 vi" value="vi" />
+                <el-option label="英语 en" value="en" />
+                <el-option label="中文 zh" value="zh" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="生效开始">
+              <el-date-picker
+                v-model="form.effectiveStart"
+                type="datetime"
+                value-format="YYYY-MM-DDTHH:mm:ss"
+                placeholder="留空表示立即生效"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="生效结束">
+              <el-date-picker
+                v-model="form.effectiveEnd"
+                type="datetime"
+                value-format="YYYY-MM-DDTHH:mm:ss"
+                placeholder="留空表示长期有效"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-alert
+              v-if="form.targetScope === 'PLAYER' || form.targetScope === 'ALL'"
+              class="mb-2"
+              type="success"
+              :closable="false"
+              show-icon
+              title="该公告将下发到玩家端（大厅接口），玩家拉取到公告后会产生送达回执，可在列表的「送达回执」中查看。"
+            />
+          </el-col>
           <el-col :span="24">
             <el-form-item label="状态">
               <el-radio-group v-model="form.status">
@@ -223,13 +295,47 @@
         <div class="notice-detail__content" v-html="safeNoticeContent"></div>
       </div>
     </el-dialog>
+
+    <!-- 送达/已读回执（数据由玩家端真实拉取通告时落库） -->
+    <el-dialog v-model="deliveryDialog.visible" title="通告送达回执" width="860px" append-to-body>
+      <div class="summary-strip">
+        <div class="summary-item">
+          <span class="summary-label">送达人数</span>
+          <span class="summary-value">{{ delivery.summary?.delivered ?? 0 }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">已读人数</span>
+          <span class="summary-value">{{ delivery.summary?.readCount ?? 0 }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">首次送达</span>
+          <span class="summary-value">{{ fmt(delivery.summary?.firstDeliveredAt) }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">最近送达</span>
+          <span class="summary-value">{{ fmt(delivery.summary?.lastDeliveredAt) }}</span>
+        </div>
+      </div>
+      <el-table v-loading="deliveryLoading" border max-height="420" :data="delivery.details ?? []">
+        <el-table-column label="UID" prop="uid" min-width="200" />
+        <el-table-column label="昵称" prop="nickName" min-width="140" />
+        <el-table-column label="端类型" prop="deviceType" align="center" width="110" />
+        <el-table-column label="语言" prop="lang" align="center" width="90" />
+        <el-table-column label="送达时间" align="center" width="170">
+          <template #default="{ row }">{{ fmt(row.deliveredAt) }}</template>
+        </el-table-column>
+        <el-table-column label="已读时间" align="center" width="170">
+          <template #default="{ row }">{{ fmt(row.readAt) }}</template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
 <script setup name="Notice" lang="ts">
 import { useRoute, useRouter } from 'vue-router';
-import { listNotice, getNotice, delNotice, addNotice, updateNotice } from '@/api/system/notice';
-import { NoticeForm, NoticeQuery, NoticeVO } from '@/api/system/notice/types';
+import { listNotice, getNotice, delNotice, addNotice, updateNotice, getNoticeDelivery } from '@/api/system/notice';
+import { NoticeDeliveryResult, NoticeForm, NoticeQuery, NoticeVO } from '@/api/system/notice/types';
 import { useLoading } from '@/hooks/async/useLoading';
 import { useDialogState } from '@/hooks/dialog/useDialogState';
 import { useFormDialog } from '@/hooks/dialog/useFormDialog';
@@ -243,6 +349,18 @@ import { parseTime } from '@/utils/ruoyi';
 import { sanitizeHtml } from '@/utils/sanitize';
 
 const { sys_notice_status, sys_notice_type } = toRefs<any>(useDict('sys_notice_status', 'sys_notice_type'));
+
+/**
+ * 投放范围：ADMIN 仅管理端（默认，行为与升级前一致）/ PLAYER 仅玩家端 / ALL 两者。
+ * 用本地常量而不是字典，是因为该字段属于功能开关而非运营可维护文案，避免运营误改导致语义失效。
+ */
+const targetScopes = [
+  { value: 'ADMIN', label: '仅管理端' },
+  { value: 'PLAYER', label: '仅玩家端' },
+  { value: 'ALL', label: '管理端+玩家端' }
+];
+const scopeLabel = (value?: string) => targetScopes.find(item => item.value === value)?.label ?? '仅管理端';
+const fmt = (value?: string | null) => (value ? String(value).replace('T', ' ').slice(0, 19) : '—');
 const route = useRoute();
 const router = useRouter();
 
@@ -263,7 +381,11 @@ const initFormData: NoticeForm = {
   noticeContent: '',
   status: '0',
   remark: '',
-  createByName: ''
+  createByName: '',
+  targetScope: 'ADMIN',
+  noticeLang: '',
+  effectiveStart: null,
+  effectiveEnd: null
 };
 const detailForm = ref<NoticeVO>({} as NoticeVO);
 const safeNoticeContent = computed(() => sanitizeHtml(detailForm.value.noticeContent || emptyNoticeContent));
@@ -275,7 +397,8 @@ const data = reactive<PageData<NoticeForm, NoticeQuery>>({
     noticeTitle: '',
     createByName: '',
     status: '',
-    noticeType: ''
+    noticeType: '',
+    targetScope: ''
   },
   rules: {
     noticeTitle: [{ required: true, message: '公告标题不能为空', trigger: 'blur' }],
@@ -301,6 +424,32 @@ const {
   openDialog: openDetailDialog,
   closeDialog: closeDetailDialog
 } = useDialogState('公告详情');
+
+/** 送达回执弹窗与数据 */
+const deliveryDialog = ref({ visible: false });
+const delivery = ref<NoticeDeliveryResult>({ summary: null, details: [] });
+const deliveryLoading = ref(false);
+
+/**
+ * 打开送达回执。
+ *
+ * 数据来源：玩家端在大厅接口真实拿到该公告时写入 ops_notice_delivery_log
+ *（游戏端触发落库），因此"送达为 0"能直接说明公告还没被任何玩家拉到——
+ * 这是判断公告是否真正生效的唯一客观依据。
+ */
+const openDelivery = async (row: NoticeVO) => {
+  deliveryDialog.value.visible = true;
+  deliveryLoading.value = true;
+  try {
+    const res = await getNoticeDelivery(row.noticeId, 50);
+    delivery.value = res.data ?? { summary: null, details: [] };
+  } catch (error) {
+    delivery.value = { summary: null, details: [] };
+    modal.msgError('送达回执加载失败');
+  } finally {
+    deliveryLoading.value = false;
+  }
+};
 
 /** 查询公告列表 */
 const getList = async () => {

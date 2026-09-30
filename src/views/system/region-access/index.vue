@@ -14,12 +14,11 @@
             v-model="queryParams.keyword"
             clearable
             filterable
-            allow-create
             default-first-option
-            placeholder="请选择或输入国家/地区"
+            placeholder="请选择国家/地区"
             style="width: 200px"
           >
-            <el-option v-for="item in countryOptions" :key="item" :label="item" :value="item" />
+            <el-option v-for="item in countryOptions" :key="item.value" :label="item.label" :value="item.label" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="timeScope === 'month'">
@@ -71,6 +70,7 @@
       <el-table v-loading="loading" border :data="rows" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="50" align="center" />
         <el-table-column label="国家/地区" prop="country" align="center" min-width="150" />
+        <el-table-column label="国家码" prop="countryCode" align="center" width="90" />
         <el-table-column label="站点名称" prop="siteName" align="center" width="120" />
         <el-table-column label="访问类型" align="center" width="110">
           <template #default="{ row }">
@@ -108,15 +108,32 @@
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
         <el-form-item label="国家/地区" prop="country">
           <el-select
-            v-model="form.country"
+            v-model="form.countryCode"
             filterable
-            allow-create
             default-first-option
-            placeholder="选择或输入国家/地区"
+            placeholder="请选择国家/地区"
             style="width: 100%"
           >
-            <el-option v-for="item in countryOptions" :key="item" :label="item" :value="item" />
+            <el-option v-for="item in countryOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="生效开始">
+          <el-date-picker
+            v-model="form.effectiveStart"
+            type="datetime"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            placeholder="留空表示立即生效"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="生效结束">
+          <el-date-picker
+            v-model="form.effectiveEnd"
+            type="datetime"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            placeholder="留空表示长期有效"
+            style="width: 100%"
+          />
         </el-form-item>
         <el-form-item label="站点名称" prop="siteName">
           <el-select v-model="form.siteName" placeholder="选择站点" style="width: 100%">
@@ -172,31 +189,26 @@ const formRef = ref<ElFormInstance>();
 const options = reactive<{
   sites: { value: string; label: string }[];
   accessTypes: { label: string; value: string }[];
-}>({ sites: [], accessTypes: [] });
+  countries: { label: string; value: string }[];
+}>({ sites: [], accessTypes: [], countries: [] });
 
-/** 国家/地区候选（截图现有 6 条 + 常见国家，允许自由输入以覆盖后续新增） */
-const countryOptions = [
-  '英国',
-  '美国',
-  '新加坡',
-  '中国澳门特别行政区',
-  '中国台湾省',
-  '中国',
-  '越南',
-  '马来西亚',
-  '泰国',
-  '印度尼西亚',
-  '菲律宾',
-  '印度',
-  '日本',
-  '韩国',
-  '澳大利亚'
-];
+/**
+ * 国家/地区候选：改为字典驱动（sys_country_region，value 为 ISO-2 码）。
+ *
+ * 为什么去掉硬编码与自由输入：入口层按 ISO 码判定，自由输入会产出"页面能存但线上永不命中"
+ * 的无效配置（如多一个空格、或写成"中国澳门"而字典是"中国澳门特别行政区"）。
+ * 字典同源后，页面所见即入口所用。
+ */
+const countryOptions = computed(() => options.countries);
+
+/** 按 ISO 码取中文名（提交时 country 存中文名，便于列表与导出阅读） */
+const countryLabelOf = (code?: string) =>
+  options.countries.find(item => item.value === code)?.label ?? code ?? '';
 
 const queryParams = ref<RegionAccessQuery>({ pageNum: 1, pageSize: 10 });
 const form = ref<RegionAccessForm>({ accessType: 1, permDownload: 1, permApp: 1 });
 const rules = {
-  country: [{ required: true, message: '请选择国家/地区', trigger: 'change' }],
+  countryCode: [{ required: true, message: '请选择国家/地区', trigger: 'change' }],
   siteName: [{ required: true, message: '请选择站点名称', trigger: 'change' }],
   accessType: [{ required: true, message: '请选择访问类型', trigger: 'change' }]
 };
@@ -231,13 +243,15 @@ const handleSelectionChange = (selection: RegionAccessVO[]) => {
 };
 
 const handleAdd = () => {
-  form.value = { accessType: 1, permDownload: 1, permApp: 1 };
+  form.value = { accessType: 1, permDownload: 1, permApp: 1, countryCode: '' };
   dialog.title = '新增非经营地访问限制';
   dialog.visible = true;
 };
 
 const handleUpdate = (row: any) => {
-  form.value = { ...row };
+  // 兼容历史数据：老行可能没有 countryCode，这里按中文名反查一次
+  const code = row.countryCode || options.countries.find(item => item.label === row.country)?.value || '';
+  form.value = { ...row, countryCode: code };
   dialog.title = '修改非经营地访问限制';
   dialog.visible = true;
 };
@@ -249,14 +263,20 @@ const submitForm = async () => {
     return;
   }
   if (form.value.id) {
-    await updateRegionAccess(form.value);
+    await updateRegionAccess(payload());
   } else {
-    await addRegionAccess(form.value);
+    await addRegionAccess(payload());
   }
   modal.msgSuccess('操作成功');
   dialog.visible = false;
   getList();
 };
+
+/** 组装提交体：country 与 countryCode 必须同时给出，避免只落中文名导致入口层无法判定 */
+const payload = (): RegionAccessForm => ({
+  ...form.value,
+  country: countryLabelOf(form.value.countryCode) || form.value.country
+});
 
 const handleDelete = async (row?: any) => {
   const delIds = row?.id ? [row.id] : ids.value;
@@ -273,6 +293,7 @@ onMounted(async () => {
   const res = await getRegionAccessOptions();
   options.sites = res.data?.sites ?? [];
   options.accessTypes = res.data?.accessTypes ?? [];
+  options.countries = res.data?.countries ?? [];
   applyScopeRange();
   getList();
 });

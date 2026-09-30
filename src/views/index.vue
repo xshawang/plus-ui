@@ -6,12 +6,24 @@
         <p class="dash-subtitle">核心经营指标 · 今日实时运营 · 今日排行榜 · 多日趋势 · 运营总览</p>
       </div>
       <div class="topbar-actions">
-        <span class="muted small">金额单位：VND</span>
+        <span class="muted small">
+          口径：{{ meta.site || '-' }} / 金额单位：{{ meta.currency }}</span>
+        <span v-if="meta.timezone" class="muted small">统计时区：{{ meta.timezone }}</span>
         <el-button type="primary" plain icon="Refresh" :loading="refreshing" @click="refreshAll">
           刷新全部
         </el-button>
       </div>
     </div>
+
+    <!-- 数据链路健康度：断链时明确提示，避免把"0"当成业务真实值 -->
+    <el-alert
+      v-if="health && !health.healthy"
+      type="error"
+      :closable="false"
+      show-icon
+      title="数据链路异常，以下指标可能不是最新值"
+      :description="brokenText"
+    />
 
     <!-- 1. 核心经营指标 -->
     <el-card shadow="hover" class="dash-card">
@@ -470,6 +482,8 @@ import DashboardStateBox from '@/components/Dashboard/StateBox.vue';
 import DashboardTrendChart from '@/components/Dashboard/TrendChart.vue';
 import {
   getDashboardKpi,
+  getDashboardHealth,
+  getDashboardMeta,
   getDashboardOverview,
   getDashboardRanking,
   getDashboardRealtime,
@@ -496,6 +510,36 @@ const TrendChart = DashboardTrendChart;
 
 /* ---------------- 基础格式化 ---------------- */
 const toNumber = (value?: unknown) => Number(value ?? 0);
+
+/* ---------------- 0. 口径与数据健康度 ---------------- */
+/**
+ * 口径条：明确"当前看的是哪个站点、按什么币种与时区统计"，
+ * 并在任一数据源断链时标红，避免把"断链导致的 0"误读成"业务为 0"。
+ */
+const meta = ref<{ site: string; currency: string; timezone: string }>({ site: '', currency: 'VND', timezone: '' });
+const health = ref<{ healthy: boolean; broken: string[]; snapshotAt: string; sources: any[] } | null>(null);
+const brokenText = computed(() => {
+  if (!health.value || health.value.healthy) {
+    return '';
+  }
+  const names = (health.value.sources ?? [])
+    .filter(item => item.status !== 'OK')
+    .map(item => `${item.description || item.key}（${item.message || '已断链'}）`);
+  return names.join('；');
+});
+
+const loadMetaAndHealth = async () => {
+  try {
+    const [metaRes, healthRes] = await Promise.all([getDashboardMeta(), getDashboardHealth()]);
+    if (metaRes.data) {
+      meta.value = metaRes.data;
+    }
+    health.value = healthRes.data ?? null;
+  } catch (error) {
+    // 口径/健康度属于辅助信息，失败不阻塞主数据展示
+    health.value = null;
+  }
+};
 
 const formatCount = (value?: unknown) => Math.round(toNumber(value)).toLocaleString('en-US');
 
@@ -791,7 +835,15 @@ const refreshing = ref(false);
 const refreshAll = async () => {
   refreshing.value = true;
   try {
-    await Promise.all([loadKpi(), loadRealtime(), loadRanking(), loadTrend(), loadOverview(), loadRisk()]);
+    await Promise.all([
+      loadMetaAndHealth(),
+      loadKpi(),
+      loadRealtime(),
+      loadRanking(),
+      loadTrend(),
+      loadOverview(),
+      loadRisk()
+    ]);
   } finally {
     refreshing.value = false;
   }
@@ -801,6 +853,7 @@ let realtimeTimer: number | undefined;
 let kpiTimer: number | undefined;
 
 onMounted(() => {
+  void loadMetaAndHealth();
   void loadKpi();
   void loadRealtime();
   void loadRanking();

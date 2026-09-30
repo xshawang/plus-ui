@@ -16,14 +16,6 @@
               @keyup.enter="handleQuery"
             />
           </el-form-item>
-          <el-form-item label="客户端秘钥" prop="clientSecret">
-            <el-input
-              v-model="queryParams.clientSecret"
-              placeholder="请输入客户端秘钥"
-              clearable
-              @keyup.enter="handleQuery"
-            />
-          </el-form-item>
           <el-form-item label="状态" prop="status">
             <el-select v-model="queryParams.status" placeholder="状态" clearable>
               <el-option v-for="dict in sys_normal_disable" :key="dict.value" :label="dict.label" :value="dict.value" />
@@ -86,7 +78,15 @@
         <el-table-column v-if="false" label="id" align="center" prop="id" />
         <el-table-column label="客户端id" align="center" prop="clientId" />
         <el-table-column label="客户端key" align="center" prop="clientKey" />
-        <el-table-column label="客户端秘钥" align="center" prop="clientSecret" />
+        <el-table-column label="客户端秘钥" align="center" min-width="220">
+          <template #default="scope">
+            <!-- 秘钥默认打码：列表页往往是截图/录屏的常客，明文展示等于把凭证随手泄露 -->
+            <span class="font-mono">{{ revealed.has(scope.row.id) ? scope.row.clientSecret : maskSecret(scope.row.clientSecret) }}</span>
+            <el-button link type="primary" @click="toggleReveal(scope.row)">
+              {{ revealed.has(scope.row.id) ? '隐藏' : '查看' }}
+            </el-button>
+          </template>
+        </el-table-column>
         <el-table-column label="授权类型" align="center">
           <template #default="scope">
             <dict-tag class="grant-type-tag" :options="sys_grant_type" :value="scope.row.grantTypeList" />
@@ -300,6 +300,31 @@ const total = ref(0);
 
 const queryFormRef = ref<ElFormInstance>();
 const clientFormRef = ref<ElFormInstance>();
+
+/**
+ * 已展开秘钥的行集合。
+ *
+ * 为什么默认打码、点开才显示且不做持久化：秘钥是客户端凭证，
+ * 列表页常被截图或共享，明文常驻等于持续泄露；按需展开能兼顾排障与安全，
+ * 且刷新页面即回到打码状态，不会因为前台忘记关闭而长期暴露。
+ */
+const revealed = ref<Set<string | number>>(new Set());
+const maskSecret = (value?: string) => {
+  if (!value) {
+    return '—';
+  }
+  return value.length <= 8 ? '********' : `${value.slice(0, 4)}****${value.slice(-4)}`;
+};
+const toggleReveal = (row: Partial<ClientVO>) => {
+  const key = row.id as string | number;
+  const next = new Set(revealed.value);
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+  revealed.value = next;
+};
 
 const initFormData: ClientForm = {
   id: undefined,

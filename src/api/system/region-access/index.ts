@@ -10,6 +10,8 @@ export const listRegionAccess = (query?: RegionAccessQuery): AxiosPromise<PageRe
 export const getRegionAccessOptions = (): AxiosPromise<{
   sites: { value: string; label: string }[];
   accessTypes: { label: string; value: string }[];
+  /** 国家/地区字典（value=ISO-3166 alpha-2，label=中文名） */
+  countries: { label: string; value: string }[];
 }> => {
   return request({ url: '/infra/sys/region-access/options', method: 'get' });
 };

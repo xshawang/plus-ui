@@ -61,3 +61,30 @@ export const getDashboardOverview = (
     params: period === 'custom' ? { period, startDate, endDate } : { period }
   });
 };
+
+/** 看板口径元信息（站点 / 币种 / 统计时区） */
+export const getDashboardMeta = (site?: string): AxiosPromise<{ site: string; currency: string; timezone: string }> => {
+  return request({ url: '/infra/report/dashboard/meta', method: 'get', params: { site } });
+};
+
+/** 数据健康度（各数据源最后写入时间与是否断链） */
+export const getDashboardHealth = (): AxiosPromise<{
+  snapshotAt: string;
+  site: string;
+  timezone: string;
+  currency: string;
+  healthy: boolean;
+  broken: string[];
+  sources: Array<{
+    key: string;
+    table: string;
+    description?: string;
+    lastAt?: string | null;
+    lagSeconds?: number | null;
+    thresholdSeconds?: number;
+    status: 'OK' | 'BROKEN';
+    message?: string;
+  }>;
+}> => {
+  return request({ url: '/infra/report/dashboard/health', method: 'get' });
+};
