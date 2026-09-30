@@ -354,12 +354,18 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="有效期开始">
-              <el-date-picker v-model="questForm.validStart" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" style="width: 100%" />
+              <!--
+                FIX: 2026-09-30 日期格式由 `YYYY-MM-DDTHH:mm:ss`（带 T）改为 `YYYY-MM-DD HH:mm:ss`（空格）。
+                原因：后端 QuestConfigDTO.validStart/validEnd 是 LocalDateTime，全局 Jackson
+                （go88-common-json/JacksonConfig）只认 `yyyy-MM-dd HH:mm:ss`，带 T 的 ISO 串会 400：
+                「请求参数格式错误：Text '2026-10-01T00:00:00' could not be parsed at index 10」。
+              -->
+              <el-date-picker v-model="questForm.validStart" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="有效期结束">
-              <el-date-picker v-model="questForm.validEnd" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" style="width: 100%" />
+              <el-date-picker v-model="questForm.validEnd" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -662,11 +668,14 @@ const resetQuestQuery = () => {
 
 const openQuestEdit = (row?: QuestConfigVO) => {
   Object.assign(questForm.value, defaultQuestForm(), row ? { ...row } : {});
+  // FIX: 2026-09-30 回显不再把空格改写成带 T 的 ISO 串。原因：日期控件 value-format 已统一为
+  // `YYYY-MM-DD HH:mm:ss`（与后端全局 Jackson 一致），再转成 T 会导致回显失败；这里改为把可能的
+  // 历史 ISO 串反向归一成空格格式，兼容老数据。
   if (row?.validStart) {
-    questForm.value.validStart = String(row.validStart).replace(' ', 'T');
+    questForm.value.validStart = String(row.validStart).replace('T', ' ');
   }
   if (row?.validEnd) {
-    questForm.value.validEnd = String(row.validEnd).replace(' ', 'T');
+    questForm.value.validEnd = String(row.validEnd).replace('T', ' ');
   }
   questDialog.visible = true;
 };

@@ -118,10 +118,17 @@
           </el-select>
         </el-form-item>
         <el-form-item label="生效开始">
+          <!--
+            FIX: 2026-09-30 日期格式由 `YYYY-MM-DDTHH:mm:ss`（带 T）改为 `YYYY-MM-DD HH:mm:ss`（空格）。
+            原因：后端全局 Jackson（go88-common-json/JacksonConfig）对 LocalDateTime 统一使用
+            `yyyy-MM-dd HH:mm:ss` 序列化/反序列化，带 T 的 ISO 串会直接 400：
+            「请求参数格式错误：Text '2026-10-01T00:00:00' could not be parsed at index 10」。
+            顺带修复编辑回显：列表接口返回的也是空格格式，格式一致后日期控件才能正确回填。
+          -->
           <el-date-picker
             v-model="form.effectiveStart"
             type="datetime"
-            value-format="YYYY-MM-DDTHH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
             placeholder="留空表示立即生效"
             style="width: 100%"
           />
@@ -130,7 +137,7 @@
           <el-date-picker
             v-model="form.effectiveEnd"
             type="datetime"
-            value-format="YYYY-MM-DDTHH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
             placeholder="留空表示长期有效"
             style="width: 100%"
           />
