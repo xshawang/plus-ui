@@ -10,8 +10,9 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item>
-          <el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD" range-separator="-"
-                          start-placeholder="开始日期" end-placeholder="结束日期" style="width: 260px" />
+          <!-- 截图：区间到时分秒（2026-09-08 00:00:00 ~ 2026-09-14 23:59:59） -->
+          <el-date-picker v-model="dateRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss"
+                          range-separator="-" start-placeholder="开始时间" end-placeholder="结束时间" style="width: 380px" />
         </el-form-item>
         <el-form-item>
           <!-- 截图：账号检索维度下拉（精准/模糊/会员ID/上级代理ID/会员层级/渠道名称(ID)） -->
@@ -19,7 +20,9 @@
             <el-option label="精准会员账号" value="EXACT_ACCOUNT" />
             <el-option label="模糊会员账号" value="FUZZY_ACCOUNT" />
             <el-option label="会员ID" value="UID" />
-            <el-option label="上级代理ID" value="PARENT_AGENT" />
+            <!-- 截图：检索维度里「上级代理」与「上级代理ID」是两个不同项（前者按登录名模糊、后者按代理 ID 精确） -->
+            <el-option label="上级代理" value="PARENT_AGENT" />
+            <el-option label="上级代理ID" value="PARENT_AGENT_ID" />
             <el-option label="会员层级" value="MEMBER_LEVEL" />
             <el-option label="渠道名称(ID)" value="CHANNEL" />
           </el-select>
@@ -56,13 +59,22 @@
             <div class="sub">({{ row.channelId || '—' }})</div>
           </template>
         </el-table-column>
-        <el-table-column label="上级代理" align="center" width="130">
-          <template #default="{ row }">{{ row.parentAgent || '—' }}</template>
+        <el-table-column label="上级代理(ID)" align="center" width="170">
+          <template #default="{ row }">
+            <div>{{ row.parentAgent || '—' }}</div>
+            <div v-if="row.parentAgentId" class="sub">({{ row.parentAgentId }})</div>
+          </template>
         </el-table-column>
-        <el-table-column label="会员账号(ID)" align="center" width="200">
+        <el-table-column label="会员账号(ID)" align="center" width="180">
           <template #default="{ row }">
             <div>{{ row.loginName || '—' }}</div>
             <div class="sub">({{ row.uid }})</div>
+          </template>
+        </el-table-column>
+        <!-- 截图：「会员ID」是与「会员账号(ID)」并列的独立列，行内「输赢分析」入口挂在会员ID 列下 -->
+        <el-table-column label="会员ID" align="center" width="170">
+          <template #default="{ row }">
+            <div>{{ row.uid }}</div>
             <el-link type="primary" @click="openWinLoss(row)">输赢分析</el-link>
           </template>
         </el-table-column>
@@ -144,6 +156,8 @@ const accountPlaceholder = computed(() => {
       return '请输入会员ID';
     case 'PARENT_AGENT':
       return '请输入上级代理账号';
+    case 'PARENT_AGENT_ID':
+      return '请输入上级代理ID';
     case 'MEMBER_LEVEL':
       return '请输入会员层级名称';
     case 'CHANNEL':
@@ -158,8 +172,9 @@ function applyPeriod() {
   const start = new Date();
   if (period.value === 'WEEK') start.setDate(end.getDate() - 6);
   else if (period.value === 'MONTH') start.setMonth(end.getMonth() - 1);
-  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  dateRange.value = [fmt(start), fmt(end)];
+  const p = (n: number) => String(n).padStart(2, '0');
+  const fmt = (d: Date, tail: string) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${tail}`;
+  dateRange.value = [fmt(start, '00:00:00'), fmt(end, '23:59:59')];
   getList();
 }
 
@@ -168,8 +183,9 @@ async function getList() {
   try {
     const res: any = await memberBetDetailPage({
       ...query,
-      startDate: dateRange.value?.[0],
-      endDate: dateRange.value?.[1]
+      // 后端按 stat_date（日粒度）聚合，区间到时分秒仅用于与截图控件形态对齐，取日期部分传参
+      startDate: dateRange.value?.[0]?.slice(0, 10),
+      endDate: dateRange.value?.[1]?.slice(0, 10)
     });
     rows.value = res.rows ?? [];
     total.value = res.total ?? 0;
@@ -196,9 +212,18 @@ async function exportData() {
     ElMessage.warning('暂无可导出数据');
     return;
   }
-  const header = Object.keys(rows.value[0]).join(',');
-  const body = rows.value.map((row) => Object.values(row).join(',')).join('\n');
-  const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
+  // 表头用中文列名（原实现导出 Object.keys 原始字段名，运营无法直接使用）
+  const cols: Array<[string, string]> = [
+    ['币种', 'currency'], ['渠道名称', 'channelName'], ['渠道ID', 'channelId'],
+    ['上级代理', 'parentAgent'], ['上级代理ID', 'parentAgentId'],
+    ['会员账号', 'loginName'], ['会员ID', 'uid'], ['会员层级', 'memberLevel'],
+    ['游戏类型', 'gameTypeName'], ['游戏平台', 'platformName'], ['游戏名称', 'gameName'],
+    ['注单数量', 'betCount'], ['投注金额', 'betAmount'], ['有效投注', 'validBet'],
+    ['会员输赢', 'memberWin'], ['杀率(%)', 'killRate']
+  ];
+  const header = cols.map((c) => c[0]).join(',');
+  const body = rows.value.map((row: any) => cols.map((c) => `"${row[c[1]] ?? ''}"`).join(',')).join('\n');
+  const blob = new Blob([`\ufeff${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = `会员投注细目_${dateRange.value?.[0]}_${dateRange.value?.[1]}.csv`;

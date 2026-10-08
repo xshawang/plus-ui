@@ -8,21 +8,72 @@
         <el-tab-pane label="投注明细(按代理线)" name="AGENT" />
       </el-tabs>
 
+      <!-- 截图：右上固定「导出报表 / 操作教程」 -->
+      <div class="bet-toolbar">
+        <span />
+        <span>
+          <el-button icon="Download" @click="exportReport">导出报表</el-button>
+          <el-button link type="primary" icon="Document" @click="openGuide">操作教程</el-button>
+        </span>
+      </div>
+
       <el-form :inline="true">
-        <el-form-item label="投注时间">
-          <el-date-picker v-model="range" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss"
-                          start-placeholder="开始时间" end-placeholder="结束时间" style="width: 380px" />
-        </el-form-item>
-        <el-form-item v-if="tab === 'STAT' || tab === 'DETAIL'" :label="tab === 'STAT' ? '会员账号' : ''">
-          <el-select v-model="query.accountField" style="width: 140px">
-            <el-option v-for="f in accountFields" :key="f" :label="fieldLabel(f)" :value="f" />
+        <!-- 截图：「投注时间 ▾」是字段下拉（投注时间/结算时间）+ 日/周/月 快捷 + 区间 -->
+        <el-form-item>
+          <el-select v-model="query.timeField" style="width: 120px">
+            <el-option label="投注时间" value="BET" />
+            <el-option label="结算时间" value="SETTLE" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-input v-model="query.accountValue" :placeholder="accountPlaceholder" clearable style="width: 220px" @keyup.enter="reload" />
+          <el-radio-group v-model="period" @change="applyPeriod">
+            <el-radio-button value="DAY">日</el-radio-button>
+            <el-radio-button value="WEEK">周</el-radio-button>
+            <el-radio-button value="MONTH">月</el-radio-button>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item v-if="tab === 'AGENT'" label="上级代理账号">
-          <el-input v-model="query.parentAgent" placeholder="请输入上级代理账号" clearable style="width: 200px" />
+        <el-form-item>
+          <el-date-picker v-model="range" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss"
+                          start-placeholder="开始时间" end-placeholder="结束时间" style="width: 360px" />
+        </el-form-item>
+        <!-- 截图：「请选择类型/平台」下拉（类型与平台二选一，传 gameType / providerCode） -->
+        <!-- 截图（投注统计）：筛选只有 日/周/月 + 区间 + 会员账号 + 搜索/重置，故此处按页签隐藏 -->
+        <el-form-item v-if="tab !== 'STAT'">
+          <el-select v-model="query.platformKey" placeholder="请选择类型/平台" clearable filterable style="width: 190px">
+            <el-option v-for="o in platformChoices" :key="o.value" :label="o.label" :value="o.value" />
+          </el-select>
+        </el-form-item>
+        <!-- 截图：「模糊子游戏名称」下拉 + 文本输入 -->
+        <el-form-item v-if="tab !== 'STAT'">
+          <el-select v-model="gameNameField" style="width: 140px">
+            <el-option label="模糊子游戏名称" value="GAME_NAME" />
+          </el-select>
+          <el-input v-model="query.gameName" placeholder="请输入子游戏名称" clearable
+                    style="width: 170px; margin-left: 6px" @keyup.enter="reload" />
+        </el-form-item>
+        <!-- 投注明细 / 投注统计 / 主播号：会员账号（主播号）下拉 + 输入 -->
+        <el-form-item v-if="tab !== 'AGENT'">
+          <el-select v-model="query.accountField" style="width: 140px">
+            <el-option v-for="f in accountFields" :key="f" :label="fieldLabel(f)" :value="f" />
+          </el-select>
+          <el-input v-model="query.accountValue" :placeholder="accountPlaceholder" clearable
+                    style="width: 200px; margin-left: 6px" @keyup.enter="reload" />
+        </el-form-item>
+        <!-- 截图（按代理线）：上级代理账号下拉 + 输入 -->
+        <el-form-item v-if="tab === 'AGENT'">
+          <el-select v-model="agentField" style="width: 150px">
+            <el-option label="上级代理账号" value="PARENT_AGENT" />
+          </el-select>
+          <el-input v-model="query.parentAgent" placeholder="请输入上级代理账号" clearable
+                    style="width: 190px; margin-left: 6px" @keyup.enter="reload" />
+        </el-form-item>
+        <!-- 截图（按代理线）：注单编号下拉 + 输入 -->
+        <el-form-item v-if="tab === 'AGENT'">
+          <el-select v-model="bizNoField" style="width: 140px">
+            <el-option label="注单编号" value="BIZ_NO" />
+          </el-select>
+          <el-input v-model="query.bizNo" placeholder="请输入注单编号" clearable
+                    style="width: 190px; margin-left: 6px" @keyup.enter="reload" />
         </el-form-item>
         <el-form-item v-if="tab === 'DETAIL' || tab === 'AGENT'" label="结算状态">
           <el-select v-model="query.settleStatus" placeholder="结算状态" clearable style="width: 130px">
@@ -90,10 +141,26 @@
           <el-table-column label="状态" align="center" width="110">
             <template #default="{ row }">{{ statusText(row.settleStatus) }}</template>
           </el-table-column>
+          <!-- 截图：明细类页签末列固定「操作」 -->
+          <el-table-column label="操作" align="center" width="110" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="openRowRemark(row)">备注</el-button>
+            </template>
+          </el-table-column>
         </el-table>
+        <!-- 截图底部：投注明细=「全选当前页 + 批量操作 ▾ + 已选择 N 条 + 共 N 条」；其余页签只显示「共 N 条」 -->
         <div class="footer-bar">
-          <span>已选择 {{ selection.length }} 条数据 | 共 {{ total }} 条</span>
-          <el-button link type="primary" @click="openRemark">批量备注</el-button>
+          <span v-if="tab === 'DETAIL'">全选当前页 | 已选择 {{ selection.length }} 条数据 | 共 {{ total }} 条</span>
+          <span v-else>共 {{ total }} 条</span>
+          <el-dropdown v-if="tab === 'DETAIL'" @command="onBatchCommand">
+            <el-button>批量操作 ▾</el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="REMARK">批量备注</el-dropdown-item>
+                <el-dropdown-item command="EXPORT">导出选中</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
         <pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="loadDetail" />
       </template>
@@ -142,6 +209,7 @@
 import { reactive, ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { listGameBetDetail, gameBetOptions, gameBetStat, saveGameBetRemark } from '@/api/game/bet';
+import { gameTypeOptions, platformOptions } from '@/api/game/manage';
 
 defineOptions({ name: 'GameBet' });
 
@@ -154,8 +222,19 @@ const range = ref<any>([]);
 const options = reactive<any>({ tip: '' });
 const stat = ref<any>({});
 const remarkDialog = reactive({ visible: false, remark: '' });
+/** 时间档位（截图「日/周/月」快捷） */
+const period = ref('DAY');
+/** 「模糊子游戏名称」是固定维度，保留下拉以对齐截图形态 */
+const gameNameField = ref('GAME_NAME');
+/** 按代理线页签：上级代理账号维度固定 */
+const agentField = ref('PARENT_AGENT');
+/** 按代理线页签：注单编号维度固定 */
+const bizNoField = ref('BIZ_NO');
+/** 「请选择类型/平台」候选（值编码 TYPE:{类型码} / PLATFORM:{平台码}） */
+const platformChoices = ref<Array<{ label: string; value: string }>>([]);
 const query = reactive<any>({ pageNum: 1, pageSize: 10, tab: 'DETAIL', accountField: 'ACCOUNT', accountValue: undefined,
-  parentAgent: undefined, settleStatus: undefined, betAmountMin: undefined, betAmountMax: undefined });
+  parentAgent: undefined, settleStatus: undefined, betAmountMin: undefined, betAmountMax: undefined,
+  timeField: 'BET', gameName: undefined, platformKey: undefined, bizNo: undefined });
 
 const accountFields = computed<string[]>(() => options.accountFields || []);
 const accountPlaceholder = computed(() => (tab.value === 'STREAMER' ? '请输入主播号' : '请输入会员账号'));
@@ -169,10 +248,78 @@ const statusText = (status: number) =>
 
 function buildParams() {
   const params: any = { ...query, tab: tab.value };
+  // 「请选择类型/平台」下拉按 TYPE:/PLATFORM: 前缀拆回后端参数（类型与平台互斥，避免两个条件叠加后查空）
+  delete params.platformKey;
+  const key = query.platformKey || '';
+  if (key.startsWith('TYPE:')) {
+    params.gameType = Number(key.slice(5));
+  } else if (key.startsWith('PLATFORM:')) {
+    params.providerCode = key.slice(9);
+  }
+  // 按代理线页签的「注单编号」独立输入框 → 复用后端 accountField=BIZ_NO 精确匹配
+  if (tab.value === 'AGENT') {
+    params.accountField = 'BIZ_NO';
+    params.accountValue = query.bizNo;
+    delete params.bizNo;
+  } else {
+    params.accountField = query.accountField;
+    delete params.bizNo;
+  }
   if (range.value?.length === 2) {
     params.params = { beginTime: range.value[0], endTime: range.value[1] };
   }
   return params;
+}
+
+/** 日/周/月 快捷：按截图回填区间（周=近 7 天含今日，月=近 30 天含今日） */
+function applyPeriod() {
+  const end = new Date();
+  const start = new Date();
+  if (period.value === 'WEEK') start.setDate(end.getDate() - 6);
+  else if (period.value === 'MONTH') start.setDate(end.getDate() - 29);
+  const p = (n: number) => String(n).padStart(2, '0');
+  const fmt = (d: Date, tail: string) =>
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${tail}`;
+  range.value = [fmt(start, '00:00:00'), fmt(end, '23:59:59')];
+  reload();
+}
+
+/** 导出报表：按当前筛选条件导全部命中行（前端 CSV，表头用中文列名） */
+async function exportReport() {
+  if (tab.value === 'STAT') {
+    ElMessage.warning('投注统计为聚合视图，请使用页面表格查看');
+    return;
+  }
+  const res: any = await listGameBetDetail({ ...buildParams(), pageNum: 1, pageSize: 5000 });
+  const list = res.rows ?? [];
+  if (!list.length) {
+    ElMessage.warning('暂无可导出数据');
+    return;
+  }
+  const cols: Array<[string, string]> = [
+    ['注单编号', 'bizNo'], ['牌局编号', 'roundNo'], ['会员账号', 'loginName'], ['会员ID', 'uid'],
+    ['上级代理账号', 'parentAgent'], ['上级代理ID', 'parentAgentId'],
+    ['顶层代理账号', 'topAgent'], ['顶层代理ID', 'topAgentId'],
+    ['子游戏名称', 'gameName'], ['平台名称', 'platformName'], ['投注时间', 'betTime'],
+    ['结算时间', 'settleTime'], ['投注结算时间差(秒)', 'settleCostSeconds'], ['币种', 'currency'],
+    ['投注金额', 'betAmount'], ['有效投注', 'validBet'], ['预扣税', 'taxAmount'],
+    ['会员输赢', 'memberWin'], ['投注后余额', 'afterBalance'], ['状态', 'settleStatus']
+  ];
+  const head = cols.map((c) => c[0]).join(',');
+  const body = list
+    .map((row: any) => cols.map((c) => `"${row[c[1]] ?? ''}"`).join(','))
+    .join('\n');
+  const blob = new Blob([`\ufeff${head}\n${body}`], { type: 'text/csv;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `投注记录_${tab.value}_${range.value?.[0] ?? ''}_${range.value?.[1] ?? ''}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+/** 操作教程：指向本目录的测试/需求文档入口（无独立教程页时的落点） */
+function openGuide() {
+  ElMessage.info('操作教程见 docs/运营后台DOC/游戏管理模块测试流程文档/04-投注记录与会员投注细目-截图字段级需求与差异清单.md');
 }
 
 async function loadDetail() {
@@ -212,7 +359,8 @@ async function reload() {
 
 function resetQuery() {
   Object.assign(query, { pageNum: 1, accountValue: undefined, parentAgent: undefined,
-    settleStatus: undefined, betAmountMin: undefined, betAmountMax: undefined });
+    settleStatus: undefined, betAmountMin: undefined, betAmountMax: undefined,
+    timeField: 'BET', gameName: undefined, platformKey: undefined, bizNo: undefined });
   range.value = [];
   reload();
 }
@@ -226,6 +374,36 @@ function openRemark() {
   remarkDialog.visible = true;
 }
 
+/** 行内「操作 → 备注」：单选一行后直接进入批量备注弹窗（与截图的操作列对齐） */
+function openRowRemark(row: any) {
+  selection.value = [row];
+  openRemark();
+}
+
+function onBatchCommand(command: string) {
+  if (command === 'REMARK') {
+    openRemark();
+  } else if (command === 'EXPORT') {
+    if (!selection.value.length) {
+      ElMessage.warning('请先选择注单');
+      return;
+    }
+    const cols: Array<[string, string]> = [
+      ['注单编号', 'bizNo'], ['牌局编号', 'roundNo'], ['会员账号', 'loginName'], ['会员ID', 'uid'],
+      ['投注时间', 'betTime'], ['结算时间', 'settleTime'], ['投注金额', 'betAmount'],
+      ['有效投注', 'validBet'], ['会员输赢', 'memberWin'], ['状态', 'settleStatus']
+    ];
+    const head = cols.map((c) => c[0]).join(',');
+    const body = selection.value.map((row: any) => cols.map((c) => `"${row[c[1]] ?? ''}"`).join(',')).join('\n');
+    const blob = new Blob([`\ufeff${head}\n${body}`], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `投注记录_选中${selection.value.length}条.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+}
+
 async function submitRemark() {
   if (!remarkDialog.remark) {
     ElMessage.warning('备注内容不能为空');
@@ -236,10 +414,45 @@ async function submitRemark() {
   remarkDialog.visible = false;
 }
 
-onMounted(reload);
+/** 「请选择类型/平台」候选：类型来自 /game/type/options，平台来自 /game/platform/options（截图同一个下拉） */
+async function loadPlatformChoices() {
+  try {
+    const types: any = ((await gameTypeOptions('VND1000:1')) as unknown as any)?.data ?? [];
+    const plats: any = ((await platformOptions()) as unknown as any)?.data ?? [];
+    platformChoices.value = [
+      ...(types || []).map((t: any) => ({ label: `类型：${t.typeName}`, value: `TYPE:${t.typeCode}` })),
+      ...(plats || []).map((p: any) => ({
+        label: `平台：${p.platformName || p.providerCode}`,
+        value: `PLATFORM:${p.providerCode ?? p.platformCode}`
+      }))
+    ];
+  } catch {
+    platformChoices.value = [];
+  }
+}
+
+onMounted(async () => {
+  applyPeriodDefaults();
+  await loadPlatformChoices();
+  await reload();
+});
+
+/** 首屏按「日」给区间（截图默认当日 00:00:00 ~ 23:59:59），不触发查询 */
+function applyPeriodDefaults() {
+  const end = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  const fmt = (d: Date, tail: string) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${tail}`;
+  range.value = [fmt(end, '00:00:00'), fmt(end, '23:59:59')];
+}
 </script>
 
 <style scoped>
+.bet-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -8px 0 8px;
+}
 .sub {
   color: #909399;
   font-size: 12px;
