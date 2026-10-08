@@ -188,9 +188,13 @@
           </div> -->
 
           <el-table v-loading="configLoading" border class="data-table" :data="items" max-height="600">
+            <!-- 方案A：bannerInfo 由「运营管理 → 大厅Banner」维护，此处只读，避免两侧双写分叉 -->
             <el-table-column label="键" align="left" prop="configKey" min-width="220" show-overflow-tooltip>
               <template #default="{ row }">
                 <span class="font-mono">{{ row.configKey }}</span>
+                <el-tag v-if="isManagedElsewhere(row.configKey)" size="small" type="warning" class="ml-2">
+                  由大厅Banner维护
+                </el-tag>
               </template>
             </el-table-column>
             <el-table-column label="类型" align="center" width="90">
@@ -206,7 +210,14 @@
             </el-table-column>
             <el-table-column label="操作" align="center" width="120" fixed="right">
               <template #default="{ row }">
-                <el-tooltip content="编辑值/说明" placement="top">
+                <el-tooltip v-if="isManagedElsewhere(row.configKey)" placement="top">
+                  <template #content>
+                    该配置由「运营管理 → 大厅Banner」结构化维护：<br />
+                    在此手改会在下次发布时被覆盖，请到该页面修改并点「发布到客户端」。
+                  </template>
+                  <el-button link type="info" icon="Lock" disabled />
+                </el-tooltip>
+                <el-tooltip v-else content="编辑值/说明" placement="top">
                   <el-button link type="primary" icon="Edit" @click="openConfigDialog(row as ClientConfigItem)" />
                 </el-tooltip>
               </template>
@@ -445,7 +456,22 @@ const preview = (value?: string) => {
   return value.length > 160 ? value.slice(0, 160) + '...' : value;
 };
 
+/**
+ * 由其它模块结构化维护、本页只读的配置键（方案A）。
+ *
+ * 为什么必须挡住：bannerInfo 的事实源是「运营管理 → 大厅Banner」的 ops_banner_config，
+ * 在此手改的内容会在下一次「发布到客户端」时被整体覆盖（发布是"用结构化条目重建 configBanner"）。
+ * 运营很难理解"改完又变回去"，因此在入口处直接禁止，并给出跳转指引。
+ */
+const MANAGED_ELSEWHERE_KEYS = ['bannerInfo'];
+const isManagedElsewhere = (configKey?: string) =>
+  !!configKey && MANAGED_ELSEWHERE_KEYS.includes(configKey);
+
 const openConfigDialog = (row: ClientConfigItem) => {
+  if (isManagedElsewhere(row.configKey)) {
+    modal.msgWarning('该配置由「运营管理 → 大厅Banner」维护，请到该页面修改并点「发布到客户端」');
+    return;
+  }
   configDialog.row = row;
   configText.description = row.description || '';
   configText.value = row.configValue || '';

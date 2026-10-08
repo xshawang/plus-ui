@@ -11,9 +11,19 @@
           </p>
         </div>
         <div class="toolbar-actions">
-          <el-tag :type="pendingCount > 0 ? 'warning' : 'success'">
-            {{ pendingCount > 0 ? `待发布 ${pendingCount} 项变更` : '已与客户端配置一致' }}
-          </el-tag>
+          <el-popover v-if="pendingCount > 0" placement="bottom" :width="420" trigger="hover">
+            <template #reference>
+              <el-tag type="warning" style="cursor: pointer">待发布 {{ pendingCount }} 项变更</el-tag>
+            </template>
+            <div class="pending-list">
+              <div v-for="(item, index) in pendingList" :key="index" class="pending-item">
+                <el-tag size="small" :type="pendingTagType(item.type)">{{ pendingTagText(item.type) }}</el-tag>
+                <span class="font-mono">{{ item.namebanner }}</span>
+                <div class="muted small">{{ item.detail }}</div>
+              </div>
+            </div>
+          </el-popover>
+          <el-tag v-else type="success">已与客户端配置一致</el-tag>
           <el-button v-hasPermi="['ops:banner:edit']" type="primary" plain icon="Plus" @click="handleAdd">
             新增
           </el-button>
@@ -38,6 +48,14 @@
           {{ fileExists ? `${fileSize} 字节 · ${fmt(fileUpdatedAt)}` : '文件不存在' }}
         </el-descriptions-item>
       </el-descriptions>
+      <el-alert
+        class="mt-2"
+        type="info"
+        :closable="false"
+        show-icon
+        title="VIP 门槛生效条件"
+        description="服务端仅在请求携带登录态（X-TOKEN/xtoken）时按钱包可用余额过滤；未登录/身份缺失一律放行。当前 g318 客户端主配置请求不带身份，VIP 门槛需客户端补透传后才会对玩家真实隐藏。"
+      />
     </el-card>
 
     <el-card shadow="hover" class="table-panel">
@@ -102,6 +120,16 @@
             <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="生效时间" align="center" width="210">
+          <template #default="{ row }">
+            <div class="muted small">
+              {{ row.effectiveStart ? fmt(row.effectiveStart) : '立即' }}
+              ~
+              {{ row.effectiveEnd ? fmt(row.effectiveEnd) : '长期' }}
+            </div>
+            <el-tag size="small" :type="windowTagType(row)">{{ windowTagText(row) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" align="center" width="140" fixed="right">
           <template #default="{ row }">
             <el-button v-hasPermi="['ops:banner:edit']" link type="primary" @click="handleUpdate(row)">
@@ -148,13 +176,39 @@
         </el-form-item>
         <el-form-item label="VIP门槛">
           <el-input-number v-model="form.vipMinAmount" :min="0" :step="100000" />
-          <span class="muted small ml-2">0=不限（本期仅后台保存，服务端过滤在批次B启用）</span>
+          <span class="muted small ml-2">0=不限；有登录态时按钱包可用余额过滤（未登录/身份缺失放行）</span>
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
             <el-radio :value="1">启用</el-radio>
             <el-radio :value="0">停用（不参与发布）</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item label="生效时间">
+          <!--
+            FIX(2026-10-08)：value-format 必须是 `YYYY-MM-DD HH:mm:ss`（空格），不能是 ISO 的 T 分隔。
+            原因：后端 LocalDateTime 的 Jackson 反序列化只认空格格式，用 T 格式提交会返回
+            code=400「请求参数格式错误：Text '...' could not be parsed at index 10」
+            （HTTP 状态仍是 200，很容易被误判为保存成功）。
+          -->
+          <el-date-picker
+            v-model="form.effectiveStart"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            placeholder="留空=立即生效"
+            style="width: 45%"
+          />
+          <span class="muted small mx-1">~</span>
+          <el-date-picker
+            v-model="form.effectiveEnd"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            placeholder="留空=长期有效"
+            style="width: 45%"
+          />
+          <div class="muted small">
+            由服务端在下发时刻过滤：<b>改生效时间无需发布</b>，客户端下次拉取即按新时间窗生效（静态兜底文件仍为全量条目）。
+          </div>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" />
@@ -185,6 +239,8 @@ const bannerInfoUpdatedAt = ref<string | null>(null);
 const fileExists = ref(false);
 const fileSize = ref(0);
 const fileUpdatedAt = ref<string | null>(null);
+const pendingCount = ref(0);
+const pendingList = ref<Array<{ type: string; namebanner: string; detail: string }>>([]);
 
 const { loading, withLoading } = useLoading(true);
 const { loading: buttonLoading, withLoading: withButtonLoading } = useLoading();
@@ -203,6 +259,8 @@ const initForm: BannerForm = {
   webEnable: 1,
   vipMinAmount: 0,
   status: 1,
+  effectiveStart: null,
+  effectiveEnd: null,
   remark: ''
 };
 const form = ref<BannerForm>({ ...initForm });
@@ -223,10 +281,39 @@ const webEnable = computed({
 });
 
 /**
- * 待发布变更数 = 启用条数与已发布条数之差。
- * 这是"有没有改动没发出去"的粗略但直观的提示；精细 diff 需要服务端比对（本期不做）。
+ * 待发布差异（方案A）。
+ *
+ * 为什么不用"启用条数 - 已发布条数"：改了图片/跳转但条数不变时该差值为 0，
+ * 页面会显示"已一致"，运营误以为已生效。现在由后端逐条比对并给出差异字段。
  */
-const pendingCount = computed(() => Math.abs(enabledCount.value - publishedCount.value));
+const pendingTagText = (type: string) =>
+  ({ ADDED: '未发布', REMOVED: '待移除', CHANGED: '已改动', ORDER_CHANGED: '顺序变更' })[type] || type;
+const pendingTagType = (type: string) =>
+  ({ ADDED: 'success', REMOVED: 'danger', CHANGED: 'warning', ORDER_CHANGED: 'info' })[type] || 'info';
+
+/**
+ * 生效时间窗状态（仅页面提示）。
+ *
+ * 真正的过滤发生在服务端渲染时并以**服务端时间**为准，避免客户端时间被修改后绕过上下线控制；
+ * 因此这里的时间显示可能与实际生效存在秒级差异，属可接受范围。
+ */
+const windowState = (row: BannerVO) => {
+  if (row.status !== 1) return 'OFF';
+  const now = Date.now();
+  if (row.effectiveStart && new Date(row.effectiveStart).getTime() > now) return 'PENDING';
+  if (row.effectiveEnd && new Date(row.effectiveEnd).getTime() < now) return 'EXPIRED';
+  return 'ACTIVE';
+};
+const windowTagText = (row: BannerVO) =>
+  ({ OFF: '停用', PENDING: '未开始', EXPIRED: '已过期', ACTIVE: '生效中' })[windowState(row)] || '';
+const windowTagType = (row: BannerVO) =>
+  (windowState(row) === 'ACTIVE'
+    ? 'success'
+    : windowState(row) === 'PENDING'
+      ? 'warning'
+      : windowState(row) === 'EXPIRED'
+        ? 'danger'
+        : 'info') as 'success' | 'warning' | 'danger' | 'info';
 
 const fmt = (value?: string | null) => (value ? String(value).replace('T', ' ').slice(0, 19) : '—');
 const formatMoney = (value?: number) => Number(value ?? 0).toLocaleString('en-US');
@@ -247,6 +334,8 @@ const getList = async () => {
     fileExists.value = res.data?.fileExists ?? false;
     fileSize.value = res.data?.fileSize ?? 0;
     fileUpdatedAt.value = res.data?.fileUpdatedAt ?? null;
+    pendingCount.value = res.data?.pendingCount ?? 0;
+    pendingList.value = res.data?.pending ?? [];
   });
 };
 
@@ -329,5 +418,21 @@ onMounted(() => {
 .muted {
   color: var(--el-text-color-secondary);
   font-size: 13px;
+}
+
+.pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.pending-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.5;
 }
 </style>

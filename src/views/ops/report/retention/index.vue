@@ -57,6 +57,14 @@
     </el-card>
 
     <el-card shadow="hover" class="table-panel">
+      <el-alert
+        v-if="isRealtimeSource"
+        type="warning"
+        :closable="false"
+        class="mb-2"
+        title="当前为「钱包流水」实时兜底口径"
+        description="查询区间内没有 T+1 汇总数据（go88-job 未跑批，或充值未经过支付通道），已改用钱包流水实时计算：充值留存取充值入账流水，投注留存取下注扣款流水。数据实时，口径=钱包实际入账。"
+      />
       <el-table v-loading="loading" border :data="displayRows" empty-text="暂无数据" max-height="580">
         <el-table-column
           v-for="col in columns"
@@ -100,6 +108,7 @@ const dateRange = ref<string[]>([]);
 const rows = ref<RetentionRow[]>([]);
 const average = ref<RetentionRow>({});
 const total = ref(0);
+const isRealtimeSource = ref(false);
 
 const queryParams = reactive({
   memberScope: 'all',
@@ -210,6 +219,8 @@ const getList = async () => {
     rows.value = res.data?.rows || [];
     average.value = res.data?.average || {};
     total.value = res.data?.total || 0;
+    // 数据源提示：summary=T+1 汇总口径；ledger=钱包流水实时兜底口径（服务端判定并下发）
+    isRealtimeSource.value = String(average.value?.dataSource || rows.value[0]?.dataSource || '') === 'ledger';
   });
 };
 

@@ -205,9 +205,11 @@
           </el-form-item>
           <el-form-item v-if="activeTab === 'member'" label="封禁类型">
             <el-select v-model="addForm.banType" style="width: 100%">
+              <!-- 口径见 F:\g318\sqls\member_ban_type_dict_20261008.sql（与 player 执行侧效果对齐） -->
               <el-option label="黑名单（同步锁定账号）" :value="1" />
-              <el-option label="禁止提现" :value="3" />
-              <el-option label="禁止游戏" :value="5" />
+              <el-option label="限制登录" :value="3" />
+              <el-option label="禁止提现（关闭提现权限）" :value="4" />
+              <el-option label="禁止游戏（未接入）" :value="5" />
             </el-select>
           </el-form-item>
         </template>

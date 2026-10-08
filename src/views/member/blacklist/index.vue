@@ -12,11 +12,13 @@
             </el-form-item>
             <el-form-item label="封禁类型">
               <el-select v-model="banQuery.banType" placeholder="全部" clearable style="width: 130px">
-                <el-option label="封号" :value="1" />
-                <el-option label="封设备" :value="2" />
-                <el-option label="禁止提现" :value="3" />
-                <el-option label="禁止充值" :value="4" />
-                <el-option label="禁止游戏" :value="5" />
+                <!-- 口径见 F:\g318\sqls\member_ban_type_dict_20261008.sql（与 player 执行侧效果对齐） -->
+                <el-option label="黑名单（封号）" :value="1" />
+                <el-option label="封设备（未接入）" :value="2" />
+                <el-option label="限制登录" :value="3" />
+                <el-option label="禁止提现" :value="4" />
+                <el-option label="禁止游戏（未接入）" :value="5" />
+                <el-option label="禁止充值（未接入）" :value="6" />
               </el-select>
             </el-form-item>
             <el-form-item label="状态">
@@ -161,11 +163,12 @@
         </el-form-item>
         <el-form-item label="封禁类型">
           <el-select v-model="banForm.banType" style="width: 100%">
-            <el-option label="封号（同步锁定账号）" :value="1" />
-            <el-option label="封设备" :value="2" />
-            <el-option label="禁止提现" :value="3" />
-            <el-option label="禁止充值" :value="4" />
-            <el-option label="禁止游戏" :value="5" />
+            <el-option label="黑名单（封号，同步锁定账号）" :value="1" />
+            <el-option label="封设备（未接入）" :value="2" />
+            <el-option label="限制登录" :value="3" />
+            <el-option label="禁止提现" :value="4" />
+            <el-option label="禁止游戏（未接入）" :value="5" />
+            <el-option label="禁止充值（未接入）" :value="6" />
           </el-select>
         </el-form-item>
         <el-form-item label="封禁天数" prop="banDays">
@@ -230,7 +233,15 @@ const confirmed = async (content: string) => {
 };
 
 const banTypeLabel = (type?: number) =>
-  ({ 1: '封号', 2: '封设备', 3: '禁止提现', 4: '禁止充值', 5: '禁止游戏' } as Record<number, string>)[type ?? -1] ?? '—';
+  // 口径见 F:\g318\sqls\member_ban_type_dict_20261008.sql（与 player 执行侧效果对齐）
+  ({
+    1: '黑名单（封号）',
+    2: '封设备（未接入）',
+    3: '限制登录',
+    4: '禁止提现',
+    5: '禁止游戏（未接入）',
+    6: '禁止充值（未接入）'
+  } as Record<number, string>)[type ?? -1] ?? '—';
 const targetTypeLabel = (type?: number) =>
   ({ 1: 'UID', 2: '设备', 3: 'IP', 4: '手机', 5: '邮箱', 6: 'PAN' } as Record<number, string>)[type ?? -1] ?? '—';
 const sourceLabel = (source?: number) => (source === 2 ? '风控引擎' : source === 3 ? '系统' : '后台');

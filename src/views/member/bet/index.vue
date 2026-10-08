@@ -72,6 +72,13 @@
         <el-table-column label="游戏类型" align="center" prop="gameTypeName" width="110" />
         <el-table-column label="游戏平台" align="center" prop="platformName" width="130" />
         <el-table-column label="游戏名称" align="center" prop="gameName" min-width="150" />
+      <el-table-column label="注单来源" align="center" width="120">
+        <template #default="{ row }">
+          <el-tag :type="row.source === 'MINIGAME' ? 'success' : 'info'">
+            {{ row.source === 'MINIGAME' ? '迷你/直播' : '棋牌/荷官桌' }}
+          </el-tag>
+        </template>
+      </el-table-column>
         <el-table-column label="注单数量" align="center" prop="betCount" width="120" sortable />
         <el-table-column label="投注金额" align="center" prop="betAmount" width="140" sortable />
         <el-table-column label="有效投注" align="center" prop="validBet" width="140" sortable />

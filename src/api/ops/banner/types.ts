@@ -37,6 +37,15 @@ export interface BannerListResult {
   enabledCount?: number;
   /** 当前已写入 bannerInfo 的条数 */
   publishedCount?: number;
+  /**
+   * 待发布差异条数（方案A：由后端逐条比对"结构化配置 vs 已发布配置"得出）
+   * 注意区别于 enabledCount-publishedCount 的粗略算法：仅改内容不改条数时，后者为 0 但本值不为 0。
+   */
+  pendingCount?: number;
+  /** 是否与已发布配置完全一致 */
+  consistent?: boolean;
+  /** 差异明细 */
+  pending?: Array<{ type: 'ADDED' | 'REMOVED' | 'CHANGED' | 'ORDER_CHANGED'; namebanner: string; detail: string }>;
   bannerInfoUpdatedAt?: string | null;
   filePath?: string;
   fileExists?: boolean;
