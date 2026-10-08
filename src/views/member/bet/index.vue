@@ -178,14 +178,23 @@ function applyPeriod() {
   getList();
 }
 
+/**
+ * 取日期部分（YYYY-MM-DD）。
+ *
+ * 为什么需要：本页日期控件是 datetimerange（值为 "YYYY-MM-DD HH:mm:ss"），
+ * 而会员域的统计接口（投注明细列表、输赢分析）入参都是 LocalDate（ISO 日期），
+ * 直接透传会报参数类型不匹配；后端按日粒度聚合，时分秒不参与计算。
+ */
+const dateOnly = (value?: string) => (value ? value.slice(0, 10) : undefined);
+
 async function getList() {
   loading.value = true;
   try {
     const res: any = await memberBetDetailPage({
       ...query,
       // 后端按 stat_date（日粒度）聚合，区间到时分秒仅用于与截图控件形态对齐，取日期部分传参
-      startDate: dateRange.value?.[0]?.slice(0, 10),
-      endDate: dateRange.value?.[1]?.slice(0, 10)
+      startDate: dateOnly(dateRange.value?.[0]),
+      endDate: dateOnly(dateRange.value?.[1])
     });
     rows.value = res.rows ?? [];
     total.value = res.total ?? 0;
@@ -202,7 +211,12 @@ function resetQuery() {
 /** 输赢分析（复用会员域既有接口） */
 async function openWinLoss(row: any) {
   analysis.loginName = row.loginName || row.uid;
-  const data: any = ((await listMemberWinLoss(row.uid, dateRange.value?.[0], dateRange.value?.[1])) as unknown as any)?.data;
+  // FIX(2026-10-08): 必须只传日期部分。
+  // 原因：接口 /infra/member/bet/win-loss/{uid} 的 startDate/endDate 是 LocalDate（ISO 日期），
+  // 而本页日期控件是 datetimerange（值形如 "2026-09-08 00:00:00"），直接透传会报
+  // "参数[startDate]要求类型为：'java.time.LocalDate'，但输入值为：'2026-09-08 00:00:00'"。
+  // 与 getList() 保持同一口径（后端按日粒度聚合，时分秒不参与计算）。
+  const data: any = ((await listMemberWinLoss(row.uid, dateOnly(dateRange.value?.[0]), dateOnly(dateRange.value?.[1]))) as unknown as any)?.data;
   analysis.rows = data ?? [];
   analysis.visible = true;
 }

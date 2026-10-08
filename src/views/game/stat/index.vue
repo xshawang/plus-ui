@@ -45,7 +45,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { gameStatList } from '@/api/game/bet';
+import { gameStatList, gameBetDefaultRange } from '@/api/game/bet';
 
 defineOptions({ name: 'GameStat' });
 
@@ -82,9 +82,21 @@ async function exportData() {
     ElMessage.warning('暂无可导出数据');
     return;
   }
-  const header = Object.keys(rows.value[0]).join(',');
-  const body = rows.value.map((row) => Object.values(row).join(',')).join('\n');
-  const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
+  // 表头用中文列名（原实现导出 Object.keys 原始字段名，运营无法直接使用）
+  const isGame = dimension.value === 'GAME';
+  const cols: Array<[string, string]> = [
+    ['币种', 'currency'],
+    ...(isGame ? ([['平台', 'platformName']] as Array<[string, string]>) : []),
+    [isGame ? '子游戏名称' : '游戏类型', isGame ? 'gameName' : 'gameTypeName'],
+    ['平均日投注人数', 'avgDailyPlayers'],
+    ['注单数', 'orderCount'],
+    ['有效投注', 'validBet'],
+    ['杀率(%)', 'killRate'],
+    ['损益', 'profit']
+  ];
+  const header = cols.map((c) => c[0]).join(',');
+  const body = rows.value.map((row: any) => cols.map((c) => `"${row[c[1]] ?? ''}"`).join(',')).join('\n');
+  const blob = new Blob([`\ufeff${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = `游戏统计_${dimension.value}_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -92,7 +104,28 @@ async function exportData() {
   URL.revokeObjectURL(link.href);
 }
 
-onMounted(load);
+/**
+ * 首屏区间对齐后端定义的「近 7 天」（截图口径 2026-09-08 ~ 2026-09-14）。
+ *
+ * 为什么需要：原实现 range 初始为空 ⇒ 不传 startDate/endDate ⇒ 后端 parse(null) 落「当日」，
+ * 与截图默认区间和后端 default-range 接口口径都不一致（今天无数据时页面直接空表）。
+ * 取不到区间时保持空值，回落后端默认当日，不影响可用性。
+ */
+async function initRange() {
+  try {
+    const r: any = ((await gameBetDefaultRange()) as unknown as any)?.data;
+    if (Array.isArray(r) && r.length === 2) {
+      range.value = r;
+    }
+  } catch {
+    range.value = [];
+  }
+}
+
+onMounted(async () => {
+  await initRange();
+  await load();
+});
 </script>
 
 <style scoped>
