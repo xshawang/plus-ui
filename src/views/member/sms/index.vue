@@ -1,5 +1,7 @@
 <template>
   <div class="p-2 app-container member-sms-page">
+    <el-tabs v-model="activeTab">
+      <el-tab-pane label="短信配置" name="config">
     <el-card shadow="hover" class="table-panel">
       <template #header>
         <div class="toolbar-shell">
@@ -29,14 +31,22 @@
         </el-form-item>
       </el-form>
     </el-card>
+      </el-tab-pane>
+      <el-tab-pane label="短信召回" name="recall" lazy>
+        <RecallRulePanel channel="sms" />
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
 <script setup name="MemberSms" lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import modal from '@/plugins/modal';
 import { listSmsConfig, saveSmsConfig } from '@/api/member/module-config';
+import RecallRulePanel from '../components/RecallRulePanel.vue';
 import { useKvConfig, type ConfigControl } from '../components/useKvConfig';
+
+const activeTab = ref('config');
 
 const controls: ConfigControl[] = [
   { key: 'sms_enabled', label: '短信通道总开关', type: 'switch' },

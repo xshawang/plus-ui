@@ -1,5 +1,7 @@
 <template>
   <div class="p-2 app-container member-register-config-page">
+    <el-tabs v-model="activeTab">
+      <el-tab-pane label="注册与登录配置" name="config">
     <el-card shadow="hover" class="table-panel">
       <template #header>
         <div class="toolbar-shell">
@@ -45,14 +47,100 @@
         </el-form-item>
       </el-form>
     </el-card>
+      </el-tab-pane>
+      <el-tab-pane label="外部注册API配置" name="external" lazy>
+        <el-card v-loading="extLoading" shadow="hover" class="table-panel">
+          <template #header>
+            <div class="toolbar-shell">
+              <div class="table-heading">
+                <h3>外部注册API配置</h3>
+                <p>渠道方通过 API 直接建号的开关、AK/SK 与 IP 白名单；APISecret 密文存储，仅展示掩码。</p>
+              </div>
+              <div class="toolbar-actions">
+                <el-button v-hasPermi="['member:register:edit']" type="primary" :loading="extSaving" @click="saveExternal">保存</el-button>
+                <el-button v-hasPermi="['member:register:edit']" @click="rotateSecret">重置密钥</el-button>
+              </div>
+            </div>
+          </template>
+          <el-form label-width="160px">
+            <el-form-item label="接口开关">
+              <el-switch v-model="extForm.enabled" :active-value="1" :inactive-value="0" />
+            </el-form-item>
+            <el-form-item label="APIKEY">
+              <el-input v-model="extForm.apiKey" style="width: 420px" placeholder="留空则保持原值" />
+            </el-form-item>
+            <el-form-item label="APISecret">
+              <el-input :model-value="extForm.apiSecretMask || '（未配置）'" readonly style="width: 420px" />
+              <el-button class="ml-2" link type="primary" @click="copyMask">复制</el-button>
+              <span class="ml-2 text-gray-400 text-sm">仅展示掩码；重置后新密钥只在弹窗里返回一次。</span>
+            </el-form-item>
+            <el-form-item label="IP白名单">
+              <el-input v-model="extForm.ipWhitelist" type="textarea" :rows="4" style="width: 620px" placeholder="多个 IP 用逗号或换行分隔" />
+            </el-form-item>
+          </el-form>
+        </el-card>
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
 <script setup name="MemberRegisterConfig" lang="ts">
-import { computed } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import modal from '@/plugins/modal';
 import { listRegisterConfig, saveRegisterConfig } from '@/api/member/module-config';
+import { getExternalRegisterConfig, rotateExternalRegisterSecret, saveExternalRegisterConfig, type ExternalRegisterConfigVO } from '@/api/member/recall';
 import { useKvConfig, type ConfigControl } from '../components/useKvConfig';
+
+const activeTab = ref('config');
+
+/** 外部注册 API 配置：密钥只回掩码，重置后仅本次可见明文 */
+const extLoading = ref(false);
+const extSaving = ref(false);
+const extForm = reactive<ExternalRegisterConfigVO & { apiSecret?: string }>({ enabled: 0, apiKey: '', apiSecretMask: '', ipWhitelist: '' });
+
+const loadExternal = async () => {
+  extLoading.value = true;
+  try {
+    const res = await getExternalRegisterConfig();
+    Object.assign(extForm, (res as unknown as { data?: ExternalRegisterConfigVO }).data ?? {});
+  } finally {
+    extLoading.value = false;
+  }
+};
+
+const saveExternal = async () => {
+  extSaving.value = true;
+  try {
+    await saveExternalRegisterConfig({ enabled: extForm.enabled, apiKey: extForm.apiKey, ipWhitelist: extForm.ipWhitelist });
+    modal.msgSuccess('保存成功');
+    await loadExternal();
+  } finally {
+    extSaving.value = false;
+  }
+};
+
+const rotateSecret = async () => {
+  await modal.confirm('重置后旧密钥立即失效，确认重置？');
+  const res = await rotateExternalRegisterSecret();
+  const secret = (res as unknown as { data?: { apiSecret: string } }).data?.apiSecret;
+  if (secret) {
+    await modal.alert(`新 APISecret（仅本次显示，请立即复制）：\n${secret}`);
+  }
+  await loadExternal();
+};
+
+const copyMask = async () => {
+  if (!extForm.apiSecretMask) {
+    modal.msgWarning('当前未配置密钥，请先重置密钥');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(extForm.apiSecretMask);
+    modal.msgSuccess('已复制掩码');
+  } catch {
+    modal.msgWarning('浏览器不支持自动复制，请手动选择');
+  }
+};
 
 const controls: ConfigControl[] = [
   { key: 'register_enabled', label: '开放注册', type: 'switch' },
@@ -81,4 +169,5 @@ const handleSave = async () => {
 };
 
 load();
+loadExternal();
 </script>
