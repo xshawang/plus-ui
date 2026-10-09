@@ -1,7 +1,7 @@
 <template>
   <div class="p-2 app-container game-bet-page">
     <el-card shadow="hover">
-      <el-tabs v-model="tab" @tab-change="reload">
+      <el-tabs v-model="tab" @tab-change="onTabChange">
         <el-tab-pane label="投注明细" name="DETAIL" />
         <el-tab-pane label="投注统计" name="STAT" />
         <el-tab-pane label="主播号投注明细" name="STREAMER" />
@@ -34,7 +34,8 @@
         </el-form-item>
         <el-form-item>
           <el-date-picker v-model="range" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss"
-                          start-placeholder="开始时间" end-placeholder="结束时间" style="width: 360px" />
+                          start-placeholder="开始时间" end-placeholder="结束时间" style="width: 360px"
+                          @change="rangeTouched = true" />
         </el-form-item>
         <!-- 截图：「请选择类型/平台」下拉（类型与平台二选一，传 gameType / providerCode） -->
         <!-- 截图（投注统计）：筛选只有 日/周/月 + 区间 + 会员账号 + 搜索/重置，故此处按页签隐藏 -->
@@ -167,6 +168,11 @@
 
       <!-- 投注统计 -->
       <template v-else>
+        <!-- 口径提示：投注统计读「用户游戏日汇总」（T+1），当天注单次日才可见 -->
+        <el-alert v-if="statLoaded && !loading && !(stat.typeStat?.length) && !(stat.gameStat?.length)"
+                  type="warning" :closable="false" show-icon style="margin-bottom: 8px"
+                  title="所选区间暂无汇总数据：投注统计按「日汇总（T+1）」出数——当天注单要等次日 01:30 汇总后才可见。"
+                  description="需要看当天数据请切到「投注明细」页签（实时读注单表）；或由运维补跑日汇总接口。" />
         <p class="member-bar">
           会员账号：{{ stat.member?.loginName || '—' }} 会员ID：{{ stat.member?.uid || '—' }} 会员币种：{{ stat.member?.currency || '—' }}
         </p>
@@ -208,7 +214,7 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { listGameBetDetail, gameBetOptions, gameBetStat, saveGameBetRemark } from '@/api/game/bet';
+import { listGameBetDetail, gameBetOptions, gameBetStat, saveGameBetRemark, gameBetDefaultRange } from '@/api/game/bet';
 import { gameTypeOptions, platformOptions } from '@/api/game/manage';
 
 defineOptions({ name: 'GameBet' });
@@ -221,6 +227,10 @@ const selection = ref<any[]>([]);
 const range = ref<any>([]);
 const options = reactive<any>({ tip: '' });
 const stat = ref<any>({});
+/** 统计页签是否已完成过一次加载（避免首屏空数据时误弹口径提示） */
+const statLoaded = ref(false);
+/** 用户是否手动动过区间：未动过时切到「投注统计」自动放宽到近 7 天（统计为 T+1 口径，查当天必空） */
+const rangeTouched = ref(false);
 const remarkDialog = reactive({ visible: false, remark: '' });
 /** 时间档位（截图「日/周/月」快捷） */
 const period = ref('DAY');
@@ -273,6 +283,8 @@ function buildParams() {
 
 /** 日/周/月 快捷：按截图回填区间（周=近 7 天含今日，月=近 30 天含今日） */
 function applyPeriod() {
+  // 用户显式选了日/周/月 ⇒ 后续切页签不再自动改写区间
+  rangeTouched.value = true;
   const end = new Date();
   const start = new Date();
   if (period.value === 'WEEK') start.setDate(end.getDate() - 6);
@@ -345,7 +357,29 @@ async function loadStat() {
     })) as unknown as any)?.data ?? {};
   } finally {
     loading.value = false;
+    statLoaded.value = true;
   }
+}
+
+/**
+ * 页签切换。
+ *
+ * 为什么单独处理「投注统计」：该页签读的是 `user_game_daily_summary`（日汇总，T+1 口径，
+ * 无参聚合的是"昨天"），默认区间若是"当天"则**必然空表**，运营会误判为功能坏了。
+ * 因此用户没手动改过区间时，切到该页签自动放宽为近 7 天（与截图 2026-09-08~2026-09-14 一致）。
+ */
+async function onTabChange(name: string) {
+  if (name === 'STAT' && !rangeTouched.value) {
+    try {
+      const r: any = ((await gameBetDefaultRange()) as unknown as any)?.data;
+      if (Array.isArray(r) && r.length === 2) {
+        range.value = [`${r[0]} 00:00:00`, `${r[1]} 23:59:59`];
+      }
+    } catch {
+      // 取不到区间时保持原值，不影响页面可用性
+    }
+  }
+  await reload();
 }
 
 async function reload() {

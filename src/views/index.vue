@@ -15,16 +15,6 @@
       </div>
     </div>
 
-    <!-- 数据链路健康度：断链时明确提示，避免把"0"当成业务真实值 -->
-    <el-alert
-      v-if="health && !health.healthy"
-      type="error"
-      :closable="false"
-      show-icon
-      title="数据链路异常，以下指标可能不是最新值"
-      :description="brokenText"
-    />
-
     <!-- 1. 核心经营指标 -->
     <el-card shadow="hover" class="dash-card">
       <template #header>
@@ -514,19 +504,17 @@ const toNumber = (value?: unknown) => Number(value ?? 0);
 /* ---------------- 0. 口径与数据健康度 ---------------- */
 /**
  * 口径条：明确"当前看的是哪个站点、按什么币种与时区统计"，
- * 并在任一数据源断链时标红，避免把"断链导致的 0"误读成"业务为 0"。
+ * 健康度数据用于区分"断链导致的 0"与"业务真的为 0"。
+ *
+ * FIX: 2026-10-09 按需求移除首页顶部的「数据链路异常，以下指标可能不是最新值」红色提示。
+ * 原因：本地/测试环境存在长期处于断链态的数据源（无真实玩家流量时 onlineUserMinute / metricHourly /
+ * activityDaily / financeDaily 都会被判 BROKEN），提示常驻在首页顶部，干扰运营看看板。
+ * 解决方案：只去掉页面上的提示渲染（不再渲染 el-alert），健康度数据仍照常取回，
+ * 排查时可在浏览器控制台查看 health.value；后端 GET /infra/report/dashboard/health 契约不变，
+ * 后续若要恢复提示，直接重新渲染 health 即可。
  */
 const meta = ref<{ site: string; currency: string; timezone: string }>({ site: '', currency: 'VND', timezone: '' });
 const health = ref<{ healthy: boolean; broken: string[]; snapshotAt: string; sources: any[] } | null>(null);
-const brokenText = computed(() => {
-  if (!health.value || health.value.healthy) {
-    return '';
-  }
-  const names = (health.value.sources ?? [])
-    .filter(item => item.status !== 'OK')
-    .map(item => `${item.description || item.key}（${item.message || '已断链'}）`);
-  return names.join('；');
-});
 
 const loadMetaAndHealth = async () => {
   try {
