@@ -29,6 +29,16 @@ export interface CreditOrderForm {
   bonusAmount?: number;
   turnoverMultiple?: number;
   channelCode?: string;
+  /** 会员币种（客户端/后台可传，留空取客服代充设置默认值） */
+  currency?: string;
+  /** 会员币种比例展示 */
+  currencyRate?: string;
+  /** 标记（运营自定义标签） */
+  tag?: string;
+  /** 来源客服渠道（仅客服代充单；选定后服务端按「渠道 + 会员层级」自动带出赠送金额） */
+  csConfigId?: number;
+  /** 是否以传入的赠送金额为准（true=跳过按层级自动带出） */
+  bonusOverride?: boolean;
   payerName?: string;
   payerAccount?: string;
   payerBank?: string;
@@ -56,6 +66,9 @@ export interface CreditOrderVO {
   bonusAmount?: number;
   turnoverMultiple?: number;
   channelCode?: string;
+  currency?: string;
+  currencyRate?: string;
+  tag?: string;
   payerName?: string;
   payerAccount?: string;
   payerBank?: string;
@@ -64,11 +77,25 @@ export interface CreditOrderVO {
   voucherUrl?: string;
   transferRemark?: string;
   proofRemark?: string;
+  /** 会员层级（member_user_level.level_name，无记录为空） */
+  memberLevel?: string;
+  /** 注册渠道ID */
+  registerChannel?: number;
+  /** 注册来源（渠道名，无渠道=官网） */
+  registerSource?: string;
+  /** 通道名称（finance_channel_route.channel_name，未配置回落 channel_code） */
+  channelName?: string;
+  /** 充值大类（finance_channel_group.group_name，未配置回落「客服代充」/「转账充值」） */
+  rechargeGroupName?: string;
+  /** 总上分金额 = 订单金额 + 赠送金额（分） */
+  totalCreditAmount?: number;
   status: number;
   sourceType?: number;
   lockOperatorId?: string;
   auditOperatorId?: string;
   auditedAt?: string;
+  /** 最后操作人（审核/锁定/备注） */
+  lastOperatorId?: string;
   frontRemark?: string;
   backRemark?: string;
   failReason?: string;

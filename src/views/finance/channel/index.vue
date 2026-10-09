@@ -68,10 +68,17 @@
             <el-table-column label="币种" prop="currency" align="center" width="80" />
             <el-table-column label="费率(%)" prop="feeRate" align="right" width="90" />
             <el-table-column label="成功率(%)" prop="successRate" align="right" width="100" />
-            <el-table-column label="单笔限额(分)" align="right" width="180">
-              <template #default="{ row }">{{ row.amountMin ?? 0 }} ~ {{ row.amountMax ?? 0 }}</template>
+            <el-table-column label="单笔限额" align="right" width="180">
+              <template #default="{ row }">{{ formatMoneyRange(row.amountMin ?? 0, row.amountMax ?? 0) }}</template>
             </el-table-column>
-            <el-table-column label="推荐金额(分)" prop="recommendAmounts" align="left" min-width="160" show-overflow-tooltip />
+            <el-table-column
+              label="推荐金额"
+              prop="recommendAmounts"
+              align="left"
+              min-width="200"
+              show-overflow-tooltip
+              :formatter="moneyListColumnFormatter"
+            />
             <el-table-column label="停启用" align="center" width="90">
               <template #default="{ row }">
                 <el-switch
@@ -199,17 +206,17 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单笔最低(分)">
+            <el-form-item label="单笔最低">
               <el-input-number v-model="routeForm.amountMin" :min="0" controls-position="right" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单笔最高(分)">
+            <el-form-item label="单笔最高">
               <el-input-number v-model="routeForm.amountMax" :min="0" controls-position="right" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
-            <el-form-item label="推荐金额(分)">
+            <el-form-item label="推荐金额">
               <el-input v-model="routeForm.recommendAmounts" placeholder="逗号分隔，如 50000,100000,500000" />
             </el-form-item>
           </el-col>
@@ -284,6 +291,7 @@ import type {
 } from '@/api/finance/channel/types';
 import { merchantOptions } from '@/api/finance/merchant';
 import type { FinanceMerchantVO } from '@/api/finance/merchant/types';
+import { formatMoneyRange, moneyListColumnFormatter } from '@/utils/money';
 
 /**
  * 充值大类与通道路由页（需求文档 2_财务/02）。

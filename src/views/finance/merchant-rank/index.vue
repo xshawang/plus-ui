@@ -129,19 +129,21 @@
         />
         <el-table-column
           v-if="activeTab !== 'RISK' && showColumn('ydAmount')"
-          label="昨日充值金额(分)"
+          label="昨日充值金额"
           prop="ydAmount"
           align="right"
-          width="160"
+          width="180"
           sortable="custom"
+          :formatter="moneyColumnFormatter"
         />
         <el-table-column
           v-if="activeTab !== 'RISK' && showColumn('successAmount')"
-          label="累计充值金额(分)"
+          label="累计充值金额"
           prop="successAmount"
           align="right"
-          width="170"
+          width="190"
           sortable="custom"
+          :formatter="moneyColumnFormatter"
         />
         <el-table-column
           v-if="activeTab !== 'RISK' && showColumn('successRate')"
@@ -215,6 +217,7 @@ import modal from '@/plugins/modal';
 import { getMerchantRankOptions, listMerchantRank } from '@/api/finance/merchant-rank';
 import type { MerchantRankOptions, MerchantRankQuery, MerchantRankTab, MerchantRankVO } from '@/api/finance/merchant-rank';
 import { exportCsv, type CsvColumn } from '../components/csvExport';
+import { moneyColumnFormatter } from '@/utils/money';
 
 /**
  * 三方支付排名页（需求文档 2_财务/08 的三方支付排名部分）。
@@ -240,8 +243,8 @@ const columnDefs: ColumnDef[] = [
   { label: '三方费率', prop: 'feeRate' },
   { label: '昨日充值次数', prop: 'ydCount' },
   { label: '累计充值次数', prop: 'totalCount' },
-  { label: '昨日充值金额(分)', prop: 'ydAmount' },
-  { label: '累计充值金额(分)', prop: 'successAmount' },
+  { label: '昨日充值金额', prop: 'ydAmount' },
+  { label: '累计充值金额', prop: 'successAmount' },
   { label: '充值总成功率', prop: 'successRate' },
   { label: '昨日充值成功率', prop: 'ydSuccessRate' },
   { label: '总平均入款时间', prop: 'avgSeconds' },

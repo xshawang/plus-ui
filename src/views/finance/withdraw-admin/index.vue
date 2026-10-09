@@ -73,9 +73,9 @@
         <el-table-column label="VIP" align="center" width="80">
           <template #default="{ row }">V{{ (row as WithdrawAdminVO).vipLevel ?? 0 }}</template>
         </el-table-column>
-        <el-table-column label="提现金额(分)" prop="amount" align="right" width="130" />
-        <el-table-column label="手续费(分)" prop="feeAmount" align="right" width="120" />
-        <el-table-column label="到账(分)" prop="arriveAmount" align="right" width="120" />
+        <el-table-column label="提现金额" prop="amount" align="right" width="140" :formatter="moneyColumnFormatter" />
+        <el-table-column label="手续费" prop="feeAmount" align="right" width="130" :formatter="moneyColumnFormatter" />
+        <el-table-column label="到账" prop="arriveAmount" align="right" width="130" :formatter="moneyColumnFormatter" />
         <el-table-column label="提现方式" prop="withdrawChannelCode" align="center" width="120" show-overflow-tooltip />
         <el-table-column label="收款账户" prop="beneficiaryMask" align="center" min-width="150" show-overflow-tooltip />
         <el-table-column label="三方代付" prop="payMerchantCode" align="center" width="130" show-overflow-tooltip />
@@ -214,6 +214,7 @@ import {
 } from '@/api/finance/withdraw-admin';
 import type { WithdrawActionForm, WithdrawAdminQuery, WithdrawAdminVO } from '@/api/finance/withdraw-admin';
 import { exportCsv, type CsvColumn } from '../components/csvExport';
+import { moneyColumnFormatter } from '@/utils/money';
 
 /**
  * 财务侧提现管理页（需求文档 2_财务/09、10、11）。
@@ -247,9 +248,9 @@ const allColumns: CsvColumn[] = [
   { label: '订单号', prop: 'orderNo' },
   { label: '会员ID', prop: 'uid' },
   { label: '会员账号', prop: 'account' },
-  { label: '提现金额(分)', prop: 'amount' },
-  { label: '手续费(分)', prop: 'feeAmount' },
-  { label: '到账(分)', prop: 'arriveAmount' },
+  { label: '提现金额', prop: 'amount' },
+  { label: '手续费', prop: 'feeAmount' },
+  { label: '到账', prop: 'arriveAmount' },
   { label: '提现方式', prop: 'withdrawChannelCode' },
   { label: '收款账户', prop: 'beneficiaryMask' },
   { label: '三方代付', prop: 'payMerchantCode' },

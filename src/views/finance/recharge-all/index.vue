@@ -66,7 +66,7 @@
         <el-table-column label="订单号" prop="orderNo" align="center" min-width="200" show-overflow-tooltip />
         <el-table-column label="会员ID" prop="uid" align="center" width="170" show-overflow-tooltip />
         <el-table-column label="会员账号" prop="account" align="center" min-width="120" show-overflow-tooltip />
-        <el-table-column label="充值金额(分)" prop="amount" align="right" width="130" />
+        <el-table-column label="充值金额" prop="amount" align="right" width="140" :formatter="moneyColumnFormatter" />
         <el-table-column label="状态" align="center" width="110">
           <template #default="{ row }">
             <el-tag :type="statusType((row as RechargeOrderVO).status)">{{ statusText((row as RechargeOrderVO).status) }}</el-tag>
@@ -90,10 +90,10 @@
         <el-form-item label="会员ID">
           <el-input :model-value="member?.uid ?? ''" disabled style="width: 260px" />
         </el-form-item>
-        <el-form-item label="账户余额(分)">
-          <el-input :model-value="member?.available ?? ''" disabled style="width: 260px" />
+        <el-form-item label="账户余额">
+          <el-input :model-value="formatMoney(member?.available)" disabled style="width: 260px" />
         </el-form-item>
-        <el-form-item label="充值金额(分)" prop="amount">
+        <el-form-item label="充值金额" prop="amount">
           <el-input-number v-model="createForm.amount" :min="0" controls-position="right" style="width: 260px" />
         </el-form-item>
         <el-form-item label="支付渠道">
@@ -150,6 +150,7 @@ import type { FinanceMemberAssetVO } from '@/api/finance/manual-adjust/types';
 import { createRechargeOrder, listRechargeOrders } from '@/api/finance/recharge-admin';
 import type { RechargeAdminQuery, RechargeOrderForm, RechargeOrderVO } from '@/api/finance/recharge-admin';
 import { exportCsv, type CsvColumn } from '../components/csvExport';
+import { formatMoney, moneyColumnFormatter } from '@/utils/money';
 
 /**
  * 全部充值页（需求文档 2_财务/04、05）。
@@ -200,7 +201,7 @@ const allColumns: CsvColumn[] = [
   { label: '订单号', prop: 'orderNo' },
   { label: '会员ID', prop: 'uid' },
   { label: '会员账号', prop: 'account' },
-  { label: '充值金额(分)', prop: 'amount' },
+  { label: '充值金额', prop: 'amount' },
   { label: '状态', prop: 'status', format: (row) => statusText(Number(row.status)) },
   { label: '支付渠道', prop: 'channel' },
   { label: '通道编码', prop: 'bankCode' },

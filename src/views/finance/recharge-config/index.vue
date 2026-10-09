@@ -5,7 +5,7 @@
         <div class="toolbar-shell">
           <div class="table-heading">
             <h3>充值设置</h3>
-            <p>充值页优惠展示 / 页面展示 / 通知 / 填写信息 / 提示弹窗 / 数字货币充值 / 在线充值 / 转账充值 / 客服代充 / 提现设置</p>
+            <p>充值页优惠展示 / 页面展示 / 通知 / 填写信息 / 提示弹窗 / 数字货币充值 / 在线充值 / 转账充值 / 提现设置</p>
           </div>
           <div class="toolbar-actions">
             <el-button v-hasPermi="['finance:recharge-config:edit']" type="primary" :loading="saving" @click="handleSave">
@@ -33,6 +33,11 @@
                 controls-position="right"
                 style="width: 220px"
               />
+              <el-radio-group v-else-if="control.type === 'radio'" v-model="values[control.key] as string">
+                <el-radio v-for="option in control.options || []" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </el-radio>
+              </el-radio-group>
               <el-select v-else-if="control.type === 'select'" v-model="values[control.key] as string" style="width: 340px">
                 <el-option
                   v-for="option in control.options || []"
@@ -41,14 +46,18 @@
                   :value="option.value"
                 />
               </el-select>
+              <RechargeTabsEditor v-else-if="control.type === 'tabs'" v-model="values[control.key] as string" />
               <el-input
                 v-else
                 v-model="values[control.key] as string"
                 :style="{ width: control.wide ? '460px' : '340px' }"
               />
+              <span v-if="control.suffix" class="ml-2 text-gray-400 text-sm">{{ currencySuffix }}</span>
               <span class="ml-2 text-gray-400 text-sm">{{ descMap[control.key] }}</span>
             </el-form-item>
           </el-form>
+          <!-- 按汇率转为数字货币充值：币种 × 数字货币 勾选矩阵（专用读写端点，不参与上方键值表单保存） -->
+          <CryptoConvertMatrix v-if="group.key === 'finance-recharge-crypto'" />
         </el-tab-pane>
       </el-tabs>
     </el-card>
@@ -56,21 +65,22 @@
 </template>
 
 <script setup name="FinanceRechargeConfig" lang="ts">
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import modal from '@/plugins/modal';
+import RechargeTabsEditor from '../components/RechargeTabsEditor.vue';
+import CryptoConvertMatrix from '../components/CryptoConvertMatrix.vue';
 import {
   listCryptoConfig,
-  listCsRechargeSettingConfig,
   listFormConfig,
   listNotifyConfig,
   listPageDisplayConfig,
   listPopupConfig,
   listPromoConfig,
+  getCryptoMatrixOptions,
   listRechargeSettingConfig,
   listTransferSettingConfig,
   listWithdrawSettingConfig,
   saveCryptoConfig,
-  saveCsRechargeSettingConfig,
   saveFormConfig,
   saveNotifyConfig,
   savePageDisplayConfig,
@@ -85,16 +95,22 @@ import type { ConfigBatchForm, ConfigItemVO } from '@/api/member/config/types';
 /**
  * 财务-充值设置页（需求文档 2_财务/01、06、07、11）。
  *
- * 背景：十个设置分组结构一致（键值 + 中文说明），差异只在控件形态；
+ * 背景：九个设置分组结构一致（键值 + 中文说明），差异只在控件形态；
+ * （「客服代充-设置」已按需求迁到 客服代充 → 代充配置 页签的工具条入口，见 CsChannelConfigPanel.vue）
  * 值口径与 SQL 种子保持一致——开关存 "0"/"1"，枚举/文本存原始字符串，数值存十进制字符串。
+ *
+ * 2026-10-09 按运营后台参照页补齐差异：新增 radio/tabs 控件形态，
+ * 补「弹窗频率/充值默认选项/充值页签/首充·充值最低金额」，数字货币页签换成勾选矩阵子组件。
  */
-type ControlType = 'switch' | 'select' | 'number' | 'text';
+type ControlType = 'switch' | 'select' | 'radio' | 'number' | 'text' | 'tabs';
 
 interface Control {
   key: string;
   label: string;
   type: ControlType;
   wide?: boolean;
+  /** 数值后缀提示（如最低金额后面跟会员币种比例 VND1000:1） */
+  suffix?: boolean;
   options?: Array<{ label: string; value: string }>;
 }
 
@@ -276,7 +292,19 @@ const groups: Group[] = [
           { label: '推荐金额在金额输入框下方', value: 'BELOW' },
           { label: '推荐金额在金额输入框上方', value: 'ABOVE' }
         ]
-      }
+      },
+      // 参照页「充值默认选项」：上次使用通道 / 第一个推荐
+      {
+        key: 'recharge_default_option',
+        label: '充值默认选项',
+        type: 'radio',
+        options: [
+          { label: '上次使用通道', value: 'LAST_CHANNEL' },
+          { label: '第一个推荐', value: 'FIRST_RECOMMEND' }
+        ]
+      },
+      // 参照页「充值页签」：可勾选启用 + 可改名 + 可排序（存 JSON 数组）
+      { key: 'recharge_tabs', label: '充值页签', type: 'tabs' }
     ]
   },
   {
@@ -318,6 +346,9 @@ const groups: Group[] = [
           { label: '自动填充本人姓名且不可修改(合规)', value: 'SELF_LOCKED' }
         ]
       },
+      // 参照图6：合规最低金额（后缀展示会员币种比例，如 VND1000:1）
+      { key: 'min_first_recharge_amount', label: '首充最低金额(合规)', type: 'number', suffix: true },
+      { key: 'min_recharge_amount', label: '充值最低金额(合规)', type: 'number', suffix: true },
       { key: 'form_payer_wallet', label: '付款人钱包地址填写(0/1/2)', type: 'number' },
       { key: 'form_transfer_voucher', label: '上传转账凭证填写(0/1/2)', type: 'number' }
     ]
@@ -329,7 +360,20 @@ const groups: Group[] = [
     loader: listPopupConfig,
     saver: savePopupConfig,
     controls: [
-      { key: 'popup_enabled', label: '充值提示弹窗总开关', type: 'switch' },
+      // 参照图2：把"是否弹窗 + 频率"合并成一个五选一；保存时由频率反推 popup_enabled（NEVER=0，其余=1）
+      {
+        key: 'popup_freq',
+        label: '弹窗提示',
+        type: 'radio',
+        options: [
+          { label: '不弹窗', value: 'NEVER' },
+          { label: '首次弹一次', value: 'FIRST_ONCE' },
+          { label: '每天首次弹一次', value: 'DAILY_FIRST' },
+          { label: '每次都弹一次', value: 'EVERY_TIME' },
+          { label: '每隔N天提示一次', value: 'EVERY_N_DAYS' }
+        ]
+      },
+      { key: 'popup_interval_days', label: '每隔天数(N)', type: 'number' },
       {
         key: 'popup_scene',
         label: '充值提示弹窗场景',
@@ -405,12 +449,12 @@ const groups: Group[] = [
           { label: '超过比例不自动上分', value: 'MANUAL' }
         ]
       },
-      { key: 'credit_limit_amount', label: '上分金额超限门槛(分)', type: 'number' },
-      { key: 'daily_bonus_limit', label: '每日充值赠送上限(分)', type: 'number' },
+      { key: 'credit_limit_amount', label: '上分金额超限门槛', type: 'number' },
+      { key: 'daily_bonus_limit', label: '每日充值赠送上限', type: 'number' },
       { key: 'turnover_default_principal', label: '默认层级-本金稽核倍数', type: 'text' },
       { key: 'turnover_default_bonus', label: '默认层级-奖金稽核倍数', type: 'text' },
       { key: 'manual_adjust_audit_enabled', label: '人工加扣款走二级审核', type: 'switch' },
-      { key: 'manual_adjust_audit_amount', label: '人工加扣款审核门槛(分)', type: 'number' }
+      { key: 'manual_adjust_audit_amount', label: '人工加扣款审核门槛', type: 'number' }
     ]
   },
   {
@@ -435,22 +479,7 @@ const groups: Group[] = [
       { key: 'audit_voice_notify', label: '转账审核语音通知', type: 'switch' },
       { key: 'backend_lock_order', label: '后台锁定转账订单', type: 'switch' },
       { key: 'remark_switch', label: '转账附言开关', type: 'switch' },
-      { key: 'daily_bonus_limit', label: '每日充值赠送上限(分)', type: 'number' }
-    ]
-  },
-  {
-    key: 'finance-cs-recharge-setting',
-    label: '客服代充-设置',
-    tip: '客服代充稽核倍数、订单有效期、是否需审核、每日代充上限与后台锁定。',
-    loader: listCsRechargeSettingConfig,
-    saver: saveCsRechargeSettingConfig,
-    controls: [
-      { key: 'turnover_default_principal', label: '默认层级-本金稽核倍数', type: 'text' },
-      { key: 'turnover_default_bonus', label: '默认层级-奖金稽核倍数', type: 'text' },
-      { key: 'order_expire_minutes', label: '订单有效时间(分钟)', type: 'number' },
-      { key: 'cs_audit_required', label: '客服代充是否需要审核', type: 'switch' },
-      { key: 'cs_daily_limit', label: '客服每日代充上限(分,0=不限)', type: 'number' },
-      { key: 'cs_backend_lock_order', label: '后台锁定代充订单', type: 'switch' }
+      { key: 'daily_bonus_limit', label: '每日充值赠送上限', type: 'number' }
     ]
   },
   {
@@ -461,14 +490,14 @@ const groups: Group[] = [
     saver: saveWithdrawSettingConfig,
     controls: [
       { key: 'auto_audit_enabled', label: '风控自动审核开关', type: 'switch' },
-      { key: 'auto_audit_amount', label: '风控自动审核金额门槛(分)', type: 'number' },
-      { key: 'no_audit_amount', label: '免审出款金额上限(分)', type: 'number' },
+      { key: 'auto_audit_amount', label: '风控自动审核金额门槛', type: 'number' },
+      { key: 'no_audit_amount', label: '免审出款金额上限', type: 'number' },
       { key: 'day_withdraw_times', label: '每日提现次数上限(0=不限)', type: 'number' },
       { key: 'withdraw_fee_rate', label: '提现手续费率(%)', type: 'text' },
-      { key: 'withdraw_fee_min', label: '提现手续费最低(分)', type: 'number' },
+      { key: 'withdraw_fee_min', label: '提现手续费最低', type: 'number' },
       { key: 'order_expire_minutes', label: '订单有效时间(分钟)', type: 'number' },
       { key: 'payee_third_enabled', label: '三方代付开关', type: 'switch' },
-      { key: 'large_amount_threshold', label: '大额提现告警门槛(分)', type: 'number' },
+      { key: 'large_amount_threshold', label: '大额提现告警门槛', type: 'number' },
       { key: 'withdraw_to_recharge_enabled', label: '提现转充值开关', type: 'switch' }
     ]
   }
@@ -477,6 +506,8 @@ const groups: Group[] = [
 const activeGroup = ref(groups[0].key);
 const loading = ref(false);
 const saving = ref(false);
+/** 会员币种比例后缀（如 VND1000:1）：取平台默认启用币种，用于「首充/充值最低金额」右侧提示 */
+const currencySuffix = ref('');
 const values = reactive<Record<string, number | string>>({});
 const descMap = reactive<Record<string, string>>({});
 
@@ -512,6 +543,11 @@ const handleSave = async () => {
     configKey: control.key,
     configValue: String(values[control.key] ?? '')
   }));
+  // 弹窗频率与总开关联动：不做成两个开关，保存时按频率反推 popup_enabled（NEVER=不弹窗=0，其余=1），
+  // 这样老的 popup_enabled 键仍然准确，客户端只需读一个总开关即可短路。
+  if (group.key === 'finance-recharge-popup') {
+    items.push({ configKey: 'popup_enabled', configValue: values.popup_freq === 'NEVER' ? '0' : '1' });
+  }
   saving.value = true;
   try {
     await group.saver({ items });
@@ -527,4 +563,21 @@ const handleTabChange = () => {
 };
 
 load();
+
+/**
+ * 取会员币种比例后缀（参照页在最低金额右侧展示「VND1000:1」）。
+ *
+ * 为什么复用数字货币矩阵的数据源：币种清单与比例来自 sys_currency_config，
+ * 矩阵端点已经把它和字典一起返回，无需再新增一个只读接口。
+ */
+onMounted(async () => {
+  try {
+    const res = await getCryptoMatrixOptions();
+    const currencies = res.data?.currencies ?? [];
+    const preferred = currencies.find((item) => item.masterSwitch === 1) ?? currencies.find((item) => item.code === 'VND') ?? currencies[0];
+    currencySuffix.value = preferred ? `${preferred.code}${preferred.ratio ?? ''}` : '';
+  } catch {
+    currencySuffix.value = '';
+  }
+});
 </script>

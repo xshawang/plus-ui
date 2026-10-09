@@ -58,3 +58,31 @@ export const saveWithdrawSettingConfig = (data: ConfigBatchForm) => saveOf('fina
 /** 稽核任务-设置 */
 export const listAuditSettingConfig = () => listOf('finance-audit-setting');
 export const saveAuditSettingConfig = (data: ConfigBatchForm) => saveOf('finance-audit-setting', data);
+
+/**
+ * 「按汇率转为数字货币充值」矩阵（币种 × 数字货币）。
+ *
+ * 为什么不用通用 KV 端点：该页签不是纯键值表单，而是一张勾选矩阵，
+ * 数据源（币种 sys_currency_config、数字货币字典 finance_crypto_coin）与服务端校验需要专门的读写口径。
+ */
+export interface CryptoMatrixCurrency {
+  code: string;
+  name: string;
+  ratio?: string;
+  masterSwitch?: number;
+}
+
+export interface CryptoMatrixOptions {
+  currencies: CryptoMatrixCurrency[];
+  coins: Array<{ value: string; label: string }>;
+  /** 币种代码 → 已勾选的数字货币代码数组 */
+  matrix: Record<string, string[]>;
+}
+
+/** 读取矩阵与下拉数据源 */
+export const getCryptoMatrixOptions = (): AxiosPromise<CryptoMatrixOptions> =>
+  request({ url: '/infra/finance/recharge-config/crypto-matrix/options', method: 'get' });
+
+/** 保存矩阵（币种/数字货币合法性由服务端校验） */
+export const saveCryptoMatrix = (matrix: Record<string, string[]>): AxiosPromise<{ matrix: Record<string, string[]> }> =>
+  request({ url: '/infra/finance/recharge-config/crypto-matrix', method: 'put', data: { matrix } });

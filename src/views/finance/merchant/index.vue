@@ -57,8 +57,8 @@
         <el-table-column label="通道代码" prop="providerCode" align="center" width="120" show-overflow-tooltip />
         <el-table-column label="币种" prop="currency" align="center" width="90" />
         <el-table-column label="费率(%)" prop="feeRate" align="right" width="100" />
-        <el-table-column label="单笔限额(分)" align="right" width="200">
-          <template #default="{ row }">{{ row.amountMin ?? 0 }} ~ {{ row.amountMax ?? 0 }}</template>
+        <el-table-column label="单笔限额" align="right" width="200">
+          <template #default="{ row }">{{ formatMoneyRange(row.amountMin ?? 0, row.amountMax ?? 0) }}</template>
         </el-table-column>
         <el-table-column label="优先级" prop="priorityNo" align="center" width="90" />
         <el-table-column label="跑路风险" align="center" width="110">
@@ -122,17 +122,17 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单笔最低(分)">
+            <el-form-item label="单笔最低">
               <el-input-number v-model="form.amountMin" :min="0" controls-position="right" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单笔最高(分)">
+            <el-form-item label="单笔最高">
               <el-input-number v-model="form.amountMax" :min="0" controls-position="right" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="日限额(分,0=不限)">
+            <el-form-item label="日限额(0=不限)">
               <el-input-number v-model="form.dailyLimit" :min="0" controls-position="right" style="width: 100%" />
             </el-form-item>
           </el-col>
@@ -191,6 +191,7 @@ import type { FormInstance, FormRules } from 'element-plus';
 import modal from '@/plugins/modal';
 import { changeMerchantStatus, deleteMerchant, listMerchant, saveMerchant } from '@/api/finance/merchant';
 import type { FinanceMerchantForm, FinanceMerchantQuery, FinanceMerchantVO } from '@/api/finance/merchant/types';
+import { formatMoneyRange } from '@/utils/money';
 
 /**
  * 第三方支付/代付商户管理页（需求文档 2_财务/03、08）。

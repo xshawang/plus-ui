@@ -33,8 +33,8 @@
       <el-row :gutter="12">
         <el-col :span="6">
           <div class="stat-card">
-            <p class="stat-label">成功充值金额(分)</p>
-            <p class="stat-value text-blue-500">{{ summary.successAmount ?? 0 }}</p>
+            <p class="stat-label">成功充值金额</p>
+            <p class="stat-value text-blue-500">{{ formatMoney(summary.successAmount ?? 0) }}</p>
           </div>
         </el-col>
         <el-col :span="6">
@@ -51,8 +51,8 @@
         </el-col>
         <el-col :span="6">
           <div class="stat-card">
-            <p class="stat-label">客单价(分)</p>
-            <p class="stat-value">{{ summary.avgAmount ?? 0 }}</p>
+            <p class="stat-label">客单价</p>
+            <p class="stat-value">{{ formatMoney(summary.avgAmount ?? 0) }}</p>
           </div>
         </el-col>
       </el-row>
@@ -72,14 +72,14 @@
           <el-table v-loading="loading" border :data="channelRows" size="small">
             <el-table-column label="支付渠道" prop="channel" align="center" min-width="120" />
             <el-table-column label="成功笔数" prop="successCount" align="right" width="120" />
-            <el-table-column label="成功金额(分)" prop="successAmount" align="right" width="160" />
+            <el-table-column label="成功金额" prop="successAmount" align="right" width="170" :formatter="moneyColumnFormatter" />
           </el-table>
         </el-col>
         <el-col :span="12">
           <el-table v-loading="loading" border :data="dailyRows" size="small" max-height="320">
             <el-table-column label="日期" prop="statDate" align="center" min-width="120" />
             <el-table-column label="成功笔数" prop="successCount" align="right" width="120" />
-            <el-table-column label="成功金额(分)" prop="successAmount" align="right" width="160" />
+            <el-table-column label="成功金额" prop="successAmount" align="right" width="170" :formatter="moneyColumnFormatter" />
           </el-table>
         </el-col>
       </el-row>
@@ -104,7 +104,7 @@
         <el-table-column label="成功笔数" prop="successCount" align="right" width="110" />
         <el-table-column label="成功率(%)" prop="successRate" align="right" width="120" />
         <el-table-column label="费率(%)" prop="feeRate" align="right" width="110" />
-        <el-table-column label="成功金额(分)" prop="successAmount" align="right" width="160" />
+            <el-table-column label="成功金额" prop="successAmount" align="right" width="170" :formatter="moneyColumnFormatter" />
       </el-table>
     </el-card>
 
@@ -138,7 +138,7 @@
           </template>
         </el-table-column>
         <el-table-column label="成功笔数" prop="successCount" align="right" width="120" />
-        <el-table-column label="成功金额(分)" prop="successAmount" align="right" width="170" />
+        <el-table-column label="成功金额" prop="successAmount" align="right" width="180" :formatter="moneyColumnFormatter" />
       </el-table>
       <el-empty v-if="!loading && rankingRows.length === 0" :image-size="60" description="当前区间没有成功充值订单" />
     </el-card>
@@ -159,6 +159,7 @@ import type {
   FinanceStatRoute,
   FinanceStatSummary
 } from '@/api/finance/recharge-stat/types';
+import { formatMoney, moneyColumnFormatter } from '@/utils/money';
 
 /**
  * 充值统计与渠道报表页（需求文档 2_财务/08）。

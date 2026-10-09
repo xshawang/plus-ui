@@ -89,10 +89,10 @@
             </el-table-column>
             <el-table-column label="渠道类型" prop="channelType" align="center" width="110" />
             <el-table-column label="收款账号" prop="receiveNumber" align="center" width="150" show-overflow-tooltip />
-            <el-table-column label="单笔限额(分)" align="right" width="180">
-              <template #default="{ row }">{{ row.minAmount ?? 0 }} ~ {{ row.maxAmount ?? 0 }}</template>
+            <el-table-column label="单笔限额" align="right" width="180">
+              <template #default="{ row }">{{ formatMoneyRange(row.minAmount ?? 0, row.maxAmount ?? 0) }}</template>
             </el-table-column>
-            <el-table-column label="赠送(分)" prop="bonusAmount" align="right" width="110" />
+            <el-table-column label="赠送" prop="bonusAmount" align="right" width="120" :formatter="moneyColumnFormatter" />
             <el-table-column label="排序权重" prop="orderNavigate" align="center" width="100" />
             <el-table-column label="状态" align="center" width="100">
               <template #default="{ row }">
@@ -164,6 +164,7 @@
 
 <script setup name="FinanceExchangeRate" lang="ts">
 import { reactive, ref } from 'vue';
+import { formatMoneyRange, moneyColumnFormatter } from '@/utils/money';
 import { ElMessageBox } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
 import modal from '@/plugins/modal';

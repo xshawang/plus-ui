@@ -62,20 +62,20 @@
         </el-col>
         <el-col :span="3">
           <div class="stat-card">
-            <p class="stat-label">账户余额(分)</p>
-            <p class="stat-value">{{ member.available ?? 0 }}</p>
+            <p class="stat-label">账户余额</p>
+            <p class="stat-value">{{ formatMoney(member.available ?? 0) }}</p>
           </div>
         </el-col>
         <el-col :span="3">
           <div class="stat-card">
-            <p class="stat-label">利息宝(分)</p>
-            <p class="stat-value">{{ member.extra ?? 0 }}</p>
+            <p class="stat-label">利息宝</p>
+            <p class="stat-value">{{ formatMoney(member.extra ?? 0) }}</p>
           </div>
         </el-col>
         <el-col :span="3">
           <div class="stat-card">
-            <p class="stat-label">合计总余额(分)</p>
-            <p class="stat-value text-blue-500">{{ member.total ?? 0 }}</p>
+            <p class="stat-label">合计总余额</p>
+            <p class="stat-value text-blue-500">{{ formatMoney(member.total ?? 0) }}</p>
           </div>
         </el-col>
       </el-row>
@@ -108,9 +108,13 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="场馆余额(分)" align="right" width="150">
+        <el-table-column label="场馆余额" align="right" width="150">
           <template #default="{ row }">
-            {{ (row as VendorWalletVO).balance === null || (row as VendorWalletVO).balance === undefined ? '-' : (row as VendorWalletVO).balance }}
+            {{
+              (row as VendorWalletVO).balance === null || (row as VendorWalletVO).balance === undefined
+                ? '-'
+                : formatMoney((row as VendorWalletVO).balance)
+            }}
           </template>
         </el-table-column>
         <el-table-column label="说明" prop="note" align="left" min-width="280" show-overflow-tooltip />
@@ -182,17 +186,17 @@
         <el-table-column label="操作" align="center" width="120">
           <template #default="{ row }">{{ typeText(row.adjustType) }}</template>
         </el-table-column>
-        <el-table-column label="加款(分)" align="right" width="120">
-          <template #default="{ row }">{{ row.adjustType === 1 ? row.adjustAmount : '-' }}</template>
+        <el-table-column label="加款" align="right" width="120">
+          <template #default="{ row }">{{ row.adjustType === 1 ? formatMoney(row.adjustAmount) : '-' }}</template>
         </el-table-column>
-        <el-table-column label="扣除(分)" align="right" width="120">
-          <template #default="{ row }">{{ isDeduct(row.adjustType) ? row.adjustAmount : '-' }}</template>
+        <el-table-column label="扣除" align="right" width="120">
+          <template #default="{ row }">{{ isDeduct(row.adjustType) ? formatMoney(row.adjustAmount) : '-' }}</template>
         </el-table-column>
-        <el-table-column label="追缴(分)" align="right" width="110">
-          <template #default="{ row }">{{ row.chaseAmount ? row.chaseAmount : '-' }}</template>
+        <el-table-column label="追缴" align="right" width="110">
+          <template #default="{ row }">{{ row.chaseAmount ? formatMoney(row.chaseAmount) : '-' }}</template>
         </el-table-column>
-        <el-table-column label="未追缴(分)" align="right" width="120">
-          <template #default="{ row }">{{ row.unchasedAmount ? row.unchasedAmount : '-' }}</template>
+        <el-table-column label="未追缴" align="right" width="120">
+          <template #default="{ row }">{{ row.unchasedAmount ? formatMoney(row.unchasedAmount) : '-' }}</template>
         </el-table-column>
         <el-table-column label="稽核倍数" prop="turnoverMultiple" align="right" width="100" />
         <el-table-column label="状态" align="center" width="110">
@@ -235,11 +239,11 @@
         <el-form-item label="真实姓名">
           <el-input :model-value="member?.realName ?? ''" disabled style="width: 260px" />
         </el-form-item>
-        <el-form-item label="账户余额(分)">
-          <el-input :model-value="member?.available ?? 0" disabled style="width: 260px" />
+        <el-form-item label="账户余额">
+          <el-input :model-value="formatMoney(member?.available ?? 0)" disabled style="width: 260px" />
         </el-form-item>
-        <el-form-item v-if="adjustForm.adjustType !== 1" label="合计总余额(分)">
-          <el-input :model-value="member?.total ?? 0" disabled style="width: 260px" />
+        <el-form-item v-if="adjustForm.adjustType !== 1" label="合计总余额">
+          <el-input :model-value="formatMoney(member?.total ?? 0)" disabled style="width: 260px" />
         </el-form-item>
         <el-form-item label="类型" prop="adjustType">
           <el-radio-group v-model="adjustForm.adjustType">
@@ -253,7 +257,7 @@
             </template>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="订单金额(分)" prop="adjustAmount">
+        <el-form-item label="订单金额" prop="adjustAmount">
           <el-input-number
             v-model="adjustForm.adjustAmount"
             :min="0"
@@ -306,7 +310,7 @@
             <el-option v-for="item in vendorRows" :key="item.vendorCode" :label="`${item.vendorName}（${item.vendorCode}）`" :value="item.vendorCode" />
           </el-select>
         </el-form-item>
-        <el-form-item label="拉回金额(分)" prop="amount">
+        <el-form-item label="拉回金额" prop="amount">
           <el-input-number v-model="pullBackForm.amount" :min="0" controls-position="right" style="width: 260px" />
         </el-form-item>
         <el-form-item label="场馆转出流水号" prop="externalTxnNo">
@@ -352,6 +356,7 @@ import type {
 } from '@/api/finance/manual-adjust/types';
 import { listVendorWallets, pullBackVendor } from '@/api/finance/vendor';
 import type { VendorPullBackForm, VendorWalletVO } from '@/api/finance/vendor';
+import { formatMoney } from '@/utils/money';
 
 /**
  * 人工拉回修正页（需求文档 2_财务/12）。

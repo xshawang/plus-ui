@@ -60,11 +60,11 @@
           <template #default="{ row }">{{ sourceText(row.sourceType) }}</template>
         </el-table-column>
         <el-table-column label="关联单号" prop="sourceNo" align="center" min-width="170" show-overflow-tooltip />
-        <el-table-column label="记账金额(分)" prop="sourceAmount" align="right" width="130" />
+        <el-table-column label="记账金额" prop="sourceAmount" align="right" width="130" :formatter="moneyColumnFormatter" />
         <el-table-column label="倍数" prop="rolloverMultiple" align="right" width="90" />
-        <el-table-column label="目标流水(分)" prop="targetAmount" align="right" width="140" />
-        <el-table-column label="已打码(分)" prop="rolledAmount" align="right" width="130" />
-        <el-table-column label="剩余(分)" prop="remainingAmount" align="right" width="130" />
+        <el-table-column label="目标流水" prop="targetAmount" align="right" width="140" :formatter="moneyColumnFormatter" />
+        <el-table-column label="已打码" prop="rolledAmount" align="right" width="130" :formatter="moneyColumnFormatter" />
+        <el-table-column label="剩余" prop="remainingAmount" align="right" width="130" :formatter="moneyColumnFormatter" />
         <el-table-column label="状态" align="center" width="110">
           <template #default="{ row }">
             <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
@@ -96,8 +96,8 @@
         <el-form-item label="真实姓名">
           <el-input :model-value="member?.realName ?? ''" disabled style="width: 260px" />
         </el-form-item>
-        <el-form-item label="账户余额(分)">
-          <el-input :model-value="member?.available ?? ''" disabled style="width: 260px" />
+        <el-form-item label="账户余额">
+          <el-input :model-value="formatMoney(member?.available)" disabled style="width: 260px" />
         </el-form-item>
         <el-form-item label="稽核来源" prop="sourceType">
           <el-select v-model="form.sourceType" style="width: 260px">
@@ -110,7 +110,7 @@
         <el-form-item label="关联单号">
           <el-input v-model="form.sourceNo" placeholder="留空自动生成" style="width: 260px" />
         </el-form-item>
-        <el-form-item label="记账金额(分)" prop="sourceAmount">
+        <el-form-item label="记账金额" prop="sourceAmount">
           <el-input-number v-model="form.sourceAmount" :min="0" controls-position="right" style="width: 260px" />
         </el-form-item>
         <el-form-item label="流水倍数">
@@ -161,6 +161,7 @@
 
 <script setup name="FinanceAuditTask" lang="ts">
 import { reactive, ref } from 'vue';
+import { formatMoney, moneyColumnFormatter } from '@/utils/money';
 import type { FormInstance, FormRules } from 'element-plus';
 import modal from '@/plugins/modal';
 import { createAuditTask, getAuditTaskDetail, listAuditTask, releaseAuditTask } from '@/api/finance/audit-task';
@@ -184,10 +185,10 @@ interface SettingControl {
 const settingControls: SettingControl[] = [
   { key: 'default_multiple', label: '默认流水倍数', type: 'text' },
   { key: 'default_expire_days', label: '默认有效天数(0=永久)', type: 'number' },
-  { key: 'min_bet_amount', label: '计入有效流水最低单注(分)', type: 'number' },
+  { key: 'min_bet_amount', label: '计入有效流水最低单注', type: 'number' },
   { key: 'game_scope', label: '默认限定游戏范围', type: 'text' },
   { key: 'auto_release_enabled', label: '稽核自动解除额度开关', type: 'switch' },
-  { key: 'auto_release_threshold', label: '自动解除额度(分)', type: 'number' },
+  { key: 'auto_release_threshold', label: '自动解除额度', type: 'number' },
   { key: 'withdraw_block_enabled', label: '未达标阻断提现', type: 'switch' }
 ];
 
