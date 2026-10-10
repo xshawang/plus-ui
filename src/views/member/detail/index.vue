@@ -315,6 +315,9 @@ import { listMemberDevice } from '@/api/member/device';
 import type { MemberDeviceVO } from '@/api/member/device/types';
 import { listMemberLog } from '@/api/member/log';
 import type { MemberLogVO } from '@/api/member/log/types';
+// FIX(2026-10-10): 会员详情支持"账号 → uid"解析，需要复用会员列表接口（见 handleLoad）
+import { listMemberUser } from '@/api/member/users';
+import type { MemberUserVO } from '@/api/member/users/types';
 
 type DataBody<T> = { data?: T };
 type PageBody<T> = { rows?: T[]; total?: number };
@@ -357,13 +360,36 @@ const bizTypeLabel = (type?: number) =>
   ({ 1: '充值', 2: '提现', 3: '下注', 4: '派彩', 5: '退款', 6: '人工调账' } as Record<number, string>)[type ?? -1] ?? '其他';
 
 const handleLoad = async () => {
-  const uid = uidInput.value.trim();
-  if (!uid) {
+  const input = uidInput.value.trim();
+  if (!input) {
     modal.msgWarning('请输入会员ID');
     return;
   }
   loading.value = true;
   try {
+    // FIX(2026-10-10): 输入非数字时先按"会员账号"解析出 uid，再调用详情接口。
+    // 原因：本页输入框是自由文本，旧实现把内容原样拼进路径（/infra/member/detail/{uid}/overview），
+    // 后端 @PathVariable Long uid 直接类型校验失败，返回
+    // "请求参数类型不匹配，参数[uid]要求类型为：'java.lang.Long'，但输入值为：'www'"。
+    // 解决方案：纯数字按 uid 用；非数字先经会员列表按 loginName 精确查询换取 uid；
+    // 查不到/多条时给出明确提示，不再把非法值拼进 URL（同时避免后续各页签接口重复报错）。
+    let uid = input;
+    if (!/^\d+$/.test(input)) {
+      // 注意：后端 loginName 是**模糊**匹配（实测 "g318test" 会命中 g318test1/g318test2），
+      // 因此这里必须再按"精确相等"过滤一次，否则会把近似账号当成目标会员。
+      const matched = (await listMemberUser({ loginName: input, pageNum: 1, pageSize: 20 })) as unknown as PageBody<MemberUserVO>;
+      const exact = (matched.rows ?? []).filter((item) => item.loginName === input);
+      if (!exact.length) {
+        modal.msgWarning(`未找到账号为「${input}」的会员，请输入数字会员ID或正确的会员账号`);
+        return;
+      }
+      if (exact.length > 1) {
+        modal.msgWarning(`账号「${input}」匹配到多个会员，请输入数字会员ID精确定位`);
+        return;
+      }
+      uid = String(exact[0].uid);
+      uidInput.value = uid;
+    }
     currentUid.value = uid;
     const res = (await getMemberDetailOverview(uid)) as unknown as DataBody<MemberDetailOverviewVO>;
     Object.assign(overview, res.data ?? { uid: 0 });

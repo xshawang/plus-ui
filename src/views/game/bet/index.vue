@@ -106,7 +106,8 @@
           <template v-else>
             <el-table-column label="会员账号(ID)" align="center" width="170">
               <template #default="{ row }">
-                <div>{{ row.loginName }}</div>
+                <!-- 防御：账号缺失时不要把列渲染成只有 "(uid)"（历史上机器人 uid 无 player_account 行即如此） -->
+                <div>{{ row.loginName || '—' }}</div>
                 <div class="sub">({{ row.uid }})</div>
               </template>
             </el-table-column>
