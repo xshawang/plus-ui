@@ -324,13 +324,20 @@ const openBindDialog = () => {
   bindDialog.visible = true;
 };
 
-const parseUids = (text: string) =>
+/**
+ * 解析会员ID输入框。
+ *
+ * FIX(2026-10-10): 返回**字符串**而不是 number。
+ * 原因：会员UID 是 19 位雪花ID（如 2108388244222775296），超出 JS 安全整数范围，
+ * 原实现 `.map(Number)` 会丢精度（…775296 → …775300），后端拿错误 uid 查不到会员，
+ * bind() 静默 continue，最终"影响 0 条"但界面提示成功。
+ * 解决方案：仅做数字格式校验，保留原始字符串；服务端 List<Long> 可直接接收数字字符串。
+ */
+const parseUids = (text: string): string[] =>
   text
     .split(/[,，\s]+/)
     .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-    .map((item) => Number(item))
-    .filter((item) => Number.isFinite(item) && item > 0);
+    .filter((item) => /^\d+$/.test(item));
 
 const submitBind = async () => {
   const uids = parseUids(bindForm.uidText);
@@ -350,7 +357,13 @@ const submitBind = async () => {
   const res = (await withButtonLoading(async () =>
     bindForm.mode === 'bind' ? bindMemberTag(payload) : unbindMemberTag(payload)
   )) as unknown as DataBody<number>;
-  modal.msgSuccess(`操作完成（影响 ${res?.data ?? 0} 条）`);
+  // FIX(2026-10-10): 影响 0 条时必须给出可读提示，不能一律报"成功"（否则用户以为打标成功但列表看不到）。
+  const affected = res?.data ?? 0;
+  if (affected > 0) {
+    modal.msgSuccess(`操作完成（影响 ${affected} 条）`);
+  } else {
+    modal.msgWarning('未产生任何变更：请确认会员ID是否存在，或该会员与所选标签之间已无变化');
+  }
   bindDialog.visible = false;
   bindForm.uidText = '';
   bindForm.tagIds = [];

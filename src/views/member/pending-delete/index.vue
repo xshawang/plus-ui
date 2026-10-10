@@ -319,13 +319,13 @@ const confirmed = async (content: string) => {
   }
 };
 
-const parseUids = (text: string): number[] =>
+// FIX(2026-10-10): 同上——会员UID 是 19 位雪花ID，超出 JS 安全整数范围，
+// 用 Number() 转换会丢精度导致后端查不到会员；这里保持字符串。
+const parseUids = (text: string): string[] =>
   text
     .split(/[\s,，;；]+/)
     .map((item) => item.trim().replace(/[^\d]/g, ''))
-    .filter((item) => item.length > 0)
-    .map((item) => Number(item))
-    .filter((item) => Number.isFinite(item));
+    .filter((item) => item.length > 0);
 
 const getList = async () => {
   await withLoading(async () => {

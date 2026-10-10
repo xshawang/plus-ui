@@ -37,6 +37,14 @@ export interface MemberTagForm {
 }
 
 export interface MemberTagBindForm {
-  uids: number[];
+  /**
+   * 会员UID。
+   *
+   * FIX(2026-10-10): 类型放宽为 string。原因：UID 是 19 位雪花ID（例如 2108388244222775296），
+   * 超过 JS Number.MAX_SAFE_INTEGER(9007199254740991)，前端一旦用 Number() 转换就会丢精度
+   * （实测 ...775296 变成 ...775300），后端按错误 uid 查不到会员 → 静默跳过 → 打标影响 0 条。
+   * 因此 uid 全程以字符串传递，由 Jackson 在服务端解析为 Long。
+   */
+  uids: Array<number | string>;
   tagIds: number[];
 }
