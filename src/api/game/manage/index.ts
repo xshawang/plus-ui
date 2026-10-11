@@ -111,6 +111,10 @@ export const sortTemplateItem = (rows: any[]): AxiosPromise<void> =>
 export const removeTemplateItem = (data: { templateCode: string; gameCode: string }): AxiosPromise<void> =>
   request({ url: '/infra/game/template/item/remove', method: 'put', data });
 
+/** 模板页「新增游戏」：手工把子游戏加入模板（后端 source=3 手工添加，幂等） */
+export const addTemplateItems = (data: { templateCode: string; gameCodes: string[] }): AxiosPromise<any> =>
+  request({ url: '/infra/game/template/item/add', method: 'put', data, headers: { repeatSubmit: false } });
+
 /** 游戏公共配置 / 有效投注配置（平台管理右上角两个弹窗） */
 export const getCommonConfig = (currency?: string): AxiosPromise<any> =>
   request({ url: '/infra/game/config/common', method: 'get', params: { currency } });

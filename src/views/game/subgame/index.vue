@@ -120,7 +120,10 @@
             <div>二 <el-switch :model-value="row.featureTpl2 === 1" @change="v => switchField(row, 'feature_tpl2', 'featureTpl2', v, 'feature_2', 2)" /></div>
           </template>
         </el-table-column>
-        <el-table-column label="角标名称" align="center" prop="cornerName" width="100" />
+        <!-- 角标名称：无角标时原站显示「无」（截图口径），空值不能留白 -->
+        <el-table-column label="角标名称" align="center" width="100">
+          <template #default="{ row }">{{ row.cornerName || '无' }}</template>
+        </el-table-column>
         <el-table-column label="维护开关" align="center" width="110">
           <template #default="{ row }">
             <el-switch :model-value="row.maintenance === 1" @change="v => openMaintenance(row, v)" />

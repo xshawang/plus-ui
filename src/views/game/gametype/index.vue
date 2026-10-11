@@ -51,6 +51,10 @@
             <el-button v-hasPermi="['game:type:edit']" link type="primary" @click="openEdit(row, false)">修改</el-button>
           </template>
         </el-table-column>
+        <!-- 操作人（截图列）：取最后操作人 updateBy，历史/种子数据无 updateBy 时回落 createBy（种子为 system） -->
+        <el-table-column label="操作人" align="center" width="110">
+          <template #default="{ row }">{{ row.updateBy || row.createBy || 'system' }}</template>
+        </el-table-column>
         <el-table-column label="操作时间" align="center" prop="updateTime" width="170" />
       </el-table>
       <div class="batch-bar">

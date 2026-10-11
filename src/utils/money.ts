@@ -72,3 +72,34 @@ export const moneyColumnFormatter = (_row: unknown, _column: unknown, cellValue:
 /** el-table-column 的 formatter 适配器（逗号分隔的金额清单，如推荐金额）。 */
 export const moneyListColumnFormatter = (_row: unknown, _column: unknown, cellValue: unknown): string =>
   formatMoneyList(cellValue);
+
+/**
+ * 「封顶档位 + `+`」金额展示（游戏全网排名专用口径）。
+ *
+ * 背景：游戏全网排名的金额量级极大（总投注可达十亿级），原站按「1×10^k / 5×10^k」档位向下取整
+ * 并在末尾加 `+`，例如 `1,000,000,000.00+`、`100,000,000.00+`、`50,000,000.00+`、`1,000,000.00+`
+ * （2026-10-11 截图核对：总投注/有效投注/盈亏三列均为此形态，而注单量列仍是裸整数、不加千分位）。
+ *
+ * 口径（与截图逐值拟合）：
+ *  ① 绝对值 < 1,000,000 → 精确展示「千分位 + 2 位小数」；
+ *  ② 否则取「不大于该值的最大 1×10^k 或 5×10^k」作为档位值，尾缀 `+`（负数保留 `-`，`+` 表示"不低于"）；
+ *  ③ 非数值原样返回，空值返回空串（与 formatMoney 一致）。
+ *
+ * 仅用于展示；导出/入库必须用原始数值（报告口径不能被展示口径污染）。
+ */
+export const formatCappedMoney = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') return '';
+  const num = toNumber(value);
+  if (Number.isNaN(num)) return String(value);
+  const abs = Math.abs(num);
+  if (abs < 1_000_000) return formatMoney(num);
+  const exponent = Math.floor(Math.log10(abs));
+  const scale = Math.pow(10, exponent);
+  const bucket = abs / scale >= 5 ? 5 * scale : scale;
+  const prefix = num < 0 ? '-' : '';
+  return prefix + bucket.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '+';
+};
+
+/** el-table-column 的 formatter 适配器（封顶档位金额，游戏全网排名金额列专用）。 */
+export const cappedMoneyColumnFormatter = (_row: unknown, _column: unknown, cellValue: unknown): string =>
+  formatCappedMoney(cellValue);

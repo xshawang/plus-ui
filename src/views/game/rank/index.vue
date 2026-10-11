@@ -33,11 +33,12 @@
         <el-table-column label="子游戏名称" align="center" prop="gameName" min-width="160" />
         <el-table-column label="注单排名" align="center" prop="orderRank" width="100" />
         <el-table-column label="注单量" align="center" prop="orderCount" width="130" sortable="custom" />
-        <el-table-column label="总投注" align="center" prop="totalBet" width="160" sortable="custom" />
-        <el-table-column label="有效投注" align="center" prop="validBet" width="160" sortable="custom" />
+        <!-- 金额列按原站口径展示：≥100 万走「1/5×10^k 档位 + `+`」，否则千分位 + 2 位小数（见 utils/money.ts） -->
+        <el-table-column label="总投注" align="center" prop="totalBet" width="180" sortable="custom" :formatter="cappedMoneyColumnFormatter" />
+        <el-table-column label="有效投注" align="center" prop="validBet" width="180" sortable="custom" :formatter="cappedMoneyColumnFormatter" />
         <el-table-column label="盈亏" align="center" prop="profit" width="150" sortable="custom">
           <template #default="{ row }">
-            <span :class="row.profit < 0 ? 'text-red' : 'text-green'">{{ row.profit }}</span>
+            <span :class="row.profit < 0 ? 'text-red' : 'text-green'">{{ formatCappedMoney(row.profit) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="杀率" align="center" prop="killRate" width="100" sortable="custom">
@@ -58,6 +59,7 @@
 import { reactive, ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { listGameRank, gameRankMemo, exportGameRank, addHotGame, gameTypeOptions, platformOptions as fetchPlatformOptions } from '@/api/game/manage';
+import { formatCappedMoney, cappedMoneyColumnFormatter } from '@/utils/money';
 
 defineOptions({ name: 'GameRank' });
 
