@@ -62,6 +62,37 @@ export interface MemberUserVO {
   totalRechargeAmount?: number;
   /** 累计提现金额 */
   totalWithdrawAmount?: number;
+  /** ===== 01 文档扩展字段 ===== */
+  /** 账号类型：FORMAL/TEST/STREAMER/AGENT */
+  accountType?: string;
+  /** 注册方式：ACCOUNT/PHONE/EMAIL/SOCIAL */
+  registerType?: string;
+  /** 验证方式：NONE/SMS/EMAIL/KYC */
+  verifyType?: string;
+  /** 真实姓名（player_kyc.real_name） */
+  realName?: string;
+  /** 会员层级 */
+  levelId?: number;
+  levelName?: string;
+  /** 会员标签（逗号拼接） */
+  tagNames?: string;
+  /** 累计充值/提现笔数 */
+  totalRechargeCount?: number;
+  totalWithdrawCount?: number;
+  /** 充提差额（分） */
+  balanceDiff?: number;
+  /** 首充金额（分） */
+  firstDepositAmount?: number;
+  /** 代理链：邀请人 / 上级代理 / 顶层代理 */
+  inviteUid?: number;
+  inviteName?: string;
+  parentAgentUid?: number;
+  parentAgentName?: string;
+  topAgentUid?: number;
+  topAgentName?: string;
+  /** 最近登录终端 */
+  lastLoginClientType?: string;
+  lastLoginOs?: string;
 }
 
 /**
@@ -109,7 +140,58 @@ export interface MemberUserQuery extends PageQuery {
   registerChannel?: number;
   /** 余额币种（默认 VND） */
   currency?: string;
+  /** 时间维度：REGISTER 注册时间 / LAST_LOGIN 最后登录 / FIRST_DEPOSIT 首充时间 */
+  dateField?: string;
+  /** 账号维度：LOGIN_NAME 精准账号 / LOGIN_NAME_LIKE 模糊账号 / UID / PHONE / REAL_NAME */
+  accountField?: string;
+  /** 账号维度检索值（服务端按白名单映射，禁止拼接） */
+  accountValue?: string;
+  /** 会员层级ID（levelId=1 含未分配归属） */
+  levelId?: number;
+  /** 会员标签ID */
+  tagId?: number;
+  /** VIP等级 */
+  vipLevel?: number;
+  /** 账号类型 */
+  accountType?: string;
   params?: any;
+}
+
+/** 后台新增会员表单（01 文档 §4） */
+export interface MemberUserCreateForm {
+  loginName: string;
+  password: string;
+  payPassword?: string;
+  nickName?: string;
+  phone?: string;
+  levelId?: number;
+  vipLevel?: number;
+  accountType?: string;
+  registerType?: string;
+  initBalance?: number;
+  remark?: string;
+}
+
+/** 批量调整层级 */
+export interface MemberBatchLevelForm {
+  uids: Array<string | number>;
+  levelId: number;
+  isLocked?: number;
+  reason?: string;
+}
+
+/** 批量打标 / 摘标 */
+export interface MemberBatchTagForm {
+  uids: Array<string | number>;
+  tagIds: number[];
+  mode?: 'BIND' | 'UNBIND';
+}
+
+/** 批量冻结 / 解冻 / 注销 */
+export interface MemberBatchStatusForm {
+  uids: Array<string | number>;
+  status: number;
+  reason?: string;
 }
 
 /** 后台调整用户余额请求（金额单位：分，前端按 VND 整数输入后 ×100 提交） */

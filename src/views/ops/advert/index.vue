@@ -138,7 +138,7 @@
               <el-date-picker
                 v-model="form.startAt"
                 type="datetime"
-                value-format="YYYY-MM-DDTHH:mm:ss"
+                value-format="YYYY-MM-DD HH:mm:ss"
                 style="width: 100%"
               />
             </el-form-item>
@@ -148,7 +148,7 @@
               <el-date-picker
                 v-model="form.endAt"
                 type="datetime"
-                value-format="YYYY-MM-DDTHH:mm:ss"
+                value-format="YYYY-MM-DD HH:mm:ss"
                 style="width: 100%"
               />
             </el-form-item>

@@ -6,7 +6,8 @@ export interface OssConfigVO extends BaseEntity {
   bucketName: string;
   prefix: string;
   endpoint: string;
-  domainUrl: string;
+  /** 自定义域名（FIX: 2026-09-28 与后端 SysOssConfig.domain / 库列 domain 对齐；原写 domainUrl 导致该列读不到值） */
+  domain: string;
   isHttps: string;
   region: string;
   status: string;
@@ -29,7 +30,8 @@ export interface OssConfigForm {
   bucketName: string;
   prefix: string;
   endpoint: string;
-  domainUrl: string;
+  /** 自定义域名（同 VO，字段名必须为 domain） */
+  domain: string;
   isHttps: string;
   accessPolicy: string;
   region: string;

@@ -20,6 +20,47 @@
               <el-option v-for="(label, value) in userStatusMap" :key="value" :label="label" :value="Number(value)" />
             </el-select>
           </el-form-item>
+          <!-- 01 文档：时间维度（注册/最后登录/首充）+ 账号维度（精准账号/模糊账号/UID/手机/真实姓名） -->
+          <el-form-item label="时间维度">
+            <el-select v-model="queryParams.dateField" placeholder="注册时间" clearable style="width: 130px">
+              <el-option label="注册时间" value="REGISTER" />
+              <el-option label="最后登录时间" value="LAST_LOGIN" />
+              <el-option label="首充时间" value="FIRST_DEPOSIT" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="账号维度">
+            <el-select v-model="queryParams.accountField" placeholder="精准会员账号" clearable style="width: 140px">
+              <el-option label="精准会员账号" value="LOGIN_NAME" />
+              <el-option label="模糊会员账号" value="LOGIN_NAME_LIKE" />
+              <el-option label="会员ID" value="UID" />
+              <el-option label="手机号" value="PHONE" />
+              <el-option label="真实姓名" value="REAL_NAME" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-input v-model="queryParams.accountValue" placeholder="请输入账号维度检索值" clearable style="width: 200px" @keyup.enter="handleQuery" />
+          </el-form-item>
+          <el-form-item label="会员层级">
+            <el-select v-model="queryParams.levelId" placeholder="全部" clearable style="width: 150px">
+              <el-option v-for="item in levelOptions" :key="item.levelId" :label="item.levelName" :value="item.levelId" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="会员标签">
+            <el-select v-model="queryParams.tagId" placeholder="全部" clearable style="width: 150px">
+              <el-option v-for="item in tagOptions" :key="item.tagId" :label="item.tagName" :value="item.tagId" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="VIP等级">
+            <el-input-number v-model="queryParams.vipLevel" :min="0" :max="30" controls-position="right" style="width: 120px" />
+          </el-form-item>
+          <el-form-item label="账号类型">
+            <el-select v-model="queryParams.accountType" placeholder="全部" clearable style="width: 130px">
+              <el-option label="正式账号" value="FORMAL" />
+              <el-option label="测试账号" value="TEST" />
+              <el-option label="主播号" value="STREAMER" />
+              <el-option label="代理账号" value="AGENT" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="注册时间" prop="dateRange">
             <el-date-picker
               v-model="dateRange"
@@ -46,13 +87,47 @@
             <span class="text-gray-400 text-sm">余额默认展示 VND 账户</span>
           </div>
           <div class="toolbar-actions">
+            <el-button v-hasPermi="['member:user:add']" type="primary" plain icon="Plus" @click="handleCreate">新增会员</el-button>
+            <el-button plain icon="Download" @click="handleExportCurrentPage">导出当前页</el-button>
+            <el-button v-hasPermi="['member:user:export']" plain icon="Download" @click="handleExportAll">导出全部</el-button>
+            <el-upload
+              v-hasPermi="['member:user:import']"
+              class="inline-upload"
+              :show-file-list="false"
+              :auto-upload="false"
+              accept=".csv"
+              :on-change="handleImportFile"
+            >
+              <el-button plain icon="Upload">批量导入</el-button>
+            </el-upload>
             <el-button type="primary" plain icon="Refresh" @click="handleQuery">刷新</el-button>
             <right-toolbar v-model:show-search="showSearch" :search="false" @query-table="getList" />
           </div>
         </div>
       </template>
 
-      <el-table v-loading="loading" border class="data-table" :data="userList">
+      <!-- 01 文档：批量操作（改层级 / 打标 / 冻结 / 解冻） -->
+      <div v-if="selectedUids.length > 0" class="toolbar-shell mb-2">
+        <div class="table-heading">
+          <span>已选择 {{ selectedUids.length }} 名会员</span>
+        </div>
+        <div class="toolbar-actions">
+          <el-select v-model="batchLevelId" placeholder="批量调整层级" clearable style="width: 170px">
+            <el-option v-for="item in levelOptions" :key="item.levelId" :label="item.levelName" :value="item.levelId" />
+          </el-select>
+          <el-button v-hasPermi="['member:user:edit']" plain :disabled="!batchLevelId" @click="handleBatchLevel">应用层级</el-button>
+          <el-select v-model="batchTagIds" placeholder="批量打标" multiple clearable style="width: 200px">
+            <el-option v-for="item in tagOptions" :key="item.tagId" :label="item.tagName" :value="item.tagId" />
+          </el-select>
+          <el-button v-hasPermi="['member:user:edit']" plain :disabled="batchTagIds.length === 0" @click="handleBatchTag('BIND')">打标</el-button>
+          <el-button v-hasPermi="['member:user:edit']" plain :disabled="batchTagIds.length === 0" @click="handleBatchTag('UNBIND')">摘标</el-button>
+          <el-button v-hasPermi="['member:user:edit']" type="danger" plain @click="handleBatchStatus(2)">批量冻结</el-button>
+          <el-button v-hasPermi="['member:user:edit']" type="success" plain @click="handleBatchStatus(1)">批量解冻</el-button>
+        </div>
+      </div>
+
+      <el-table v-loading="loading" border class="data-table" :data="userList" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="45" />
         <el-table-column label="UID" align="left" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">
             <el-link type="primary" :underline="false" @click="handleGoLedger(row)">{{ row.uid }}</el-link>
@@ -100,12 +175,44 @@
             </el-link>
           </template>
         </el-table-column>
+        <!-- 01 文档扩展列：层级与标签 / 账号类型与注册验证 / 充提次数与差额首充 / 代理链 -->
+        <el-table-column label="层级 / 标签" align="center" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">
+            <div>{{ row.levelName || '默认层级' }}</div>
+            <div class="text-gray-400 text-sm">{{ row.tagNames || '—' }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="账号类型 / 注册 / 验证" align="center" min-width="170">
+          <template #default="{ row }">
+            <div>{{ accountTypeLabel(row.accountType) }}</div>
+            <div class="text-gray-400 text-sm">
+              {{ registerTypeLabel(row.registerType) }} · {{ verifyTypeLabel(row.verifyType) }}
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="充提次数 / 差额 / 首充" align="right" min-width="190">
+          <template #default="{ row }">
+            <div>充 {{ row.totalRechargeCount ?? 0 }} 次 · 提 {{ row.totalWithdrawCount ?? 0 }} 次</div>
+            <div class="text-gray-400 text-sm">
+              差额 {{ formatMoney(row.balanceDiff) }} · 首充 {{ formatMoney(row.firstDepositAmount) }}
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="代理链（邀请人 / 上级 / 顶层）" align="center" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <div>{{ row.inviteName || '—' }}<span class="text-gray-400">（邀请人）</span></div>
+            <div class="text-gray-400 text-sm">{{ row.parentAgentName || '—' }} / {{ row.topAgentName || '—' }}</div>
+          </template>
+        </el-table-column>
         <el-table-column label="注册IP" align="center" prop="registerIp" min-width="130" show-overflow-tooltip />
         <el-table-column label="注册时间" align="center" prop="registerAt" width="170">
           <template #default="{ row }">{{ row.registerAt }}</template>
         </el-table-column>
         <el-table-column label="操作" align="center" width="90" fixed="right">
           <template #default="{ row }">
+            <el-tooltip content="会员详情" placement="top">
+              <el-button link type="primary" icon="View" @click="handleGoDetail(row as MemberUserVO)" />
+            </el-tooltip>
             <el-tooltip content="修改用户信息" placement="top">
               <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" />
             </el-tooltip>
@@ -121,6 +228,82 @@
         @pagination="getList"
       />
     </el-card>
+
+    <!-- 新增会员（01 文档 §4 后台人工开户） -->
+    <el-dialog v-model="createDialog.visible" title="新增会员" width="680px" append-to-body destroy-on-close>
+      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="130px">
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="会员账号" prop="loginName">
+              <el-input v-model="createForm.loginName" maxlength="64" placeholder="全局唯一登录账号" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="登录密码" prop="password">
+              <el-input v-model="createForm.password" type="password" show-password placeholder="至少 6 位" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="提现密码">
+              <el-input v-model="createForm.payPassword" type="password" show-password placeholder="可空" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="昵称">
+              <el-input v-model="createForm.nickName" maxlength="64" placeholder="默认同账号" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="手机号">
+              <el-input v-model="createForm.phone" placeholder="可空" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="会员层级">
+              <el-select v-model="createForm.levelId" placeholder="默认层级" clearable style="width: 100%">
+                <el-option v-for="item in levelOptions" :key="item.levelId" :label="item.levelName" :value="item.levelId" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="VIP等级">
+              <el-input-number v-model="createForm.vipLevel" :min="0" :max="30" controls-position="right" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="账号类型">
+              <el-select v-model="createForm.accountType" style="width: 100%">
+                <el-option label="正式账号" value="FORMAL" />
+                <el-option label="测试账号" value="TEST" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="注册方式">
+              <el-select v-model="createForm.registerType" style="width: 100%">
+                <el-option label="账号注册" value="ACCOUNT" />
+                <el-option label="手机注册" value="PHONE" />
+                <el-option label="邮箱注册" value="EMAIL" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="备注">
+              <el-input v-model="createForm.remark" type="textarea" :rows="2" maxlength="255" placeholder="将写入会员备注履历" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-alert
+          type="info"
+          :closable="false"
+          title="初始余额请在建号后使用列表中的「加减款」功能调整：资金必须经钱包核心落 user_wallet_ledger 流水，保证可对账。"
+        />
+      </el-form>
+      <template #footer>
+        <el-button type="primary" @click="submitCreate">确 定</el-button>
+        <el-button @click="createDialog.visible = false">取 消</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 用户信息修改 -->
     <el-dialog v-model="dialog.visible" :title="dialog.title" width="900px" append-to-body top="4vh">
@@ -292,8 +475,27 @@
 </template>
 
 <script setup name="MemberUser" lang="ts">
-import { getMemberUser, listMemberUser, updateMemberBalance, updateMemberUser } from '@/api/member/users';
-import type { MemberBalanceAdjustForm, MemberUserForm, MemberUserQuery, MemberUserVO } from '@/api/member/users/types';
+import {
+  addMemberUser,
+  batchMemberLevel,
+  batchMemberStatus,
+  batchMemberTag,
+  getMemberUser,
+  listMemberUser,
+  updateMemberBalance,
+  updateMemberUser
+} from '@/api/member/users';
+import type {
+  MemberBalanceAdjustForm,
+  MemberUserCreateForm,
+  MemberUserForm,
+  MemberUserQuery,
+  MemberUserVO
+} from '@/api/member/users/types';
+import { listMemberLevelOptions } from '@/api/member/level';
+import type { MemberLevelVO } from '@/api/member/level/types';
+import { listMemberTagOptions } from '@/api/member/tag';
+import type { MemberTagVO } from '@/api/member/tag/types';
 import { useLoading } from '@/hooks/async/useLoading';
 import { useFormDialog } from '@/hooks/dialog/useFormDialog';
 import { useDateRangeQuery } from '@/hooks/form/useDateRangeQuery';
@@ -360,6 +562,13 @@ const data = reactive<{ queryParams: MemberUserQuery; form: MemberUserForm; rule
     status: undefined,
     registerChannel: undefined,
     currency: 'VND',
+    dateField: undefined,
+    accountField: undefined,
+    accountValue: undefined,
+    levelId: undefined,
+    tagId: undefined,
+    vipLevel: undefined,
+    accountType: undefined,
     params: undefined
   },
   form: { ...initFormData },
@@ -397,9 +606,11 @@ const formatMoneyInt = (value?: number) => {
 
 const getList = async () => {
   await withLoading(async () => {
-    const res = await listMemberUser(applyDateRange(queryParams.value));
-    userList.value = res.data?.rows || [];
-    total.value = res.data?.total || 0;
+    // FIX: 分页接口 body 为 {rows,total}（request 拦截器直出 body），原写法 res.data?.rows 恒为 undefined，
+    // 导致列表永远为空。2026-09-22 Codex
+    const res = (await listMemberUser(applyDateRange(queryParams.value))) as unknown as { rows?: MemberUserVO[]; total?: number };
+    userList.value = res.rows ?? [];
+    total.value = res.total ?? 0;
   });
 };
 
@@ -525,7 +736,234 @@ const handleGoWithdraw = (row: MemberUserVO) => {
   router.push({ path: '/member/withdraw', query: { uid: String(row.uid) } });
 };
 
+/* ==================== 01 文档：批量操作 / 新增会员 / 详情跳转 ==================== */
+
+const levelOptions = ref<MemberLevelVO[]>([]);
+const tagOptions = ref<MemberTagVO[]>([]);
+const selectedUids = ref<Array<string | number>>([]);
+const batchLevelId = ref<number>();
+const batchTagIds = ref<number[]>([]);
+const createDialog = reactive({ visible: false });
+const createFormRef = ref<ElFormInstance>();
+const createForm = reactive<MemberUserCreateForm>({
+  loginName: '',
+  password: '',
+  nickName: '',
+  phone: '',
+  levelId: undefined,
+  vipLevel: 0,
+  accountType: 'FORMAL',
+  registerType: 'ACCOUNT',
+  remark: ''
+});
+const createRules = {
+  loginName: [{ required: true, message: '会员账号不能为空', trigger: 'blur' }],
+  password: [{ required: true, min: 6, message: '登录密码不能少于 6 位', trigger: 'blur' }]
+};
+
+const accountTypeLabel = (type?: string) =>
+  ({ FORMAL: '正式账号', TEST: '测试账号', STREAMER: '主播号', AGENT: '代理账号' } as Record<string, string>)[type ?? 'FORMAL'] ?? '正式账号';
+const registerTypeLabel = (type?: string) =>
+  ({ ACCOUNT: '账号注册', PHONE: '手机注册', EMAIL: '邮箱注册', SOCIAL: '三方注册' } as Record<string, string>)[type ?? 'ACCOUNT'] ?? '账号注册';
+const verifyTypeLabel = (type?: string) =>
+  ({ NONE: '无验证', SMS: '短信', EMAIL: '邮箱', KYC: '实名' } as Record<string, string>)[type ?? 'NONE'] ?? '无验证';
+
+const loadOptions = async () => {
+  const [levels, tags] = await Promise.all([listMemberLevelOptions(), listMemberTagOptions()]);
+  levelOptions.value = ((levels as unknown as { data?: MemberLevelVO[] }).data ?? []).slice();
+  tagOptions.value = ((tags as unknown as { data?: MemberTagVO[] }).data ?? []).slice();
+};
+
+const handleSelectionChange = (selection: MemberUserVO[]) => {
+  selectedUids.value = selection.map((item) => item.uid!).filter((uid) => uid !== undefined);
+};
+
+const handleBatchLevel = async () => {
+  if (!batchLevelId.value || selectedUids.value.length === 0) {
+    return;
+  }
+  const res = (await batchMemberLevel({
+    uids: selectedUids.value,
+    levelId: batchLevelId.value,
+    reason: '会员列表批量调整'
+  })) as unknown as { data?: number };
+  modal.msgSuccess(`层级调整完成（影响 ${res.data ?? 0} 条）`);
+  selectedUids.value = [];
+  batchLevelId.value = undefined;
+  await getList();
+};
+
+const handleBatchTag = async (mode: 'BIND' | 'UNBIND') => {
+  if (batchTagIds.value.length === 0 || selectedUids.value.length === 0) {
+    return;
+  }
+  const res = (await batchMemberTag({
+    uids: selectedUids.value,
+    tagIds: batchTagIds.value,
+    mode
+  })) as unknown as { data?: number };
+  modal.msgSuccess(`${mode === 'BIND' ? '打标' : '摘标'}完成（影响 ${res.data ?? 0} 条）`);
+  selectedUids.value = [];
+  batchTagIds.value = [];
+  await getList();
+};
+
+const handleBatchStatus = async (status: number) => {
+  if (selectedUids.value.length === 0) {
+    return;
+  }
+  try {
+    await modal.confirm(status === 2 ? `确认冻结选中的 ${selectedUids.value.length} 名会员？` : `确认解冻选中的 ${selectedUids.value.length} 名会员？`);
+  } catch {
+    return;
+  }
+  const res = (await batchMemberStatus({
+    uids: selectedUids.value,
+    status,
+    reason: status === 2 ? '后台批量冻结' : '后台批量解冻'
+  })) as unknown as { data?: number };
+  modal.msgSuccess(`操作完成（影响 ${res.data ?? 0} 条）`);
+  selectedUids.value = [];
+  await getList();
+};
+
+const handleCreate = () => {
+  Object.assign(createForm, {
+    loginName: '',
+    password: '',
+    payPassword: '',
+    nickName: '',
+    phone: '',
+    levelId: undefined,
+    vipLevel: 0,
+    accountType: 'FORMAL',
+    registerType: 'ACCOUNT',
+    remark: ''
+  });
+  createDialog.visible = true;
+};
+
+const submitCreate = () => {
+  createFormRef.value?.validate(async (valid: boolean) => {
+    if (!valid) {
+      return;
+    }
+    const uid = (await addMemberUser(createForm)) as unknown as { data?: number };
+    modal.msgSuccess(`新增成功（UID ${uid.data ?? '-'}）；如需初始余额请使用「加减款」`);
+    createDialog.visible = false;
+    await getList();
+  });
+};
+
+/**
+ * 导出当前页为 CSV（前端本地生成，不经过后端）。
+ *
+ * 为什么只导出当前页：全量导出需要后端流式导出接口（大批量会员会占内存），
+ * 本期先提供当前页导出，全量导出列入 01 文档遗留项。
+ */
+const handleExportCurrentPage = () => {
+  if (userList.value.length === 0) {
+    modal.msgWarning('当前页没有可导出的数据');
+    return;
+  }
+  const header = [
+    '会员ID', '会员账号', '昵称', '账号状态', '层级', '标签', '账号类型', '注册方式', '验证方式',
+    '可用余额(分)', '冻结余额(分)', '累计充值(分)', '累计提现(分)', '充值次数', '提现次数', '充提差额(分)', '首充金额(分)',
+    '注册时间', '最后登录时间'
+  ];
+  const lines = userList.value.map((row) =>
+    [
+      row.uid, row.loginName, row.nickName, userStatusMap[row.status ?? 1] ?? '', row.levelName ?? '', row.tagNames ?? '',
+      accountTypeLabel(row.accountType), registerTypeLabel(row.registerType), verifyTypeLabel(row.verifyType),
+      row.availableBalance ?? 0, row.frozenBalance ?? 0, row.totalRechargeAmount ?? 0, row.totalWithdrawAmount ?? 0,
+      row.totalRechargeCount ?? 0, row.totalWithdrawCount ?? 0, row.balanceDiff ?? 0, row.firstDepositAmount ?? 0,
+      row.registerAt ?? '', row.lastLoginAt ?? ''
+    ]
+      .map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`)
+      .join(',')
+  );
+  const csv = '\ufeff' + [header.join(','), ...lines].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `member-list-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '')}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
+/** 跳会员详情页并自动查询 */
+const handleGoDetail = (row: MemberUserVO) => {
+  const target = router.resolve({ path: '/member/detail' });
+  if (target.matched.length === 0) {
+    modal.msgWarning('未找到会员详情菜单，请确认已分配该菜单权限');
+    return;
+  }
+  router.push({ path: '/member/detail', query: { uid: String(row.uid) } });
+};
+
 onMounted(() => {
+  loadOptions();
   getList();
 });
+
+/* ---------------- 全量导出 / 批量导入（批次 7） ---------------- */
+/** 导出全部：带 Token 拉取 CSV 流并触发下载（剔除分页参数，导出"当前筛选条件下的全量"） */
+const handleExportAll = async () => {
+  try {
+    const { exportMembers } = await import('@/api/member/import-export');
+    const params = { ...queryParams.value } as Record<string, unknown>;
+    delete params.pageNum;
+    delete params.pageSize;
+    const { url, token } = exportMembers(params);
+    const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    if (!resp.ok) {
+      modal.msgError(`导出失败：HTTP ${resp.status}`);
+      return;
+    }
+    const blob = await resp.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `member-export-${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    modal.msgSuccess('导出完成（上限 5 万行）');
+  } catch (e) {
+    modal.msgError('导出失败：' + (e as Error).message);
+  }
+};
+
+/** 下载导入模板（列顺序：账号,密码,昵称,手机号,账号类型,VIP等级,层级ID,币种,初始余额,备注） */
+const handleDownloadTemplate = () => {
+  const header = 'loginName,password,nickName,phone,accountType,vipLevel,levelId,currency,initBalance,remark';
+  const sample = 'demo001,go88@123456,Demo,0900000000,FORMAL,0,1,VND,0,导入示例';
+  const blob = new Blob(['\uFEFF' + header + '\n' + sample], { type: 'text/csv;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'member-import-template.csv';
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
+/** 批量导入：单次 ≤500 行，逐行复用"新增会员"链路；失败行返回行号与原因 */
+const handleImportFile = async (uploadFile: any) => {
+  const file: File = uploadFile?.raw;
+  if (!file) {
+    return;
+  }
+  try {
+    const { importMembers } = await import('@/api/member/import-export');
+    const res: any = await importMembers(file);
+    const data = res?.data ?? {};
+    const failed: { line: string; reason: string }[] = data.failed ?? [];
+    if (failed.length) {
+      const detail = failed.slice(0, 3).map((item) => `第${item.line}行：${item.reason}`).join('；');
+      modal.msgWarning(`导入完成：成功 ${data.created ?? 0} 条，失败 ${failed.length} 条。${detail}`);
+    } else {
+      modal.msgSuccess(`导入完成：成功 ${data.created ?? 0} 条`);
+    }
+    await getList();
+  } catch (e) {
+    modal.msgError('导入失败：' + (e as Error).message);
+  }
+};
 </script>

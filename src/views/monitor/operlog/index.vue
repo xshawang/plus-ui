@@ -11,54 +11,34 @@
           </div>
         </template>
         <el-form ref="queryFormRef" :model="queryParams" :inline="true" class="query-form">
-          <el-form-item label="操作地址" prop="operIp">
-            <el-input v-model="queryParams.operIp" placeholder="请输入操作地址" clearable @keyup.enter="handleQuery" />
+          <el-form-item>
+            <el-radio-group v-model="timeScope" @change="handleScopeChange">
+              <el-radio-button value="day">日</el-radio-button>
+              <el-radio-button value="week">周</el-radio-button>
+              <el-radio-button value="month">月</el-radio-button>
+            </el-radio-group>
           </el-form-item>
-          <el-form-item label="系统模块" prop="title">
-            <el-input v-model="queryParams.title" placeholder="请输入系统模块" clearable @keyup.enter="handleQuery" />
+          <el-form-item v-if="timeScope === 'month'">
+            <el-date-picker v-model="monthValue" type="month" value-format="YYYY-MM" placeholder="选择月份" style="width: 150px" />
           </el-form-item>
-          <el-form-item label="操作人员" prop="operName">
-            <el-input
-              v-model="queryParams.operName"
-              placeholder="请输入操作人员"
-              clearable
-              @keyup.enter="handleQuery"
-            />
-          </el-form-item>
-          <el-form-item label="客户端" prop="clientKey">
-            <el-input v-model="queryParams.clientKey" placeholder="请输入客户端" clearable @keyup.enter="handleQuery" />
-          </el-form-item>
-          <el-form-item label="设备类型" prop="deviceType">
-            <el-select v-model="queryParams.deviceType" placeholder="请选择设备类型" clearable>
-              <el-option v-for="dict in sys_device_type" :key="dict.value" :label="dict.label" :value="dict.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="浏览器" prop="browser">
-            <el-input v-model="queryParams.browser" placeholder="请输入浏览器" clearable @keyup.enter="handleQuery" />
-          </el-form-item>
-          <el-form-item label="操作系统" prop="os">
-            <el-input v-model="queryParams.os" placeholder="请输入操作系统" clearable @keyup.enter="handleQuery" />
-          </el-form-item>
-          <el-form-item label="类型" prop="businessType">
-            <el-select v-model="queryParams.businessType" placeholder="操作类型" clearable>
-              <el-option v-for="dict in sys_oper_type" :key="dict.value" :label="dict.label" :value="dict.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="状态" prop="status">
-            <el-select v-model="queryParams.status" placeholder="操作状态" clearable>
-              <el-option v-for="dict in sys_common_status" :key="dict.value" :label="dict.label" :value="dict.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="操作时间" style="width: 308px">
+          <el-form-item v-else>
             <el-date-picker
               v-model="dateRange"
-              value-format="YYYY-MM-DD HH:mm:ss"
               type="daterange"
+              value-format="YYYY-MM-DD"
               range-separator="-"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              :default-time="[new Date(2000, 1, 1, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59)]"
-            ></el-date-picker>
+              start-placeholder="开始时间"
+              end-placeholder="结束时间"
+              style="width: 260px"
+            />
+          </el-form-item>
+          <el-form-item label="精准操作人">
+            <el-input v-model="queryParams.operName" placeholder="请输入精准操作人" clearable @keyup.enter="handleQuery" />
+          </el-form-item>
+          <el-form-item label="模块">
+            <el-select v-model="queryParams.title" placeholder="请选择模块" clearable filterable style="width: 200px">
+              <el-option v-for="item in moduleOptions" :key="item" :label="item" :value="item" />
+            </el-select>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -121,15 +101,23 @@
         @sort-change="handleSortChange"
       >
         <el-table-column type="selection" width="50" align="center" />
-        <el-table-column label="日志编号" align="center" prop="operId" />
-        <el-table-column label="系统模块" align="center" prop="title" :show-overflow-tooltip="true" />
-        <el-table-column label="操作类型" align="center" prop="businessType">
+        <el-table-column label="模块" align="center" prop="title" width="220" :show-overflow-tooltip="true" />
+        <el-table-column label="操作内容" align="center" prop="operParam" min-width="240" :show-overflow-tooltip="true" />
+        <el-table-column label="操作行为" align="center" prop="operBehavior" min-width="220" :show-overflow-tooltip="true" />
+        <el-table-column label="IP" align="center" width="180" :show-overflow-tooltip="true">
           <template #default="scope">
-            <dict-tag :options="sys_oper_type" :value="scope.row.businessType" />
+            <div>{{ scope.row.operIp }}</div>
+            <div class="text-gray-400">{{ scope.row.operLocation }}</div>
           </template>
         </el-table-column>
+        <el-table-column label="traceId" align="center" prop="traceId" width="180" :show-overflow-tooltip="true" />
+        <el-table-column label="浏览器品牌" align="center" prop="browserBrand" width="150" :show-overflow-tooltip="true" />
+        <el-table-column label="操作系统" align="center" prop="os" width="140" :show-overflow-tooltip="true" />
+        <el-table-column label="系统版本" align="center" prop="systemVersion" width="100" :show-overflow-tooltip="true" />
+        <el-table-column label="设备号" align="center" prop="deviceNo" width="220" :show-overflow-tooltip="true" />
+        <el-table-column label="设备指纹" align="center" prop="deviceFingerprint" width="220" :show-overflow-tooltip="true" />
         <el-table-column
-          label="操作人员"
+          label="操作人"
           align="center"
           width="110"
           prop="operName"
@@ -137,23 +125,8 @@
           sortable="custom"
           :sort-orders="['descending', 'ascending']"
         />
-        <el-table-column label="部门" align="center" prop="deptName" width="130" :show-overflow-tooltip="true" />
-        <el-table-column label="客户端" align="center" prop="clientKey" width="110" :show-overflow-tooltip="true" />
-        <el-table-column label="设备类型" align="center" prop="deviceType" width="110" :show-overflow-tooltip="true">
-          <template #default="scope">
-            <dict-tag :options="sys_device_type" :value="scope.row.deviceType" />
-          </template>
-        </el-table-column>
-        <el-table-column label="浏览器" align="center" prop="browser" width="110" :show-overflow-tooltip="true" />
-        <el-table-column label="操作系统" align="center" prop="os" width="110" :show-overflow-tooltip="true" />
-        <el-table-column label="操作地址" align="center" prop="operIp" width="130" :show-overflow-tooltip="true" />
-        <el-table-column label="操作状态" align="center" prop="status">
-          <template #default="scope">
-            <dict-tag :options="sys_common_status" :value="scope.row.status" />
-          </template>
-        </el-table-column>
         <el-table-column
-          label="操作日期"
+          label="操作时间"
           align="center"
           prop="operTime"
           width="180"
@@ -164,17 +137,9 @@
             <span>{{ parseTime(scope.row.operTime) }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          label="消耗时间"
-          align="center"
-          prop="costTime"
-          width="110"
-          :show-overflow-tooltip="true"
-          sortable="custom"
-          :sort-orders="['descending', 'ascending']"
-        >
+        <el-table-column label="操作状态" align="center" prop="status" width="110">
           <template #default="scope">
-            <span>{{ scope.row.costTime }}毫秒</span>
+            <dict-tag :options="sys_common_status" :value="scope.row.status" />
           </template>
         </el-table-column>
         <el-table-column label="操作" fixed="right" align="center" class-name="small-padding fixed-width">
@@ -207,9 +172,10 @@
 
 <script setup name="Operlog" lang="ts">
 import { list, delOperlog, cleanOperlog } from '@/api/monitor/operlog';
+import { listModules } from '@/api/monitor/operlog';
 import { OperLogForm, OperLogQuery, OperLogVO } from '@/api/monitor/operlog/types';
 import { useLoading } from '@/hooks/async/useLoading';
-import { useDateRangeQuery } from '@/hooks/form/useDateRangeQuery';
+import { useTimeScopeQuery } from '@/hooks/form/useTimeScopeQuery';
 import { useSearchReset } from '@/hooks/form/useSearchReset';
 import { useSearchToggle } from '@/hooks/form/useSearchToggle';
 import { useTableSelection } from '@/hooks/table/useTableSelection';
@@ -228,7 +194,16 @@ const operlogList = ref<OperLogVO[]>([]);
 const { loading, withLoading } = useLoading(true);
 const { showSearch } = useSearchToggle();
 const total = ref(0);
-const { dateRange, applyDateRange, resetDateRange } = useDateRangeQuery();
+/** 截图筛选区：「日 / 周 / 月」三段按钮联动默认时间区间（模块下拉候选来自后端 distinct title） */
+const {
+  timeScope,
+  dateRange,
+  monthValue,
+  handleScopeChange: handleScopeChangeRaw,
+  buildTimeParams,
+  applyScopeRange
+} = useTimeScopeQuery({ defaultScope: 'month' });
+const moduleOptions = ref<string[]>([]);
 
 const operLogTableRef = ref<ElTableInstance>();
 const queryFormRef = ref<ElFormInstance>();
@@ -291,10 +266,16 @@ const {
 /** 查询登录日志 */
 const getList = async () => {
   await withLoading(async () => {
-    const res = await list(applyDateRange(queryParams.value));
-    operlogList.value = res.data?.rows;
-    total.value = res.data?.total;
+    // 时间区间以「日/周/月」联动结果为准（截图口径），不再走旧的 daterange 参数拼装
+    const res = await list({ ...queryParams.value, ...buildTimeParams() });
+    operlogList.value = res.data?.rows ?? [];
+    total.value = res.data?.total ?? 0;
   });
+};
+/** 粒度切换：重置默认区间并按月/日周刷新列表 */
+const handleScopeChange = () => {
+  handleScopeChangeRaw();
+  handleQuery();
 };
 const { defaultSort, handleSortChange, resetSort } = useTableSortQuery<OperLogQuery>({
   queryParams,
@@ -316,7 +297,7 @@ const { resetQuery } = useSearchReset({
   queryParams,
   pageNumKey: 'pageNum',
   resetExtras: () => {
-    resetDateRange();
+    applyScopeRange();
   },
   afterReset: () => {
     resetSort();
@@ -360,6 +341,14 @@ const handleExport = () => {
   );
 };
 onMounted(() => {
+  // 模块下拉候选：后端按 sys_oper_log.title 去重返回（与各控制器 @Log(title) 同源）
+  listModules()
+    .then(res => {
+      moduleOptions.value = res.data ?? [];
+    })
+    .catch(() => {
+      moduleOptions.value = [];
+    });
   getList();
 });
 </script>

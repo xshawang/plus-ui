@@ -24,7 +24,14 @@
           </el-form-item>
           <el-form-item label="是否默认" prop="status">
             <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
-              <el-option v-for="dict in sys_yes_no" :key="dict.value" :label="dict.label" :value="dict.value" />
+              <!--
+                FIX: 2026-09-29 「是否默认」改为后端语义 0/1（0=默认，1=非默认）。
+                原因：SysOssConfigServiceImpl#init() 仅把 status='0' 的行注册为默认存储
+                （写入 Redis global:sys_oss:default_config），原前端用 Y/N 会导致启动后无默认存储，
+                上传直接报「文件存储服务类型无法找到!」。同步调整见 sqls/resource_oss_default_config_20260929.sql
+              -->
+              <el-option label="默认" value="0" />
+              <el-option label="非默认" value="1" />
             </el-select>
           </el-form-item>
           <el-form-item>
@@ -83,7 +90,8 @@
         <el-table-column v-if="columns[0].visible" label="主建" align="center" prop="ossConfigId" />
         <el-table-column v-if="columns[1].visible" label="配置key" align="center" prop="configKey" />
         <el-table-column v-if="columns[2].visible" label="访问站点" align="center" prop="endpoint" width="200" />
-        <el-table-column v-if="columns[3].visible" label="自定义域名" align="center" prop="domainUrl" width="200" />
+        <!-- FIX: 2026-09-28 列字段名由 domainUrl 改为 domain，与后端实体/库列一致（原写法该列恒为空） -->
+        <el-table-column v-if="columns[3].visible" label="自定义域名" align="center" prop="domain" width="200" />
         <el-table-column v-if="columns[4].visible" label="桶名称" align="center" prop="bucketName" />
         <el-table-column v-if="columns[5].visible" label="前缀" align="center" prop="prefix" />
         <el-table-column v-if="columns[6].visible" label="域" align="center" prop="region" />
@@ -98,8 +106,8 @@
           <template #default="scope">
             <el-switch
               v-model="scope.row.status"
-              active-value="Y"
-              inactive-value="N"
+              active-value="0"
+              inactive-value="1"
               @change="handleStatusChange(scope.row)"
             ></el-switch>
           </template>
@@ -149,8 +157,8 @@
             </template>
           </el-input>
         </el-form-item>
-        <el-form-item label="自定义域名" prop="domainUrl">
-          <el-input v-model="form.domainUrl" placeholder="请输入自定义域名">
+        <el-form-item label="自定义域名" prop="domain">
+          <el-input v-model="form.domain" placeholder="请输入自定义域名">
             <template #prefix>
               <span style="color: #999">{{ protocol }}</span>
             </template>
@@ -246,11 +254,12 @@ const initFormData: OssConfigForm = {
   bucketName: '',
   prefix: '',
   endpoint: '',
-  domainUrl: '',
+  domain: '',
   isHttps: 'N',
   accessPolicy: '1',
   region: '',
-  status: 'N',
+  // FIX: 2026-09-29 新增配置默认「非默认(1)」，与后端 0=默认 / 1=非默认 语义一致
+  status: '1',
   remark: ''
 };
 const data = reactive<PageData<OssConfigForm, OssConfigQuery>>({
@@ -376,14 +385,15 @@ const submitForm = () => {
 };
 /** 状态修改  */
 const handleStatusChange = async (row: Partial<OssConfigVO>) => {
-  const text = row.status === 'Y' ? '启用' : '停用';
+  // FIX: 2026-09-29 文案与判定同步为 0/1 语义（0=设为默认存储）
+  const text = row.status === '0' ? '设为默认存储' : '取消默认';
   try {
     await modal.confirm('确认要"' + text + '""' + row.configKey + '"配置吗?');
     await changeOssConfigStatus(row.ossConfigId, row.status, row.configKey);
     await getList();
     modal.msgSuccess(text + '成功');
   } catch {
-    row.status = row.status === 'Y' ? 'N' : 'Y';
+    row.status = row.status === '0' ? '1' : '0';
   }
 };
 /** 删除按钮操作 */

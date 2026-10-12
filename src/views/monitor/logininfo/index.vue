@@ -11,32 +11,34 @@
           </div>
         </template>
         <el-form ref="queryFormRef" :model="queryParams" :inline="true" class="query-form">
-          <el-form-item label="登录地址" prop="ipaddr">
-            <el-input v-model="queryParams.ipaddr" placeholder="请输入登录地址" clearable @keyup.enter="handleQuery" />
+          <el-form-item>
+            <el-radio-group v-model="timeScope" @change="handleScopeChange">
+              <el-radio-button value="day">日</el-radio-button>
+              <el-radio-button value="week">周</el-radio-button>
+              <el-radio-button value="month">月</el-radio-button>
+            </el-radio-group>
           </el-form-item>
-          <el-form-item label="用户名称" prop="userName">
-            <el-input
-              v-model="queryParams.userName"
-              placeholder="请输入用户名称"
-              clearable
-              @keyup.enter="handleQuery"
-            />
+          <el-form-item v-if="timeScope === 'month'">
+            <el-date-picker v-model="monthValue" type="month" value-format="YYYY-MM" placeholder="选择月份" style="width: 150px" />
           </el-form-item>
-          <el-form-item label="状态" prop="status">
-            <el-select v-model="queryParams.status" placeholder="登录状态" clearable>
-              <el-option v-for="dict in sys_common_status" :key="dict.value" :label="dict.label" :value="dict.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="登录时间" style="width: 308px">
+          <el-form-item v-else>
             <el-date-picker
               v-model="dateRange"
-              value-format="YYYY-MM-DD HH:mm:ss"
               type="daterange"
+              value-format="YYYY-MM-DD"
               range-separator="-"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              :default-time="[new Date(2000, 1, 1, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59)]"
-            ></el-date-picker>
+              start-placeholder="开始时间"
+              end-placeholder="结束时间"
+              style="width: 260px"
+            />
+          </el-form-item>
+          <el-form-item label="后台账号">
+            <el-input v-model="queryParams.userName" placeholder="请输入后台账号" clearable @keyup.enter="handleQuery" />
+          </el-form-item>
+          <el-form-item label="结果">
+            <el-select v-model="queryParams.status" placeholder="请选择结果" clearable style="width: 130px">
+              <el-option v-for="dict in sys_common_status" :key="dict.value" :label="dict.label" :value="dict.value" />
+            </el-select>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -103,43 +105,45 @@
         @sort-change="handleSortChange"
       >
         <el-table-column type="selection" width="55" align="center" />
-        <el-table-column label="访问编号" align="center" prop="infoId" />
         <el-table-column
-          label="用户名称"
+          label="后台账号"
           align="center"
           prop="userName"
+          width="130"
           :show-overflow-tooltip="true"
           sortable="custom"
           :sort-orders="['descending', 'ascending']"
         />
-        <el-table-column label="客户端" align="center" prop="clientKey" :show-overflow-tooltip="true" />
-        <el-table-column label="设备类型" align="center">
+        <el-table-column label="登入时间/登录IP/地区" align="center" width="220">
           <template #default="scope">
-            <dict-tag :options="sys_device_type" :value="scope.row.deviceType" />
+            <div>{{ parseTime(scope.row.loginTime) }}</div>
+            <div class="text-gray-400">{{ scope.row.ipaddr }}</div>
+            <div class="text-gray-400">{{ scope.row.loginLocation }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="地址" align="center" prop="ipaddr" :show-overflow-tooltip="true" />
-        <el-table-column label="登录地点" align="center" prop="loginLocation" :show-overflow-tooltip="true" />
-        <el-table-column label="操作系统" align="center" prop="os" :show-overflow-tooltip="true" />
-        <el-table-column label="浏览器" align="center" prop="browser" :show-overflow-tooltip="true" />
-        <el-table-column label="登录状态" align="center" prop="status">
+        <el-table-column label="结果" align="center" prop="status" width="90">
           <template #default="scope">
-            <dict-tag :options="sys_common_status" :value="scope.row.status" />
+            <span :class="scope.row.status === '0' ? 'text-green-600' : 'text-red-500'">
+              {{ scope.row.status === '0' ? '成功' : '失败' }}
+            </span>
           </template>
         </el-table-column>
-        <el-table-column label="描述" align="center" prop="msg" :show-overflow-tooltip="true" />
-        <el-table-column
-          label="访问时间"
-          align="center"
-          prop="loginTime"
-          sortable="custom"
-          :sort-orders="['descending', 'ascending']"
-          width="180"
-        >
+        <el-table-column label="最后登出时间/最后登出IP/地区" align="center" width="230">
           <template #default="scope">
-            <span>{{ parseTime(scope.row.loginTime) }}</span>
+            <div>{{ scope.row.logoutTime ? parseTime(scope.row.logoutTime) : '—' }}</div>
+            <div class="text-gray-400">{{ scope.row.logoutIp || '—' }}</div>
+            <div class="text-gray-400">{{ scope.row.logoutLocation || '—' }}</div>
           </template>
         </el-table-column>
+        <el-table-column label="在线时长(时)" align="center" width="130">
+          <template #default="scope">{{ onlineHours(scope.row.onlineDuration) }}</template>
+        </el-table-column>
+        <el-table-column label="登录网址" align="center" prop="loginDomain" width="150" :show-overflow-tooltip="true" />
+        <el-table-column label="浏览器品牌" align="center" prop="browserBrand" width="150" :show-overflow-tooltip="true" />
+        <el-table-column label="操作系统" align="center" prop="os" width="130" :show-overflow-tooltip="true" />
+        <el-table-column label="系统版本" align="center" prop="systemVersion" width="100" :show-overflow-tooltip="true" />
+        <el-table-column label="设备号" align="center" prop="deviceNo" width="220" :show-overflow-tooltip="true" />
+        <el-table-column label="设备指纹" align="center" prop="deviceFingerprint" width="220" :show-overflow-tooltip="true" />
       </el-table>
 
       <pagination
@@ -157,7 +161,7 @@
 import { list, delLoginInfo, cleanLoginInfo, unlockLoginInfo } from '@/api/monitor/logininfo';
 import { LoginInfoQuery, LoginInfoVO } from '@/api/monitor/logininfo/types';
 import { useLoading } from '@/hooks/async/useLoading';
-import { useDateRangeQuery } from '@/hooks/form/useDateRangeQuery';
+import { useTimeScopeQuery } from '@/hooks/form/useTimeScopeQuery';
 import { useSearchReset } from '@/hooks/form/useSearchReset';
 import { useSearchToggle } from '@/hooks/form/useSearchToggle';
 import { useTableSelection } from '@/hooks/table/useTableSelection';
@@ -174,7 +178,23 @@ const loginInfoList = ref<LoginInfoVO[]>([]);
 const { loading, withLoading } = useLoading(true);
 const { showSearch } = useSearchToggle();
 const total = ref(0);
-const { dateRange, applyDateRange, resetDateRange } = useDateRangeQuery();
+/** 截图筛选区：「登入时间」支持 日 / 周 / 月 三段按钮联动默认区间 */
+const {
+  timeScope,
+  dateRange,
+  monthValue,
+  handleScopeChange: handleScopeChangeRaw,
+  buildTimeParams,
+  applyScopeRange
+} = useTimeScopeQuery({ defaultScope: 'day' });
+
+/** 在线时长（秒 → 时，保留 2 位小数；无登出记录显示 —） */
+const onlineHours = (seconds?: number) => {
+  if (!seconds || seconds <= 0) {
+    return '—';
+  }
+  return (seconds / 3600).toFixed(2);
+};
 
 const queryFormRef = ref<ElFormInstance>();
 const loginInfoTableRef = ref<ElTableInstance>();
@@ -200,10 +220,15 @@ const selectName = computed(() => selectedRows.value.map(item => item.userName))
 /** 查询登录日志列表 */
 const getList = async () => {
   await withLoading(async () => {
-    const res = await list(applyDateRange(queryParams.value));
-    loginInfoList.value = res.data?.rows;
-    total.value = res.data?.total;
+    const res = await list({ ...queryParams.value, ...buildTimeParams() });
+    loginInfoList.value = res.data?.rows ?? [];
+    total.value = res.data?.total ?? 0;
   });
+};
+/** 粒度切换：重置默认区间并刷新 */
+const handleScopeChange = () => {
+  handleScopeChangeRaw();
+  handleQuery();
 };
 const { defaultSort, handleSortChange, resetSort } = useTableSortQuery<LoginInfoQuery>({
   queryParams,
@@ -221,7 +246,7 @@ const { resetQuery } = useSearchReset({
   queryParams,
   pageNumKey: 'pageNum',
   resetExtras: () => {
-    resetDateRange();
+    applyScopeRange();
   },
   afterReset: () => {
     resetSort();
