@@ -65,6 +65,7 @@
 import { downloadRiskImportFailDetail, importRiskBlacklist } from '@/api/risk/blacklist';
 import type { RiskBlacklistTab, RiskImportResultVO } from '@/api/risk/blacklist/types';
 import modal from '@/plugins/modal';
+import { saveBlob } from '@/utils/save';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -141,10 +142,12 @@ const submit = async () => {
 };
 
 const downloadFailDetail = async () => {
-  if (!result.value?.logId) return;
+  const logId = result.value?.logId;
+  if (!logId) return;
   downloading.value = true;
   try {
-    await downloadRiskImportFailDetail(result.value.logId);
+    const blob = await downloadRiskImportFailDetail(logId);
+    saveBlob(blob as unknown as Blob, `黑名单导入失败明细_${logId}.csv`);
   } finally {
     downloading.value = false;
   }

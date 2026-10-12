@@ -81,6 +81,15 @@ export const importRiskBlacklist = (tab: RiskBlacklistTab, file: File): AxiosPro
   });
 };
 
+/** 下载导入失败明细（CSV：行号 + 失败原因，便于运营修正后重传） */
+export const downloadRiskImportFailDetail = (logId: number | string): AxiosPromise<Blob> => {
+  return request({
+    url: `/infra/risk/blacklist/import/${logId}/fail-detail`,
+    method: 'get',
+    responseType: 'blob'
+  });
+};
+
 /** 导出报表（走浏览器下载） */
 export const exportRiskBlacklist = (tab: RiskBlacklistTab, query?: RiskBlacklistQuery) => {
   return request({
