@@ -4,206 +4,223 @@
       <template #header>
         <div class="toolbar-shell">
           <div class="table-heading">
-            <h3>App 包管理</h3>
-            <p>维护客户端安装包版本、发布状态与强更白名单。</p>
+            <h3>APP包管理</h3>
+            <p>维护「打包APP / 原生马甲包」：图标、APP包名、应用地址（极速/原生·轻量/完整）与打包状态。</p>
           </div>
           <div class="toolbar-actions">
-            <el-button v-hasPermi="['ops:app-pack:add']" type="primary" plain icon="Plus" @click="handleAdd">新增版本</el-button>
+            <el-input
+              v-model="queryParams.keyword"
+              placeholder="APP名称 / 包名"
+              clearable
+              style="width: 180px"
+              @keyup.enter="handleQuery"
+            />
+            <el-button plain icon="Search" @click="handleQuery">搜索</el-button>
+            <el-button v-hasPermi="['ops:app-pack:edit']" plain icon="Setting" @click="openPublicConfig">公共配置</el-button>
+            <el-button v-hasPermi="['ops:app-pack:publish']" plain @click="handleBuild(2)">生成IOS包</el-button>
+            <el-button v-hasPermi="['ops:app-pack:publish']" type="primary" @click="handleBuild(1)">生成Android包</el-button>
+            <el-button v-hasPermi="['ops:app-pack:add']" plain icon="Plus" @click="openAppDialog()">新增APP</el-button>
           </div>
         </div>
       </template>
-      <el-tabs v-model="activeTab">
-        <el-tab-pane label="版本列表" name="list">
-          <el-form :inline="true" class="query-form mb-2">
-            <el-form-item label="平台">
-              <el-select v-model="queryParams.appPlatform" clearable style="width: 110px">
-                <el-option label="Android" :value="1" />
-                <el-option label="iOS" :value="2" />
-                <el-option label="H5" :value="3" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="状态">
-              <el-select v-model="queryParams.status" clearable style="width: 110px">
-                <el-option label="草稿" :value="0" />
-                <el-option label="已发布" :value="1" />
-                <el-option label="已下线" :value="2" />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-            </el-form-item>
-          </el-form>
-          <el-table v-loading="loading" border :data="rows">
-            <el-table-column label="平台" align="center" width="90">
-              <template #default="{ row }">{{ platformText(row.appPlatform) }}</template>
-            </el-table-column>
-            <el-table-column label="版本号" prop="versionCode" width="130" />
-            <el-table-column label="版本名" prop="versionName" min-width="110" />
-            <el-table-column label="强制更新" align="center" width="90">
-              <template #default="{ row }">
-                <el-tag v-if="row.forceUpdate === 1" type="danger">强制</el-tag>
-                <el-tag v-else type="info">可选</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="文件" align="center" min-width="140">
-              <template #default="{ row }">
-                <div v-if="row.fileName">{{ row.fileName }}</div>
-                <span v-else class="text-gray-400">—</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="大小" align="right" width="100">
-              <template #default="{ row }">{{ fmtSize(row.fileSize) }}</template>
-            </el-table-column>
-            <el-table-column label="状态" align="center" width="90">
-              <template #default="{ row }">
-                <el-tag :type="versionStatusType(row.status)">{{ versionStatusText(row.status) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="发布时间" align="center" width="170">
-              <template #default="{ row }">{{ fmt(row.publishAt) }}</template>
-            </el-table-column>
-            <el-table-column label="操作" align="center" width="230" fixed="right">
-              <template #default="{ row }">
-                <el-button link type="primary" @click="handleUpdate(row)">编辑</el-button>
-                <el-button v-if="row.status === 0 || row.status === 2" link type="success" @click="handlePublish(row)">发布</el-button>
-                <el-button v-if="row.status === 1" link type="warning" @click="handleOffline(row)">下线</el-button>
-                <el-button v-if="row.status === 0" link type="danger" @click="handleDelete(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <pagination
-            v-show="total > 0"
-            v-model:page="queryParams.pageNum"
-            v-model:limit="queryParams.pageSize"
-            :total="total"
-            @pagination="getList"
-          />
-        </el-tab-pane>
-        <el-tab-pane label="强更白名单" name="whitelist">
-          <div class="mb-2">
-            <el-button v-hasPermi="['ops:app-pack:whitelist']" type="primary" plain icon="Plus" @click="whiteDialog.visible = true">
-              添加白名单
-            </el-button>
-            <el-button
-              v-hasPermi="['ops:app-pack:whitelist']"
-              type="danger"
-              plain
-              icon="Delete"
-              :disabled="whiteMultiple"
-              @click="handleWhiteDelete()"
-            >删除</el-button>
-          </div>
-          <el-table v-loading="whiteLoading" border :data="whiteRows" @selection-change="handleWhiteSelection">
-            <el-table-column type="selection" width="50" align="center" />
-            <el-table-column label="UID" prop="uid" width="180" />
-            <el-table-column label="版本号" prop="versionCode" width="150" />
-            <el-table-column label="原因" prop="reason" min-width="200" />
-            <el-table-column label="创建时间" align="center" width="170">
-              <template #default="{ row }">{{ fmt(row.createdAt) }}</template>
-            </el-table-column>
-            <el-table-column label="操作" align="center" width="90">
-              <template #default="{ row }">
-                <el-button link type="danger" @click="handleWhiteDelete(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <pagination
-            v-show="whiteTotal > 0"
-            v-model:page="whiteQuery.pageNum"
-            v-model:limit="whiteQuery.pageSize"
-            :total="whiteTotal"
-            @pagination="getWhiteList"
-          />
-        </el-tab-pane>
+
+      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+        <el-tab-pane label="打包APP" name="1" />
+        <el-tab-pane label="原生马甲包" name="2" />
       </el-tabs>
+
+      <el-table v-loading="loading" border :data="rows" empty-text="暂无数据">
+        <el-table-column label="图标" align="center" width="90">
+          <template #default="{ row }">
+            <el-image v-if="row.appIconUrl" :src="row.appIconUrl" fit="cover" style="width: 44px; height: 44px; border-radius: 6px" />
+            <span v-else class="text-gray-400">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="系统" align="center" width="110">
+          <template #default="{ row }">
+            <span class="system-cell">
+              <el-icon><component :is="row.platform === 2 ? 'Apple' : 'Cellphone'" /></el-icon>
+              {{ row.platformName }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="APP名称" align="center" width="120">
+          <template #default="{ row }">{{ row.appName || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="APP包名" align="center" min-width="200" :show-overflow-tooltip="true">
+          <template #default="{ row }">{{ row.packageName || '—' }}</template>
+        </el-table-column>
+
+        <!-- 应用地址：一格多行，与「版本号 / 状态 / 操作」三列逐行对齐（图片口径） -->
+        <el-table-column label="应用地址" min-width="340">
+          <template #default="{ row }">
+            <div v-for="res in row.resources" :key="res.resourceId" class="resource-line">
+              <span class="resource-name">{{ res.resourceTypeName }}：</span>
+              <a class="resource-url" :href="res.resourceUrl || 'javascript:void(0)'" :title="res.resourceUrl" target="_blank">
+                {{ res.resourceUrl || '待回填包地址' }}
+              </a>
+              <span class="resource-size">{{ fmtSize(res.fileSize) }}</span>
+            </div>
+            <div v-if="!row.resources || !row.resources.length" class="text-gray-400">尚未生成，请点右上角「生成Android包 / 生成IOS包」</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="版本号" align="center" width="95">
+          <template #default="{ row }">
+            <div v-for="res in row.resources" :key="res.resourceId" class="resource-line">{{ res.versionCode || '—' }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" align="center" width="105">
+          <template #default="{ row }">
+            <div v-for="res in row.resources" :key="res.resourceId" class="resource-line">
+              <el-tag :type="packStatusType(res.packStatus)" size="small">{{ res.packStatusName }}</el-tag>
+            </div>
+          </template>
+        </el-table-column>
+        <!-- 操作列：图片口径一行 = 一个资源行的「下载 / 替换 / google登录指纹 / Facebook登录密钥」；
+             列宽必须容纳四个链接（实测约 300px），否则会被居中裁切成「错位」效果（2026-10-12 修复） -->
+        <el-table-column label="操作" align="center" min-width="330">
+          <template #default="{ row }">
+            <div v-for="res in row.resources" :key="res.resourceId" class="resource-ops">
+              <a v-if="res.resourceUrl" :href="res.resourceUrl" target="_blank" class="op-link">下载</a>
+              <el-button v-hasPermi="['ops:app-pack:edit']" link type="primary" @click="openReplace(row, res)">替换</el-button>
+              <el-button
+                v-if="res.googleLoginFingerprint"
+                v-hasPermi="['ops:app-pack:edit']"
+                link
+                type="primary"
+                @click="openSecretDialog(res, 'fingerprint')"
+              >google登录指纹</el-button>
+              <el-button
+                v-if="res.facebookLoginSecret"
+                v-hasPermi="['ops:app-pack:edit']"
+                link
+                type="primary"
+                @click="openSecretDialog(res, 'secret')"
+              >Facebook登录密钥</el-button>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作时间" align="center" width="170">
+          <template #default="{ row }">{{ fmt(row.packedAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作人" align="center" width="110">
+          <template #default="{ row }">{{ row.packedBy || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="" align="center" width="60" fixed="right">
+          <template #default="{ row }">
+            <el-button v-hasPermi="['ops:app-pack:edit']" link type="primary" @click="openAppDialog(row)">编辑</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <pagination
+        v-show="total > 0"
+        v-model:page="queryParams.pageNum"
+        v-model:limit="queryParams.pageSize"
+        :total="total"
+        @pagination="getList"
+      />
+      <div class="table-footer">共 {{ total }} 条</div>
     </el-card>
 
-    <el-dialog v-model="dialog.visible" :title="dialog.title" width="680px" append-to-body destroy-on-close>
-      <el-form ref="formRef" :model="form" label-width="110px">
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="平台" prop="appPlatform">
-              <el-select v-model="form.appPlatform" style="width: 100%">
-                <el-option label="Android" :value="1" />
-                <el-option label="iOS" :value="2" />
-                <el-option label="H5" :value="3" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="版本号" prop="versionCode">
-              <el-input v-model="form.versionCode" placeholder="如 2.6.2" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="版本名称" prop="versionName">
-              <el-input v-model="form.versionName" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="强制更新">
-              <el-switch v-model="forceUpdateFlag" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="文件名">
-              <el-input v-model="form.fileName" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="文件大小">
-              <el-input-number v-model="form.fileSize" :min="0" :controls="false" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="MD5">
-              <el-input v-model="form.fileMd5" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="下载站ID">
-              <el-input-number v-model="form.downloadSiteId" :min="0" :controls="false" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="下载地址">
-              <el-input v-model="form.updateUrl" placeholder="包下载 URL" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="更新说明">
-              <el-input v-model="form.updateDesc" type="textarea" :rows="3" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="策略JSON">
-              <el-input v-model="form.updateStrategyJson" type="textarea" :rows="2" placeholder='可选，如 {"grayRatio":0.1}' />
-            </el-form-item>
-          </el-col>
-        </el-row>
+    <!-- 公共配置（图片弹窗：极速APP / 原生APP 总开关 + 分端开关 + 资源类型） -->
+    <el-dialog v-model="publicDialog.visible" title="公共配置" width="620px" append-to-body>
+      <el-form label-width="150px">
+        <el-form-item label="极速APP">
+          <el-switch v-model="cfg.fast_app_enabled" active-value="1" inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="　Android极速APP">
+          <el-switch v-model="cfg.fast_app_android" active-value="1" inactive-value="0" :disabled="cfg.fast_app_enabled !== '1'" />
+        </el-form-item>
+        <el-form-item label="　iOS极速APP">
+          <el-switch v-model="cfg.fast_app_ios" active-value="1" inactive-value="0" :disabled="cfg.fast_app_enabled !== '1'" />
+        </el-form-item>
+        <el-form-item label="原生APP">
+          <el-switch v-model="cfg.native_app_enabled" active-value="1" inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="　Android原生APP">
+          <el-switch v-model="cfg.native_app_android" active-value="1" inactive-value="0" :disabled="cfg.native_app_enabled !== '1'" />
+        </el-form-item>
+        <el-form-item label="　　Android原生APP资源">
+          <el-radio-group v-model="cfg.android_resource_type" :disabled="cfg.native_app_android !== '1'">
+            <el-radio value="full">完整资源(约110M)</el-radio>
+            <el-radio value="light">轻量资源(约70M,安装后再加载)</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="　iOS原生APP">
+          <el-switch v-model="cfg.native_app_ios" active-value="1" inactive-value="0" :disabled="cfg.native_app_enabled !== '1'" />
+        </el-form-item>
+        <el-form-item label="　　iOS原生APP资源">
+          <el-radio-group v-model="cfg.ios_resource_type" :disabled="cfg.native_app_ios !== '1'">
+            <el-radio value="full">完整资源(约110M)</el-radio>
+            <el-radio value="light">轻量资源(约70M,安装后再加载)</el-radio>
+          </el-radio-group>
+        </el-form-item>
       </el-form>
       <template #footer>
-        <el-button type="primary" @click="submitForm">确 定</el-button>
-        <el-button @click="dialog.visible = false">取 消</el-button>
+        <el-button @click="publicDialog.visible = false">取 消</el-button>
+        <el-button type="primary" @click="submitPublicConfig">确 认</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="whiteDialog.visible" title="添加强更白名单" width="520px" append-to-body destroy-on-close>
-      <el-form :model="whiteForm" label-width="90px">
-        <el-form-item label="UID" prop="uid">
-          <el-input-number v-model="whiteForm.uid" :min="1" :controls="false" style="width: 100%" />
+    <!-- 替换（回填）资源行 -->
+    <el-dialog v-model="replaceDialog.visible" :title="'替换资源：' + replaceDialog.title" width="620px" append-to-body destroy-on-close>
+      <el-form :model="replaceForm" label-width="130px">
+        <el-form-item label="包地址">
+          <el-input v-model="replaceForm.resourceUrl" placeholder="CI 产出的真实包地址（http/https）" />
         </el-form-item>
-        <el-form-item label="版本号" prop="versionCode">
-          <el-input v-model="whiteForm.versionCode" placeholder="免强更版本号" />
+        <el-form-item label="文件大小(MB)">
+          <el-input-number v-model="replaceForm.fileSizeMb" :min="0" :precision="2" :step="0.1" />
         </el-form-item>
-        <el-form-item label="原因">
-          <el-input v-model="whiteForm.reason" type="textarea" :rows="2" />
+        <el-form-item label="版本号">
+          <el-input v-model="replaceForm.versionCode" placeholder="如 1.1.74 / 6.9.18" />
+        </el-form-item>
+        <el-form-item label="google登录指纹">
+          <el-input v-model="replaceForm.googleLoginFingerprint" placeholder="Android 原生包专用，可留空" />
+        </el-form-item>
+        <el-form-item label="Facebook登录密钥">
+          <el-input v-model="replaceForm.facebookLoginSecret" placeholder="Android 原生包专用，可留空" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button type="primary" @click="submitWhite">确 定</el-button>
-        <el-button @click="whiteDialog.visible = false">取 消</el-button>
+        <el-button @click="replaceDialog.visible = false">取 消</el-button>
+        <el-button type="primary" @click="submitReplace">确 认</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 指纹 / 密钥单独维护 -->
+    <el-dialog v-model="secretDialog.visible" :title="secretDialog.title" width="560px" append-to-body destroy-on-close>
+      <el-input v-model="secretDialog.value" type="textarea" :rows="3" :placeholder="secretDialog.placeholder" />
+      <template #footer>
+        <el-button @click="secretDialog.visible = false">取 消</el-button>
+        <el-button type="primary" @click="submitSecret">确 认</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 新增 / 编辑 APP -->
+    <el-dialog v-model="appDialog.visible" :title="appDialog.title" width="620px" append-to-body destroy-on-close>
+      <el-form :model="appForm" label-width="120px">
+        <el-form-item label="系统">
+          <el-radio-group v-model="appForm.platform">
+            <el-radio :value="1">Android</el-radio>
+            <el-radio :value="2">iOS</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="APP名称">
+          <el-input v-model="appForm.appName" placeholder="如 N188.COM" />
+        </el-form-item>
+        <el-form-item label="APP包名">
+          <el-input v-model="appForm.packageName" placeholder="如 com.owvcg.vvhei2562.yvok" />
+        </el-form-item>
+        <el-form-item label="APP图标地址">
+          <el-input v-model="appForm.appIconUrl" placeholder="图标 URL（选填）" />
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-input-number v-model="appForm.sortOrder" :min="0" :max="9999" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="appDialog.visible = false">取 消</el-button>
+        <el-button type="primary" @click="submitApp">确 认</el-button>
       </template>
     </el-dialog>
   </div>
@@ -214,161 +231,297 @@ import { onMounted, reactive, ref, toRefs } from 'vue';
 import { useLoading } from '@/hooks/async/useLoading';
 import modal from '@/plugins/modal';
 import {
-  addAppVersion,
-  addWhitelist,
-  delAppVersion,
-  delWhitelist,
-  listAppVersion,
-  listWhitelist,
-  offlineAppVersion,
-  publishAppVersion,
-  updateAppVersion
+  addAppPackage,
+  buildAppPackage,
+  getAppPackPublicConfig,
+  listAppPackage,
+  replaceAppResource,
+  saveAppPackPublicConfig,
+  updateAppPackage
 } from '@/api/ops/app-pack';
-import type { AppVersionForm, AppVersionQuery, AppVersionVO, WhitelistForm, WhitelistQuery, WhitelistVO } from '@/api/ops/app-pack/types';
+import type { AppPackageForm, AppPackageQuery, AppPackageVO, AppPackResourceForm, AppPackResourceVO } from '@/api/ops/app-pack/types';
 
-const activeTab = ref('list');
 const { loading, withLoading } = useLoading(true);
-const { loading: whiteLoading, withLoading: withWhiteLoading } = useLoading(true);
-const rows = ref<AppVersionVO[]>([]);
+const rows = ref<AppPackageVO[]>([]);
 const total = ref(0);
-const whiteRows = ref<WhitelistVO[]>([]);
-const whiteTotal = ref(0);
-const whiteIds = ref<number[]>([]);
-const whiteMultiple = ref(true);
-const isEdit = ref(false);
-const forceUpdateFlag = ref(false);
-const dialog = reactive({ visible: false, title: '' });
-const whiteDialog = reactive({ visible: false });
+const activeTab = ref('1');
+const publicDialog = reactive({ visible: false });
+const replaceDialog = reactive({ visible: false, title: '' });
+const secretDialog = reactive({ visible: false, title: '', value: '', placeholder: '', resourceId: 0, field: 'fingerprint' });
+const appDialog = reactive({ visible: false, title: '' });
 
 const data = reactive<{
-  queryParams: AppVersionQuery;
-  whiteQuery: WhitelistQuery;
-  form: AppVersionForm;
-  whiteForm: WhitelistForm;
+  queryParams: AppPackageQuery;
+  replaceForm: AppPackResourceForm & { fileSizeMb?: number };
+  appForm: AppPackageForm;
+  cfg: Record<string, string>;
 }>({
-  queryParams: { pageNum: 1, pageSize: 10 },
-  whiteQuery: { pageNum: 1, pageSize: 10 },
-  form: { appPlatform: 1, forceUpdate: 0, downloadSiteId: 0 },
-  whiteForm: {}
+  queryParams: { pageNum: 1, pageSize: 10, appType: 1 },
+  replaceForm: {},
+  appForm: { platform: 1, sortOrder: 100 },
+  cfg: {
+    fast_app_enabled: '1',
+    fast_app_android: '1',
+    fast_app_ios: '1',
+    native_app_enabled: '1',
+    native_app_android: '1',
+    native_app_ios: '1',
+    android_resource_type: 'light',
+    ios_resource_type: 'full'
+  }
 });
-const { queryParams, whiteQuery, form, whiteForm } = toRefs(data);
+const { queryParams, replaceForm, appForm, cfg } = toRefs(data);
 
-const platformText = (p?: number) => (p === 1 ? 'Android' : p === 2 ? 'iOS' : p === 3 ? 'H5' : '—');
-const versionStatusText = (s?: number) => (s === 0 ? '草稿' : s === 1 ? '已发布' : s === 2 ? '已下线' : '—');
-const versionStatusType = (s?: number) => (s === 0 ? 'info' : s === 1 ? 'success' : 'danger');
 const fmt = (value?: string) => (value ? value.replace('T', ' ').slice(0, 19) : '—');
-const fmtSize = (size?: number) => {
-  if (!size) return '—';
-  if (size > 1024 * 1024 * 1024) return (size / 1024 / 1024 / 1024).toFixed(2) + ' GB';
-  if (size > 1024 * 1024) return (size / 1024 / 1024).toFixed(1) + ' MB';
-  return (size / 1024).toFixed(0) + ' KB';
+
+/** 字节 → 人类可读（1024 进制，保留两位，与截图 6.82M / 57.91M 口径一致） */
+const fmtSize = (bytes?: number) => {
+  if (!bytes || bytes <= 0) {
+    return '—';
+  }
+  const units = ['B', 'K', 'M', 'G'];
+  let value = bytes;
+  let idx = 0;
+  while (value >= 1024 && idx < units.length - 1) {
+    value /= 1024;
+    idx += 1;
+  }
+  return (idx === 0 ? value : value.toFixed(2)) + units[idx];
 };
+
+const packStatusType = (status?: number) => (status === 1 ? 'success' : status === 2 ? 'warning' : 'danger');
+
+/**
+ * 表格插槽回传的是 element-plus 的 DefaultRow（弱类型），
+ * 模板入口统一用宽松类型接收再收敛到业务字段，避免为每处调用维护类型断言。
+ */
+type RowLike = Record<string, any>;
 
 const getList = async () => {
-  await withLoading(async () => {
-    const res = await listAppVersion(queryParams.value);
-    rows.value = res.data?.rows || [];
-    total.value = res.data?.total || 0;
-  });
+  queryParams.value.appType = Number(activeTab.value);
+  try {
+    await withLoading(async () => {
+      const res = await listAppPackage(queryParams.value);
+      rows.value = res.data?.rows || [];
+      total.value = res.data?.total || 0;
+    });
+  } catch (error) {
+    modal.msgError('APP包列表加载失败，请稍后重试');
+  }
 };
+
 const handleQuery = () => {
   queryParams.value.pageNum = 1;
   getList();
 };
-const resetQuery = () => {
-  queryParams.value = { pageNum: 1, pageSize: 10 } as AppVersionQuery;
-  handleQuery();
+
+const handleTabChange = () => {
+  queryParams.value.pageNum = 1;
+  rows.value = [];
+  total.value = 0;
+  getList();
 };
-const getWhiteList = async () => {
-  await withWhiteLoading(async () => {
-    const res = await listWhitelist(whiteQuery.value);
-    whiteRows.value = res.data?.rows || [];
-    whiteTotal.value = res.data?.total || 0;
-  });
+
+/** 生成包受理（图片「生成IOS包 / 生成Android包」） */
+const handleBuild = async (platform: number) => {
+  const label = platform === 1 ? 'Android' : 'IOS';
+  await modal.confirm(`确认按「公共配置」为当前列表生成 ${label} 安装包？生成后资源行状态为「打包中」，待流水线产出后用「替换」回填。`);
+  try {
+    const res = await buildAppPackage({ appType: Number(activeTab.value), platform });
+    modal.msgSuccess(res.data?.tip || '已受理');
+    getList();
+  } catch (error) {
+    modal.msgError('生成包失败，请检查公共配置与 APP 维护情况');
+  }
 };
-const handleWhiteSelection = (selection: WhitelistVO[]) => {
-  whiteIds.value = selection.map(item => item.id);
-  whiteMultiple.value = selection.length === 0;
+
+const openPublicConfig = async () => {
+  try {
+    const res = await getAppPackPublicConfig();
+    (res.data || []).forEach((item) => {
+      cfg.value[String(item.configKey)] = String(item.configValue ?? '');
+    });
+    publicDialog.visible = true;
+  } catch (error) {
+    modal.msgError('公共配置加载失败');
+  }
 };
-const handleAdd = () => {
-  isEdit.value = false;
-  forceUpdateFlag.value = false;
-  form.value = { appPlatform: 1, forceUpdate: 0, downloadSiteId: 0 } as AppVersionForm;
-  dialog.title = '新增版本';
-  dialog.visible = true;
+
+const submitPublicConfig = async () => {
+  try {
+    await saveAppPackPublicConfig({ ...cfg.value });
+    modal.msgSuccess('公共配置已保存');
+    publicDialog.visible = false;
+  } catch (error) {
+    modal.msgError('保存失败：开关只能是 0/1，资源类型只能是 full/light');
+  }
 };
-const handleUpdate = (row: AppVersionVO) => {
-  isEdit.value = true;
-  forceUpdateFlag.value = row.forceUpdate === 1;
-  form.value = {
-    versionId: row.versionId,
-    appPlatform: row.appPlatform,
-    versionCode: row.versionCode,
-    versionName: row.versionName,
-    updateUrl: row.updateUrl,
-    updateDesc: row.updateDesc,
-    fileName: row.fileName,
-    fileSize: row.fileSize,
-    fileMd5: row.fileMd5,
-    downloadSiteId: row.downloadSiteId,
-    updateStrategyJson: row.updateStrategyJson
+
+const openReplace = (row: RowLike, res: RowLike) => {
+  replaceForm.value = {
+    resourceId: res.resourceId,
+    appId: row.appId,
+    resourceType: res.resourceType,
+    platform: res.platform,
+    resourceUrl: res.resourceUrl,
+    versionCode: res.versionCode,
+    fileSizeMb: res.fileSize ? Number((res.fileSize / 1024 / 1024).toFixed(2)) : undefined,
+    googleLoginFingerprint: res.googleLoginFingerprint,
+    facebookLoginSecret: res.facebookLoginSecret
   };
-  dialog.title = '编辑版本';
-  dialog.visible = true;
+  replaceDialog.title = `${row.appName} / ${res.resourceTypeName}`;
+  replaceDialog.visible = true;
 };
-const submitForm = async () => {
-  if (!form.value.versionCode || !form.value.versionName) {
-    modal.msgWarning('版本号与版本名称必填');
+
+const submitReplace = async () => {
+  if (!replaceForm.value.resourceUrl) {
+    modal.msgWarning('请填写包地址');
     return;
   }
-  form.value.forceUpdate = forceUpdateFlag.value ? 1 : 0;
-  if (isEdit.value) {
-    await updateAppVersion(form.value);
+  const payload: AppPackResourceForm = {
+    resourceId: replaceForm.value.resourceId,
+    resourceUrl: replaceForm.value.resourceUrl,
+    versionCode: replaceForm.value.versionCode,
+    fileSize: replaceForm.value.fileSizeMb ? Math.round(replaceForm.value.fileSizeMb * 1024 * 1024) : undefined,
+    googleLoginFingerprint: replaceForm.value.googleLoginFingerprint,
+    facebookLoginSecret: replaceForm.value.facebookLoginSecret
+  };
+  try {
+    await replaceAppResource(payload);
+    modal.msgSuccess('已替换并置为「打包成功」');
+    replaceDialog.visible = false;
+    getList();
+  } catch (error) {
+    modal.msgError('替换失败：请检查包地址是否为 http(s) 链接');
+  }
+};
+
+const openSecretDialog = (res: RowLike, field: 'fingerprint' | 'secret') => {
+  secretDialog.resourceId = res.resourceId;
+  secretDialog.field = field;
+  if (field === 'fingerprint') {
+    secretDialog.title = 'google 登录指纹';
+    secretDialog.placeholder = '粘贴 google 登录指纹';
+    secretDialog.value = res.googleLoginFingerprint || '';
   } else {
-    await addAppVersion(form.value);
+    secretDialog.title = 'Facebook 登录密钥';
+    secretDialog.placeholder = '粘贴 Facebook 登录密钥';
+    secretDialog.value = res.facebookLoginSecret || '';
   }
-  modal.msgSuccess('操作成功');
-  dialog.visible = false;
-  getList();
+  secretDialog.visible = true;
 };
-const handlePublish = async (row: AppVersionVO) => {
-  await publishAppVersion(row.versionId);
-  modal.msgSuccess('已发布');
-  getList();
+
+const submitSecret = async () => {
+  const payload: AppPackResourceForm =
+    secretDialog.field === 'fingerprint'
+      ? { resourceId: secretDialog.resourceId, googleLoginFingerprint: secretDialog.value }
+      : { resourceId: secretDialog.resourceId, facebookLoginSecret: secretDialog.value };
+  try {
+    await replaceAppResource(payload);
+    modal.msgSuccess('已保存');
+    secretDialog.visible = false;
+    getList();
+  } catch (error) {
+    modal.msgError('保存失败');
+  }
 };
-const handleOffline = async (row: AppVersionVO) => {
-  await offlineAppVersion(row.versionId);
-  modal.msgSuccess('已下线');
-  getList();
+
+const openAppDialog = (row?: RowLike) => {
+  appForm.value = row
+    ? {
+        appId: row.appId,
+        appType: row.appType,
+        platform: row.platform,
+        appName: row.appName,
+        packageName: row.packageName,
+        appIconUrl: row.appIconUrl,
+        sortOrder: row.sortOrder
+      }
+    : { appType: Number(activeTab.value), platform: 1, sortOrder: 100 };
+  appDialog.title = row ? '编辑 APP' : '新增 APP';
+  appDialog.visible = true;
 };
-const handleDelete = async (row?: AppVersionVO) => {
-  if (!row) return;
-  await modal.confirm('仅草稿可删除，确认删除该版本吗？');
-  await delAppVersion(row.versionId);
-  modal.msgSuccess('删除成功');
-  getList();
-};
-const submitWhite = async () => {
-  if (!whiteForm.value.uid || !whiteForm.value.versionCode) {
-    modal.msgWarning('UID 与版本号必填');
+
+const submitApp = async () => {
+  if (!appForm.value.appName || !appForm.value.packageName) {
+    modal.msgWarning('APP名称与APP包名必填');
     return;
   }
-  await addWhitelist(whiteForm.value);
-  modal.msgSuccess('添加成功');
-  whiteDialog.visible = false;
-  whiteForm.value = {};
-  getWhiteList();
+  appForm.value.appType = appForm.value.appType || Number(activeTab.value);
+  try {
+    if (appForm.value.appId) {
+      await updateAppPackage(appForm.value);
+    } else {
+      await addAppPackage(appForm.value);
+    }
+    modal.msgSuccess('操作成功');
+    appDialog.visible = false;
+    getList();
+  } catch (error) {
+    modal.msgError('保存失败：同类型同系统下 APP 包名不能重复');
+  }
 };
-const handleWhiteDelete = async (row?: WhitelistVO) => {
-  const delIds = row ? [row.id] : whiteIds.value;
-  if (!delIds.length) return;
-  await modal.confirm('确认删除选中的白名单吗？');
-  await delWhitelist(delIds.join(','));
-  modal.msgSuccess('删除成功');
-  getWhiteList();
-};
-onMounted(() => {
-  getList();
-  getWhiteList();
-});
+
+onMounted(() => getList());
 </script>
+
+<style scoped>
+.system-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.resource-line {
+  height: 24px;
+  line-height: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resource-name {
+  color: #909399;
+}
+
+.resource-url {
+  color: #409eff;
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.resource-size {
+  margin-left: 8px;
+  color: #303133;
+}
+
+.resource-ops {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 24px;
+  line-height: 24px;
+  white-space: nowrap;
+  /* FIX(2026-10-12)：不再继承 .resource-line 的 overflow:hidden —— 操作列内容一旦超宽会被
+     居中裁切，表现为「左半截/右半截」的错位；下面同时覆盖 element-plus 默认的
+     .el-button+.el-button 左外边距，避免与 gap 叠加把整行撑出单元格。 */
+  overflow: visible;
+}
+
+.resource-ops .el-button + .el-button {
+  margin-left: 0;
+}
+
+.op-link {
+  color: #409eff;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.table-footer {
+  margin-top: 8px;
+  color: #909399;
+  font-size: 12px;
+}
+</style>

@@ -118,7 +118,8 @@
           </template>
           <el-table-column label="子游戏名称(平台名称)" align="center" width="190">
             <template #default="{ row }">
-              <div>{{ row.gameName }}</div>
+              <!-- 中文名/越南名（越南名取 game_catalog.game_name_vn；缺失或与中文名相同时只显示中文名） -->
+              <div>{{ row.gameName }}<span v-if="vnName(row)">/{{ vnName(row) }}</span></div>
               <div class="sub">({{ row.platformName }})</div>
             </template>
           </el-table-column>
@@ -313,7 +314,7 @@ async function exportReport() {
     ['注单编号', 'bizNo'], ['牌局编号', 'roundNo'], ['会员账号', 'loginName'], ['会员ID', 'uid'],
     ['上级代理账号', 'parentAgent'], ['上级代理ID', 'parentAgentId'],
     ['顶层代理账号', 'topAgent'], ['顶层代理ID', 'topAgentId'],
-    ['子游戏名称', 'gameName'], ['平台名称', 'platformName'], ['投注时间', 'betTime'],
+    ['子游戏名称', 'gameName'], ['子游戏名称(越南文)', 'gameNameVn'], ['平台名称', 'platformName'], ['投注时间', 'betTime'],
     ['结算时间', 'settleTime'], ['投注结算时间差(秒)', 'settleCostSeconds'], ['币种', 'currency'],
     ['投注金额', 'betAmount'], ['有效投注', 'validBet'], ['预扣税', 'taxAmount'],
     ['会员输赢', 'memberWin'], ['投注后余额', 'afterBalance'], ['状态', 'settleStatus']
@@ -328,6 +329,18 @@ async function exportReport() {
   link.download = `投注记录_${tab.value}_${range.value?.[0] ?? ''}_${range.value?.[1] ?? ''}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
+}
+
+/**
+ * 「子游戏名称(平台名称)」列的越南文名。
+ *
+ * 为什么单独取值再拼：中文名与越南名是两个字段（`gameName` / `gameNameVn`），
+ * 只在越南名存在且与中文名不同才追加 `/越南名`，避免出现「9848/9848」这类重复展示。
+ */
+function vnName(row: any): string {
+  const vn = row?.gameNameVn;
+  if (!vn || vn === row?.gameName) return '';
+  return String(vn);
 }
 
 /** 操作教程：指向本目录的测试/需求文档入口（无独立教程页时的落点） */

@@ -84,11 +84,17 @@
         <el-table-column label="游戏类型" align="center" prop="gameTypeName" width="110" />
         <el-table-column label="游戏平台" align="center" prop="platformName" width="130" />
         <el-table-column label="游戏名称" align="center" prop="gameName" min-width="150" />
-      <el-table-column label="注单来源" align="center" width="120">
+      <!--
+        FIX(2026-10-12): 注单来源列改为完整映射 + tooltip。
+        原因：原实现只区分 MINIGAME 与非 MINIGAME（其余一律显示"棋牌/荷官桌"），
+        SLOT/ROOM/LIVE 被误标；且后端新增了 LEDGER 兜底来源（该游戏期间无注单行，
+        数据取自资金账本），若不标注会被运营误读为注单来源。
+      -->
+      <el-table-column label="注单来源" align="center" width="150">
         <template #default="{ row }">
-          <el-tag :type="row.source === 'MINIGAME' ? 'success' : 'info'">
-            {{ row.source === 'MINIGAME' ? '迷你/直播' : '棋牌/荷官桌' }}
-          </el-tag>
+          <el-tooltip :content="sourceTip(row.source)" placement="top">
+            <el-tag :type="sourceTagType(row.source)">{{ sourceLabel(row.source) }}</el-tag>
+          </el-tooltip>
         </template>
       </el-table-column>
         <el-table-column label="注单数量" align="center" prop="betCount" width="120" sortable />
@@ -186,6 +192,41 @@ function applyPeriod() {
  * 直接透传会报参数类型不匹配；后端按日粒度聚合，时分秒不参与计算。
  */
 const dateOnly = (value?: string) => (value ? value.slice(0, 10) : undefined);
+
+/**
+ * 「注单来源」列映射（2026-10-12 新增）。
+ *
+ * 口径来源：后端 MemberBetSourceSql.ROW_UNION 的各分支 source 取值
+ * （CARD / MINIGAME / SLOT / CARD_HAND / ROOM / LIVE / DICE / LEDGER）。
+ * LEDGER 是**账本兜底**：该会员在该游戏期间完全没有注单行，数据取自 wallet 资金账本，
+ * 属"注单缺失"信号而非注单来源，因此单独用 warning 标签并在 tooltip 里说明，
+ * 避免运营把它当成正常注单渠道。
+ */
+const SOURCE_LABELS: Record<string, string> = {
+  CARD: '棋牌/荷官桌',
+  CARD_HAND: '棋牌/翻牌',
+  MINIGAME: '迷你',
+  SLOT: '老虎机',
+  ROOM: '房间玩法',
+  LIVE: '直播',
+  DICE: '骰子',
+  LEDGER: '资金账本(注单缺失)'
+};
+
+const sourceLabel = (source?: string) => SOURCE_LABELS[source ?? ''] ?? (source || '—');
+
+const sourceTagType = (source?: string): 'warning' | 'success' | 'info' => {
+  if (source === 'LEDGER') return 'warning';
+  if (source === 'MINIGAME' || source === 'SLOT') return 'success';
+  return 'info';
+};
+
+const sourceTip = (source?: string) => {
+  if (source === 'LEDGER') {
+    return '该会员在此期间该游戏没有任何注单行，此行为资金账本兜底数据（注单缺失，请联系研发核查写单链路）';
+  }
+  return `注单来源：${sourceLabel(source)}`;
+};
 
 async function getList() {
   loading.value = true;
