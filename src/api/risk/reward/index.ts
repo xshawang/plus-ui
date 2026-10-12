@@ -21,9 +21,14 @@ export const listRewardMonitor = (query?: RiskRewardQuery): AxiosPromise<PageRes
   return request({ url: '/infra/risk/reward/list', method: 'get', params: query });
 };
 
-/** 页签计数（待处理红点） */
-export const getRewardTabCounts = (): AxiosPromise<Record<string, number>> => {
-  return request({ url: '/infra/risk/reward/tab-counts', method: 'get' });
+/**
+ * 页签计数（待处理红点 / 已处理 / 已忽略 / 全部）。
+ *
+ * 必须带上与列表同一套筛选参数（日/月时间区间、会员账号、监测类型、币种），否则红点恒为全表数，
+ * 运营切到"今天"看到的却是历史累计待办量。status 由调用方剔除（四个页签要同时算）。
+ */
+export const getRewardTabCounts = (query?: RiskRewardQuery): AxiosPromise<Record<string, number>> => {
+  return request({ url: '/infra/risk/reward/tab-counts', method: 'get', params: query });
 };
 
 /** 页面下拉字典 */

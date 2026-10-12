@@ -314,9 +314,20 @@ const getList = async () => {
   });
 };
 
+/**
+ * 页签计数的筛选参数：与列表同构，但剔除 status / 分页参数。
+ *
+ * 为什么剔除 status：后端要一次算出「待处理/已处理/已忽略/全部」四个数，
+ * 带上当前页签状态会把四个数过滤成同一个（历史 bug：红点不随日/月筛选变化）。
+ */
+const buildCountParams = (): RiskRewardQuery => {
+  const { status: _status, pageNum: _pageNum, pageSize: _pageSize, ...rest } = buildParams();
+  return rest;
+};
+
 const loadTabCounts = async () => {
   try {
-    const res: any = await getRewardTabCounts();
+    const res: any = await getRewardTabCounts(buildCountParams());
     tabCounts.value = (res?.data ?? {}) as Record<string, number>;
   } catch (error) {
     tabCounts.value = {};
@@ -331,11 +342,14 @@ const handleTabChange = () => {
 const onPeriodChange = () => {
   query.value.pageNum = 1;
   getList();
+  // 计数与列表同一套筛选口径：切换日/月后必须同步刷新红点
+  loadTabCounts();
 };
 
 const handleQuery = () => {
   query.value.pageNum = 1;
   getList();
+  loadTabCounts();
 };
 
 const resetQuery = () => {
@@ -344,6 +358,7 @@ const resetQuery = () => {
   dateRange.value = defaultDayRange();
   month.value = '';
   getList();
+  loadTabCounts();
 };
 
 const handleSelectionChange = (selection: AnyRow[]) => {
