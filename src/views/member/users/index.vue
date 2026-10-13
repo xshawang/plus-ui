@@ -723,7 +723,7 @@ const submitBalance = () => {
 
 /** 点击 UID：进入该用户的账户流水列表 */
 const handleGoLedger = (row: MemberUserVO) => {
-  router.push({ path: '/member/ledger', query: { uid: String(row.uid) } });
+  router.push({ path: '/member/detail', query: { uid: String(row.uid) } });
 };
 
 /** 点击累计充值：进入充值列表并按 uid 查询 */

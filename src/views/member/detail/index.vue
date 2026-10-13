@@ -342,8 +342,17 @@ const txQuery = reactive({ pageNum: 1, pageSize: 10 });
 const loaded = reactive<Record<string, boolean>>({});
 const tabLoading = reactive<Record<string, boolean>>({});
 
+/**
+ * 金额展示（原数展示，不再做「分 → 元」折算）。
+ *
+ * FIX(2026-10-13 用户口径「所有展示的数据不需要除 100，直接原数展示」)：后端各源金额列
+ * （user_wallet_ledger.change_amount / card_dealer_round_bet.bet_amount / 汇总表 bet_amount 等）
+ * 存的就是玩家可见金额本身（本地实测：下注 10000 的注单，注单表与钱包流水都是 10000），
+ * 前端再除 100 会把金额显示成真实的 1/100（余额 781046 显示成 7810.46）。
+ * 函数名保留 fmtFen 仅为减少改动面，语义已是「按原数格式化」。
+ */
 const fmtFen = (fen?: number | string) => {
-  const value = Number(fen ?? 0) / 100;
+  const value = Number(fen ?? 0);
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 const fmtMoney = (value?: number) => Number(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
