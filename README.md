@@ -30,6 +30,9 @@ pnpm dev
 pnpm build:prod
 
 # 前端访问地址 http://localhost:80
+
+
+pnpm install --frozen-lockfile && pnpm run build 更新依赖包并编译
 ```
 
 ## 本框架与RuoYi的业务差异

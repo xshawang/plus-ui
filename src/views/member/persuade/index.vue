@@ -165,7 +165,9 @@ const submitRules = {
   reason: [{ required: true, message: '劝退原因不能为空', trigger: 'blur' }]
 };
 
-const fmtFen = (fen?: number) => (Number(fen ?? 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// FIX(2026-10-13 用户口径「所有展示的数据不需要除 100，直接原数展示」)：后端余额/罚没金额本就是玩家可见金额，
+// 不再做「分 → 元」折算（函数名保留 fmtFen 仅为减少改动面）。
+const fmtFen = (fen?: number) => Number(fen ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const statusLabel = (status?: number) =>
   ({ 1: '待处理', 2: '处理中', 3: '已完成', 4: '已取消', 5: '异常' } as Record<number, string>)[status ?? -1] ?? '—';
 const statusTagType = (status?: number) => (status === 3 ? 'success' : status === 5 ? 'danger' : status === 4 ? 'info' : 'warning');
