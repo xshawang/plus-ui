@@ -45,6 +45,28 @@ export interface VipRewardConfigForm {
   }>;
 }
 
+/** 批量修改入参：字段为 null/undefined 表示不改动该字段 */
+export interface VipRewardBatchForm {
+  vipLevels: number[];
+  rewardType: number;
+  needDeposit?: number;
+  needBet?: number;
+  amount?: number;
+  capAmount?: number;
+  status?: number;
+}
+
+/** 导入修正的一行（等级 × 奖励类型一格） */
+export interface VipRewardImportRow {
+  vipLevel: number;
+  rewardType: number;
+  needDeposit?: number;
+  needBet?: number;
+  amount?: number;
+  capAmount?: number;
+  status?: number;
+}
+
 export interface VipRewardRecordQuery {
   pageNum?: number;
   pageSize?: number;

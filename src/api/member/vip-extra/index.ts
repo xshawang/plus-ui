@@ -11,7 +11,15 @@ export interface VipRewardLimitVO {
   allowTerminals?: string;
   deviceLimit?: number;
   fingerprintLimit?: number;
+  ipLimit?: number;
+  nameLimit?: number;
   forbidLevels?: string;
+  /** 领取终端明细（图5），JSON 数组文本 */
+  terminalsJson?: string;
+  /** 更多申领限制（图5 的 12 项），JSON 数组文本 */
+  moreClaimLimitsJson?: string;
+  /** 最近N天领取条件（图5 的 5 项），JSON 数组文本 */
+  recentRulesJson?: string;
   auditScopeMode?: number;
   auditGameScope?: string;
   ruleDesc?: string;

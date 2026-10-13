@@ -33,6 +33,26 @@ export const saveVipRewardConfig = (data: VipRewardConfigForm): AxiosPromise<num
   return request({ url: '/infra/member/vip-reward/config', method: 'put', data });
 };
 
+/**
+ * 矩阵批量维护（图4 列表右上角：应用到所有币种 / 导入修正 / 批量修改）。
+ * 权限沿用 member:vip-reward:list / member:vip-reward:edit。
+ */
+export const batchVipRewardConfig = (data: VipRewardBatchForm): AxiosPromise<number> => {
+  return request({ url: '/infra/member/vip-reward/config/batch', method: 'put', data });
+};
+
+export const importVipRewardConfig = (rows: VipRewardImportRow[]): AxiosPromise<number> => {
+  return request({ url: '/infra/member/vip-reward/config/import', method: 'post', data: { rows } });
+};
+
+export const previewVipRewardCurrency = (): AxiosPromise<Record<string, unknown>> => {
+  return request({ url: '/infra/member/vip-reward/config/currency/preview', method: 'get' });
+};
+
+export const applyVipRewardCurrency = (sourceCurrency: string): AxiosPromise<Record<string, unknown>> => {
+  return request({ url: '/infra/member/vip-reward/config/currency/apply', method: 'post', params: { sourceCurrency } });
+};
+
 export const listVipRewardSetting = (): AxiosPromise<ConfigItemVO[]> => {
   return request({ url: '/infra/member/vip-reward/setting/list', method: 'get' });
 };

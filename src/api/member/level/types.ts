@@ -20,6 +20,10 @@ export interface MemberLevelVO {
   /** 最低累计充值金额（分） */
   minDepositAmount?: number;
   description?: string;
+  /** 关联标签ID（0=不关联） */
+  tagId?: number;
+  /** 关联标签名称（列表展示） */
+  tagName?: string;
   status?: number;
   sortOrder?: number;
   operatorId?: string;
@@ -36,6 +40,8 @@ export interface MemberLevelForm {
   minDepositCount?: number;
   minDepositAmount?: number;
   description?: string;
+  /** 关联标签ID；0=取消关联（2026-10-13 按截图新增） */
+  tagId?: number;
   status?: number;
   sortOrder?: number;
 }
@@ -50,6 +56,10 @@ export interface MemberLevelMemberQuery {
 export interface MemberLevelMemberVO {
   uid: number;
   loginName: string;
+  /** 币种（2026-10-13 按截图新增） */
+  currency?: string;
+  /** 上级代理账号 */
+  parentAgentName?: string;
   levelName?: string;
   registerAt?: string;
   rechargeAmount?: number;
@@ -59,7 +69,17 @@ export interface MemberLevelMemberVO {
   withdrawCount?: number;
   vipLevel?: number;
   availableBalance?: number;
+  /** 利息宝余额（分）；本项目口径 = 钱包 extra_balance（保险箱） */
+  interestBalance?: number;
   bonusBalance?: number;
+  /** 总有效投注（分），取 user_game_daily_summary.bet_amount 累计 */
+  validBetAmount?: number;
+  /** 最近一次层级变更操作人 */
+  operatorId?: string;
+  /** 最近一次层级变更时间 */
+  updatedAt?: string;
+  /** 层级锁定：0=否 1=是 */
+  isLocked?: number;
 }
 
 export interface MemberLevelAssignForm {
