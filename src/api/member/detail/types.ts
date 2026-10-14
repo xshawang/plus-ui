@@ -13,7 +13,17 @@ export interface MemberDetailOverviewVO {
   vipLevel?: number;
   levelId?: number;
   levelName?: string;
+  /** 会员标签（逗号拼接的名称，与 tagColor 同序） */
   tagNames?: string;
+  /** 会员标签颜色（与 tagNames 同序的逗号拼接，前端按同一索引取色） */
+  tagColor?: string;
+  /**
+   * 当前备注。
+   *
+   * 与「历史备注」页签同源：取 member_remark_log 最近一条 new_remark，
+   * 页签保存后备注后刷新概览即可看到一致结果。
+   */
+  remark?: string;
   realName?: string;
   bonusDepositRatio?: number;
   vipUpgradeNeedPay?: number;

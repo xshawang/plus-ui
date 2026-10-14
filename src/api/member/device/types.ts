@@ -9,6 +9,13 @@ export interface MemberDeviceQuery {
   deviceKeyword?: string;
   isTrustDevice?: number;
   clientType?: string;
+  /**
+   * 是否把「注册设备指纹」命中的记录一并返回：1=是，不传=否。
+   *
+   * 会员详情-「登录设备」页签按「使用过（uid）或 注册设备指纹」取数，
+   * 登录设备管理页不传该参数，保持原「仅按 uid」语义。
+   */
+  includeRegisterDevice?: number;
 }
 
 export interface MemberDeviceVO {

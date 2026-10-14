@@ -179,7 +179,20 @@
         <el-table-column label="层级 / 标签" align="center" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
             <div>{{ row.levelName || '默认层级' }}</div>
-            <div class="text-gray-400 text-sm">{{ row.tagNames || '—' }}</div>
+
+            <div class="tag-wrap">
+              <template v-if="row.tagNames">
+        <span
+          v-for="(name, index) in row.tagNames.split(',')"
+          :key="index"
+          class="tag-item"
+          :style="{ backgroundColor: getTagColor(row.tagColor, index) }"
+        >
+          {{ name }}
+        </span>
+              </template>
+              <span v-else class="text-gray-400">—</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="账号类型 / 注册 / 验证" align="center" min-width="170">
@@ -321,11 +334,6 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="Game UID">
-              <el-input v-model="form.gameUid" disabled />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
             <el-form-item label="昵称" prop="nickName">
               <el-input v-model="form.nickName" placeholder="昵称" />
             </el-form-item>
@@ -341,21 +349,24 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="头像">
-              <el-input v-model="form.avatarUrl" placeholder="头像地址" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="头像预览">
-              <el-avatar v-if="form.avatarUrl" shape="square" :size="40" :src="form.avatarUrl" />
-              <el-avatar v-else shape="square" :size="40" icon="User" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
             <el-form-item label="账号状态" prop="status">
               <el-select v-model="form.status" style="width: 100%">
                 <el-option v-for="(label, value) in userStatusMap" :key="value" :label="label" :value="Number(value)" />
               </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-divider content-position="left">标签</el-divider>
+        <el-row :gutter="16">
+          <el-col :span="24">
+            <el-form-item label="会员标签">
+              <el-checkbox-group v-model="form.tagIds">
+                <el-checkbox v-for="item in tagOptions" :key="item.tagId" :value="item.tagId">
+                  {{ item.tagName }}
+                </el-checkbox>
+              </el-checkbox-group>
+              <span v-if="tagOptions.length === 0" class="text-gray-400 text-sm">标签字典为空，请先到「会员标签」页维护</span>
             </el-form-item>
           </el-col>
         </el-row>
@@ -388,7 +399,7 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="注册设备">
-              <el-input v-model="form.registerDevice" placeholder="注册设备" />
+              <el-input :model-value="registerClientType || '—'" disabled />
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -528,13 +539,18 @@ const { loading, withLoading } = useLoading(true);
 const { dateRange, applyDateRange, resetDateRange } = useDateRangeQuery();
 const queryFormRef = ref<ElFormInstance>();
 const userFormRef = ref<ElFormInstance>();
+/**
+ * 注册设备展示值（只读，非表单字段）。
+ *
+ * 来源：详情接口按「player_device 中 uid + 注册指纹的最早一条」拼接的客户端类型；
+ * 不放进 form，避免编辑保存时把客户端类型字符串回写进 player_account.register_device（该列存设备指纹）。
+ */
+const registerClientType = ref('');
 
 const initFormData: MemberUserForm = {
   uid: undefined,
   loginName: undefined,
-  gameUid: undefined,
   nickName: undefined,
-  avatarUrl: undefined,
   phone: undefined,
   phoneVerified: 0,
   status: 1,
@@ -542,11 +558,11 @@ const initFormData: MemberUserForm = {
   clubLevel: 0,
   riskLevel: 0,
   registerIp: undefined,
-  registerDevice: undefined,
   registerChannel: 0,
   allowMultiDevice: 1,
   blockWebLogin: 0,
   totpEnabled: 0,
+  tagIds: [],
   password: undefined,
   payPassword: undefined
 };
@@ -613,7 +629,10 @@ const getList = async () => {
     total.value = res.total ?? 0;
   });
 };
-
+const getTagColor=(tagColor, index) =>{
+    if (!tagColor) return '#909399' // 默认灰
+    return tagColor.split(',')[index] || '#909399'
+}
 const handleQuery = () => {
   queryParams.value.pageNum = 1;
   getList();
@@ -639,6 +658,9 @@ const handleUpdate = async (row?: Partial<MemberUserVO>) => {
   Object.assign(form.value, res.data);
   form.value.password = undefined;
   form.value.payPassword = undefined;
+  // 标签复选框回填：接口未返回时按"无标签"处理，避免沿用上一个会员的勾选状态
+  form.value.tagIds = res.data?.tagIds ?? [];
+  registerClientType.value = res.data?.registerClientType ?? '';
   showDialog('修改用户 - ' + (res.data?.loginName || uid));
 };
 
@@ -967,3 +989,21 @@ const handleImportFile = async (uploadFile: any) => {
   }
 };
 </script>
+<style scoped>
+.tag-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.tag-item {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+</style>

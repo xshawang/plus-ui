@@ -34,7 +34,21 @@
             <el-descriptions-item label="注册方式">{{ overview.registerType || 'ACCOUNT' }}</el-descriptions-item>
             <el-descriptions-item label="验证方式">{{ overview.verifyType || 'NONE' }}</el-descriptions-item>
             <el-descriptions-item label="会员层级">{{ overview.levelName || '默认层级' }}</el-descriptions-item>
-            <el-descriptions-item label="会员标签">{{ overview.tagNames || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="会员标签">
+              <div class="tag-wrap">
+                <template v-if="overview.tagNames">
+                  <span
+                    v-for="(name, index) in overview.tagNames.split(',')"
+                    :key="index"
+                    class="tag-item"
+                    :style="{ backgroundColor: getTagColor(overview.tagColor, index) }"
+                  >
+                    {{ name }}
+                  </span>
+                </template>
+                <span v-else class="text-gray-400">—</span>
+              </div>
+            </el-descriptions-item>
             <el-descriptions-item label="真实姓名">{{ overview.realName || '—' }}</el-descriptions-item>
             <el-descriptions-item label="VIP等级">
               VIP{{ overview.vipLevel ?? 0 }}
@@ -63,6 +77,13 @@
             <el-descriptions-item label="最后登录IP">{{ overview.lastLoginIp || '—' }}</el-descriptions-item>
             <el-descriptions-item label="最后登录终端">
               {{ (overview.lastLoginClientType || '—') + ' ' + (overview.lastLoginOs || '') }}
+            </el-descriptions-item>
+            <el-descriptions-item label="备注" :span="3">
+              <div>
+                <span :class="{ 'text-gray-400': !overview.remark }">{{ overview.remark || '—' }}</span>
+                <el-button v-hasPermi="['member:user:edit']" class="ml-2" link type="primary" @click="openRemark">编辑备注</el-button>
+              </div>
+              <div class="text-gray-400 text-sm">与「历史备注」页签同源：此处保存即写入备注履历，两处展示始终一致</div>
             </el-descriptions-item>
           </el-descriptions>
         </el-tab-pane>
@@ -180,10 +201,14 @@
 
         <el-tab-pane label="登录设备" name="device">
           <el-table v-loading="tabLoading.device" :data="devices" border>
+            <el-table-column label="会员账号" prop="loginName" align="center" min-width="120" show-overflow-tooltip />
             <el-table-column label="最近登录" prop="lastLoginAt" align="center" width="180" />
-            <el-table-column label="设备号" prop="deviceId" align="center" min-width="180" show-overflow-tooltip />
-            <el-table-column label="客户端" align="center" min-width="120">
-              <template #default="{ row }">{{ row.clientType || '—' }} {{ row.os || '' }}</template>
+            <el-table-column label="设备号" prop="deviceFingerprint" align="center" min-width="180" show-overflow-tooltip />
+            <el-table-column label="客户端" align="center" min-width="200">
+              <template #default="{ row }">
+                <div>{{ clientOsText(row) }}</div>
+                <div class="text-gray-400 text-sm">{{ clientBrowserText(row) }}</div>
+              </template>
             </el-table-column>
             <el-table-column label="IP" prop="lastLoginIp" align="center" min-width="140" />
             <el-table-column label="信任设备" align="center" width="100">
@@ -284,11 +309,34 @@
         <el-button @click="emailDialog.visible = false">取 消</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="remarkDialog.visible" title="维护会员备注（追加备注履历）" width="560px" append-to-body destroy-on-close>
+      <el-form label-width="90px">
+        <el-form-item label="会员ID">
+          <span>{{ currentUid }}</span>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input
+            v-model="remarkDialog.remark"
+            type="textarea"
+            :rows="3"
+            maxlength="500"
+            show-word-limit
+            placeholder="请输入备注（保存后写入备注履历，与「历史备注」页签一致）"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button type="primary" :loading="remarkDialog.saving" @click="submitRemarkDialog">确 定</el-button>
+        <el-button @click="remarkDialog.visible = false">取 消</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup name="MemberDetail" lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router'
 import modal from '@/plugins/modal';
 import {
   getMemberDetailContact,
@@ -321,7 +369,7 @@ import type { MemberUserVO } from '@/api/member/users/types';
 
 type DataBody<T> = { data?: T };
 type PageBody<T> = { rows?: T[]; total?: number };
-
+const route = useRoute()
 const uidInput = ref<string>('');
 const activeTab = ref('overview');
 const loading = ref(false);
@@ -368,6 +416,28 @@ const mailTypeLabel = (type?: number) => (type === 2 ? '活动奖励' : type ===
 const bizTypeLabel = (type?: number) =>
   ({ 1: '充值', 2: '提现', 3: '下注', 4: '派彩', 5: '退款', 6: '人工调账' } as Record<number, string>)[type ?? -1] ?? '其他';
 
+/**
+ * 标签取色（与【用户列表】同一套「文字 + 颜色块」效果）。
+ *
+ * tagColor 与 tagNames 是后端同一次聚合产出的同序逗号拼接，按同一索引取色；
+ * 缺失时回落灰色，避免出现无底色文字。
+ */
+const getTagColor = (tagColor?: string, index?: number) => {
+  if (!tagColor) return '#909399';
+  return tagColor.split(',')[index ?? 0] || '#909399';
+};
+
+/** 客户端展示＝OS + 系统版本（需求口径：客户端包含 os/os_version/browser/browser_version） */
+const clientOsText = (row: { os?: string; osVersion?: string }) => [row.os, row.osVersion].filter(Boolean).join(' ') || '—';
+const clientBrowserText = (row: { browser?: string; browserVersion?: string }) =>
+  [row.browser, row.browserVersion].filter(Boolean).join(' ') || '—';
+
+const loadOverview = async (uid: string | number) => {
+  const res = (await getMemberDetailOverview(uid)) as unknown as DataBody<MemberDetailOverviewVO>;
+  Object.assign(overview, res.data ?? { uid: 0 });
+  return res.data;
+};
+
 const handleLoad = async () => {
   const input = uidInput.value.trim();
   if (!input) {
@@ -400,9 +470,8 @@ const handleLoad = async () => {
       uidInput.value = uid;
     }
     currentUid.value = uid;
-    const res = (await getMemberDetailOverview(uid)) as unknown as DataBody<MemberDetailOverviewVO>;
-    Object.assign(overview, res.data ?? { uid: 0 });
-    if (!res.data) {
+    const data = await loadOverview(uid);
+    if (!data) {
       modal.msgWarning('未查询到该会员');
       return;
     }
@@ -447,7 +516,8 @@ const loadTab = async (tab: string) => {
       const res = (await listMemberMessage(uid, { pageNum: 1, pageSize: 20 })) as unknown as PageBody<MemberMessageVO>;
       messages.value = res.rows ?? [];
     } else if (tab === 'device') {
-      const res = (await listMemberDevice({ uid, pageNum: 1, pageSize: 20 })) as unknown as PageBody<MemberDeviceVO>;
+      // includeRegisterDevice=1：按「使用过（uid）或 注册设备指纹」取数（见后端 MemberDeviceMapper）
+      const res = (await listMemberDevice({ uid, includeRegisterDevice: 1, pageNum: 1, pageSize: 20 })) as unknown as PageBody<MemberDeviceVO>;
       devices.value = res.rows ?? [];
     } else if (tab === 'log') {
       const res = (await listMemberLog({ uid, pageNum: 1, pageSize: 20 })) as unknown as PageBody<MemberLogVO>;
@@ -479,6 +549,34 @@ const submitRemark = async () => {
   modal.msgSuccess(`备注已保存（履历 ${res.data ?? 0}）`);
   newRemark.value = '';
   await loadTab('remark');
+  // 概览的「备注」与履历同源，保存后立即刷新，保证两个页签看到的是同一个值
+  await loadOverview(currentUid.value);
+};
+
+/* ---------------- 备注维护（概览入口，与「历史备注」页签同一条写入链路） ---------------- */
+const remarkDialog = reactive<{ visible: boolean; remark: string; saving: boolean }>({ visible: false, remark: '', saving: false });
+
+const openRemark = () => {
+  // 以当前备注为初值，便于在原备注上追加；置空即清空备注（变更仍记入履历）
+  remarkDialog.remark = overview.remark ?? '';
+  remarkDialog.visible = true;
+};
+
+const submitRemarkDialog = async () => {
+  if (!currentUid.value) {
+    return;
+  }
+  remarkDialog.saving = true;
+  try {
+    const res = (await updateMemberRemark({ uid: currentUid.value, remark: remarkDialog.remark })) as unknown as DataBody<number>;
+    modal.msgSuccess(`备注已保存（履历 ${res.data ?? 0}）`);
+    remarkDialog.visible = false;
+    await loadOverview(currentUid.value);
+    // 履历已变：标记该页签待重拉，下次进入「历史备注」时与概览保持一致
+    loaded.remark = false;
+  } finally {
+    remarkDialog.saving = false;
+  }
 };
 
 watch(activeTab, async (tab) => {
@@ -489,12 +587,24 @@ watch(activeTab, async (tab) => {
 
 onMounted(() => {
   const queryUid = new URLSearchParams(window.location.search).get('uid');
+  console.log('uid:', queryUid);
   if (queryUid) {
     uidInput.value = queryUid;
     handleLoad();
   }
 });
-
+// 用 watch 监听 query.uid，immediate 让首次也执行
+watch(
+  () => route.query.uid,
+  (uid) => {
+    console.log('uid:', uid)
+    if (uid) {
+      uidInput.value = ''+uid
+      handleLoad()
+    }
+  },
+  { immediate: true }
+)
 /* ---------------- 明文查看 / VIP 改档（批次 7） ---------------- */
 const plainDialog = reactive<{ visible: boolean; data: any }>({ visible: false, data: {} });
 const vipDialog = reactive<{ visible: boolean; vipLevel: number; reason: string; saving: boolean }>({
@@ -591,3 +701,22 @@ const submitEmail = async () => {
   }
 };
 </script>
+
+<style scoped>
+/* 会员标签：文字以颜色块包裹（与【用户列表】「层级 / 标签」列同一视觉效果） */
+.tag-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag-item {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+</style>

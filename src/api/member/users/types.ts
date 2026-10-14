@@ -76,6 +76,8 @@ export interface MemberUserVO {
   levelName?: string;
   /** 会员标签（逗号拼接） */
   tagNames?: string;
+  /** 会员标签颜色（与 tagNames 同序的逗号拼接，列表按同一索引取色渲染色块） */
+  tagColor?: string;
   /** 累计充值/提现笔数 */
   totalRechargeCount?: number;
   totalWithdrawCount?: number;
@@ -93,6 +95,16 @@ export interface MemberUserVO {
   /** 最近登录终端 */
   lastLoginClientType?: string;
   lastLoginOs?: string;
+  /**
+   * 注册设备（客户端类型，只读展示）。
+   *
+   * 后端口径：player_account.register_device 是注册时上报的 deviceId（= player_device.device_fingerprint），
+   * 运营不可读，故按「player_device 中 uid 与注册指纹匹配、created_at 升序第一条」
+   * 拼接 os+os_version+browser+browser_version 返回。
+   */
+  registerClientType?: string;
+  /** 已绑定标签ID（仅详情接口返回，编辑弹窗复选框回显） */
+  tagIds?: number[];
 }
 
 /**
@@ -105,7 +117,7 @@ export interface MemberUserForm {
   uid?: string | number;
   loginName?: string;
   nickName?: string;
-  gameUid?: string;
+  /** 头像地址（详情回填后原值回传；弹窗内不再提供编辑入口） */
   avatarUrl?: string;
   phone?: string;
   phoneVerified?: number;
@@ -119,6 +131,12 @@ export interface MemberUserForm {
   allowMultiDevice?: number;
   blockWebLogin?: number;
   totpEnabled?: number;
+  /**
+   * 会员标签ID集合（编辑弹窗多选保存）。
+   *
+   * 后端语义：空数组 = 清空该会员全部标签；非空 = 以该集合为目标整体对齐 member_tag_relation。
+   */
+  tagIds?: number[];
   /** 重置登录密码（留空不修改） */
   password?: string;
   /** 重置资金密码（留空不修改） */
