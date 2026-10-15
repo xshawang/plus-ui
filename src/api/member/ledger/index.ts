@@ -1,7 +1,7 @@
 import type { PageResult } from '@/api/types';
 import type { AxiosPromise } from '@/utils/api-types';
 import request from '@/utils/request';
-import type { GameCodeOption, WalletLedgerQuery, WalletLedgerVO } from './types';
+import type { GameCodeOption, WalletLedgerQuery, WalletLedgerSummaryVO, WalletLedgerVO } from './types';
 
 /**
  * 分页查询钱包流水
@@ -24,5 +24,19 @@ export const listLedgerGameCodes = (): AxiosPromise<GameCodeOption[]> => {
   return request({
     url: '/infra/member/ledger/game-codes',
     method: 'get'
+  });
+};
+
+/**
+ * 按查询条件分组统计（列表上方统计区）。
+ *
+ * 与列表接口同一套查询条件与权限点（member:ledger:list），但不分页——
+ * 统计必须覆盖全部命中数据，否则翻页时统计值会随当前页抖动。
+ */
+export const getWalletLedgerSummary = (query?: WalletLedgerQuery): AxiosPromise<WalletLedgerSummaryVO> => {
+  return request({
+    url: '/infra/member/ledger/summary',
+    method: 'get',
+    params: query
   });
 };

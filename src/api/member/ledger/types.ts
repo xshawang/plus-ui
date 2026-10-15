@@ -92,3 +92,44 @@ export interface GameCodeOption {
   /** 游戏中文名 */
   gameName?: string;
 }
+
+/**
+ * 单个游戏的流水统计（流水列表上方统计表的一行）。
+ *
+ * 口径：投注 = 该游戏流水的扣款合计；派奖 = 该游戏流水的入账合计（均为正值）。
+ */
+export interface WalletLedgerGameStatVO {
+  /** 游戏代码（user_wallet_ledger.game_code） */
+  gameCode?: string;
+  /** 游戏中文名（game_catalog；字典缺失时为空串） */
+  gameName?: string;
+  /** 投注金额（该游戏扣款合计） */
+  betAmount?: number;
+  /** 派奖金额（该游戏入账合计） */
+  payoutAmount?: number;
+}
+
+/**
+ * 流水列表「按查询条件分组统计」结果。
+ *
+ * 口径（后端 {@code GET /infra/member/ledger/summary}，不分页，覆盖当前全部查询条件）：
+ * ① 游戏行：投注 = 扣款合计、派奖 = 入账合计；
+ * ② 无游戏标记的流水（game_code 为空）：其他收入 = 加款合计、其他支出 = 扣款合计；
+ * ③ 总收入 = 全部加款 = 派奖合计 + 其他收入；总支出 = 全部扣款 = 投注合计 + 其他支出。
+ */
+export interface WalletLedgerSummaryVO {
+  /** 各游戏统计（仅有游戏标记的流水，按投注+派奖倒序） */
+  games?: WalletLedgerGameStatVO[];
+  /** 投注合计 */
+  betTotal?: number;
+  /** 派奖合计 */
+  payoutTotal?: number;
+  /** 其他收入（无游戏标记的加款合计） */
+  otherIncome?: number;
+  /** 其他支出（无游戏标记的扣款合计） */
+  otherExpense?: number;
+  /** 总收入（全部加款合计） */
+  totalIncome?: number;
+  /** 总支出（全部扣款合计） */
+  totalExpense?: number;
+}
