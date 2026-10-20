@@ -111,7 +111,7 @@ export interface MemberUserVO {
  * 用户编辑表单
  *
  * loginName/uid 为主键与唯一标识，编辑弹窗中只读；
- * password/payPassword 为空表示不修改，非空表示重置登录密码/资金密码。
+ * 密码不随资料修改提交，登录密码重置走专用接口 resetMemberUserPassword。
  */
 export interface MemberUserForm {
   uid?: string | number;
@@ -123,6 +123,7 @@ export interface MemberUserForm {
   phoneVerified?: number;
   status?: number;
   vipLevel?: number;
+  isStreamer?: number;
   clubLevel?: number;
   riskLevel?: number;
   registerIp?: string;
@@ -137,10 +138,12 @@ export interface MemberUserForm {
    * 后端语义：空数组 = 清空该会员全部标签；非空 = 以该集合为目标整体对齐 member_tag_relation。
    */
   tagIds?: number[];
-  /** 重置登录密码（留空不修改） */
-  password?: string;
-  /** 重置资金密码（留空不修改） */
-  payPassword?: string;
+}
+
+/** 后台重置会员登录密码（专用接口） */
+export interface MemberUserResetPasswordForm {
+  /** 新登录密码 */
+  password: string;
 }
 
 export interface MemberUserQuery extends PageQuery {
@@ -172,6 +175,7 @@ export interface MemberUserQuery extends PageQuery {
   vipLevel?: number;
   /** 账号类型 */
   accountType?: string;
+  isStreamer?: number;
   params?: any;
 }
 

@@ -73,3 +73,8 @@ export const listVipRewardRecord = (query?: VipRewardRecordQuery): AxiosPromise<
 export const retryVipRewardRecord = (recordId: number): AxiosPromise<number> => {
   return request({ url: `/infra/member/vip-reward/record/${recordId}/retry`, method: 'put' });
 };
+
+/** 批量触发待发放记录 */
+export const disburseVipRewardRecords = (recordIds: number[]): AxiosPromise<number> => {
+  return request({ url: '/infra/member/vip-reward/record/disburse', method: 'post', data: recordIds });
+};

@@ -10,6 +10,7 @@ import type {
   MemberUserCreateForm,
   MemberUserForm,
   MemberUserQuery,
+  MemberUserResetPasswordForm,
   MemberUserVO
 } from './types';
 
@@ -47,6 +48,21 @@ export const updateMemberUser = (data: MemberUserForm) => {
     url: '/infra/member/users',
     method: 'put',
     data: data
+  });
+};
+
+/**
+ * 后台重置会员登录密码（专用接口，不经过用户资料修改）。
+ * 权限标识：member:user:edit
+ */
+export const resetMemberUserPassword = (
+  uid: string | number,
+  data: MemberUserResetPasswordForm
+) => {
+  return request({
+    url: '/infra/member/users/' + uid + '/password',
+    method: 'put',
+    data
   });
 };
 

@@ -61,6 +61,12 @@
               <el-option label="代理账号" value="AGENT" />
             </el-select>
           </el-form-item>
+          <el-form-item label="主播号">
+            <el-select v-model="queryParams.isStreamer" placeholder="全部" clearable style="width: 110px">
+              <el-option label="是" :value="1" />
+              <el-option label="否" :value="0" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="注册时间" prop="dateRange">
             <el-date-picker
               v-model="dateRange"
@@ -138,10 +144,9 @@
             <el-link type="primary" :underline="false" @click="handleUpdate(row)">{{ row.loginName }}</el-link>
           </template>
         </el-table-column>
-        <el-table-column label="头像" align="center" width="90">
+        <el-table-column label="是否主播号" align="center" width="110">
           <template #default="{ row }">
-            <el-avatar v-if="row.avatarUrl" shape="square" :size="40" :src="row.avatarUrl" />
-            <el-avatar v-else shape="square" :size="40" icon="User" />
+            <el-tag :type="row.isStreamer === 1 ? 'danger' : 'info'">{{ row.isStreamer === 1 ? '主播号' : '否' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="昵称" align="center" prop="nickName" min-width="120" show-overflow-tooltip />
@@ -221,13 +226,22 @@
         <el-table-column label="注册时间" align="center" prop="registerAt" width="170">
           <template #default="{ row }">{{ row.registerAt }}</template>
         </el-table-column>
-        <el-table-column label="操作" align="center" width="90" fixed="right">
+        <el-table-column label="操作" align="center" width="130" fixed="right">
           <template #default="{ row }">
             <el-tooltip content="会员详情" placement="top">
               <el-button link type="primary" icon="View" @click="handleGoDetail(row as MemberUserVO)" />
             </el-tooltip>
             <el-tooltip content="修改用户信息" placement="top">
               <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" />
+            </el-tooltip>
+            <el-tooltip content="重置登录密码" placement="top">
+              <el-button
+                v-hasPermi="['member:user:edit']"
+                link
+                type="warning"
+                icon="Key"
+                @click="handleResetPassword(row)"
+              />
             </el-tooltip>
           </template>
         </el-table-column>
@@ -388,6 +402,13 @@
               <el-input-number v-model="form.riskLevel" :min="0" controls-position="right" style="width: 100%" />
             </el-form-item>
           </el-col>
+          <el-col :span="8">
+            <el-form-item label="是否主播号">
+              <el-switch v-model="form.isStreamer" :active-value="1" :inactive-value="0"
+                         :disabled="form.isStreamer === 1" />
+              <span class="text-gray-400 text-sm ml-2">置为是后不可取消</span>
+            </el-form-item>
+          </el-col>
         </el-row>
 
         <el-divider content-position="left">注册与登录限制</el-divider>
@@ -424,24 +445,49 @@
           </el-col>
         </el-row>
 
-        <el-divider content-position="left">密码（留空不修改）</el-divider>
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="登录密码" prop="password">
-              <el-input v-model="form.password" type="password" show-password placeholder="留空则不修改" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="资金密码" prop="payPassword">
-              <el-input v-model="form.payPassword" type="password" show-password placeholder="留空则不修改" />
-            </el-form-item>
-          </el-col>
-        </el-row>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
           <el-button :loading="buttonLoading" type="primary" @click="submitForm">确 定</el-button>
           <el-button @click="cancel">取 消</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 重置登录密码（专用接口，不走用户资料修改） -->
+    <el-dialog v-model="passwordDialog.visible" title="重置登录密码" width="520px" append-to-body destroy-on-close>
+      <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="120px">
+        <el-form-item label="会员账号">
+          <el-input :model-value="passwordDialog.loginName" disabled />
+        </el-form-item>
+        <el-form-item label="新登录密码" prop="password">
+          <el-input
+            v-model="passwordForm.password"
+            type="password"
+            show-password
+            maxlength="64"
+            placeholder="6-64 位"
+          />
+        </el-form-item>
+        <el-form-item label="确认新密码" prop="confirmPassword">
+          <el-input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            show-password
+            maxlength="64"
+            placeholder="再次输入新密码"
+          />
+        </el-form-item>
+        <el-alert
+          type="warning"
+          :closable="false"
+          title="重置后请通过安全渠道告知会员新密码；本次操作会记录后台操作日志。"
+        />
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button :loading="passwordSaving" type="primary" @click="submitResetPassword">确 定</el-button>
+          <el-button @click="passwordDialog.visible = false">取 消</el-button>
         </div>
       </template>
     </el-dialog>
@@ -493,6 +539,7 @@ import {
   batchMemberTag,
   getMemberUser,
   listMemberUser,
+  resetMemberUserPassword,
   updateMemberBalance,
   updateMemberUser
 } from '@/api/member/users';
@@ -501,6 +548,7 @@ import type {
   MemberUserCreateForm,
   MemberUserForm,
   MemberUserQuery,
+  MemberUserResetPasswordForm,
   MemberUserVO
 } from '@/api/member/users/types';
 import { listMemberLevelOptions } from '@/api/member/level';
@@ -512,7 +560,7 @@ import { useFormDialog } from '@/hooks/dialog/useFormDialog';
 import { useDateRangeQuery } from '@/hooks/form/useDateRangeQuery';
 import { useSearchReset } from '@/hooks/form/useSearchReset';
 import modal from '@/plugins/modal';
-import { reactive, ref, toRefs } from 'vue';
+import { nextTick, reactive, ref, toRefs } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -562,9 +610,8 @@ const initFormData: MemberUserForm = {
   allowMultiDevice: 1,
   blockWebLogin: 0,
   totpEnabled: 0,
-  tagIds: [],
-  password: undefined,
-  payPassword: undefined
+  isStreamer: 0,
+  tagIds: []
 };
 
 const data = reactive<{ queryParams: MemberUserQuery; form: MemberUserForm; rules: any }>({
@@ -585,6 +632,7 @@ const data = reactive<{ queryParams: MemberUserQuery; form: MemberUserForm; rule
     tagId: undefined,
     vipLevel: undefined,
     accountType: undefined,
+    isStreamer: undefined,
     params: undefined
   },
   form: { ...initFormData },
@@ -656,8 +704,6 @@ const handleUpdate = async (row?: Partial<MemberUserVO>) => {
   if (!uid) return;
   const res = await getMemberUser(uid);
   Object.assign(form.value, res.data);
-  form.value.password = undefined;
-  form.value.payPassword = undefined;
   // 标签复选框回填：接口未返回时按"无标签"处理，避免沿用上一个会员的勾选状态
   form.value.tagIds = res.data?.tagIds ?? [];
   registerClientType.value = res.data?.registerClientType ?? '';
@@ -682,6 +728,62 @@ const submitForm = () => {
 const cancel = () => {
   reset();
   closeDialog();
+};
+
+/** 重置登录密码弹窗 */
+const passwordFormRef = ref<ElFormInstance>();
+const passwordSaving = ref(false);
+const passwordDialog = reactive<{ visible: boolean; uid?: string | number; loginName: string }>({
+  visible: false,
+  uid: undefined,
+  loginName: ''
+});
+const passwordForm = reactive({ password: '', confirmPassword: '' });
+const validateConfirmPassword = (_rule: any, value: string, callback: (error?: Error) => void) => {
+  if (value !== passwordForm.password) {
+    callback(new Error('两次输入的密码不一致'));
+    return;
+  }
+  callback();
+};
+const passwordRules = {
+  password: [
+    { required: true, message: '请输入新登录密码', trigger: 'blur' },
+    { min: 6, max: 64, message: '登录密码长度必须为 6-64 位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    { validator: validateConfirmPassword, trigger: 'blur' }
+  ]
+};
+
+const handleResetPassword = (row: Partial<MemberUserVO>) => {
+  if (row.uid === undefined || row.uid === null || row.uid === '') {
+    return;
+  }
+  passwordDialog.uid = row.uid;
+  passwordDialog.loginName = row.loginName || String(row.uid);
+  passwordForm.password = '';
+  passwordForm.confirmPassword = '';
+  passwordDialog.visible = true;
+  nextTick(() => passwordFormRef.value?.clearValidate());
+};
+
+const submitResetPassword = () => {
+  passwordFormRef.value?.validate(async (valid: boolean) => {
+    if (!valid) return;
+    const uid = passwordDialog.uid;
+    if (uid === undefined || uid === '') return;
+    passwordSaving.value = true;
+    try {
+      const payload: MemberUserResetPasswordForm = { password: passwordForm.password };
+      await resetMemberUserPassword(uid, payload);
+      modal.msgSuccess('登录密码重置成功');
+      passwordDialog.visible = false;
+    } finally {
+      passwordSaving.value = false;
+    }
+  });
 };
 
 /** 余额调整弹窗状态 */

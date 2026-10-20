@@ -9,6 +9,7 @@ export interface VipLevelConfigVO {
   currency?: string;
   badgeIcon?: string;
   minPayTotal?: number;
+  minTurnoverAmount?: number;
   minRounds?: number;
   dailyGift?: number;
   feeDiscountRate?: number;
@@ -30,6 +31,13 @@ export interface VipRewardConfigVO {
   needBet?: number;
   amount?: number;
   capAmount?: number;
+  windowDays?: number;
+  conditionType?: number;
+  conditionValue?: number;
+  requireRechargeCount?: number;
+  requireRechargeAmount?: number;
+  requireRechargeDays?: number;
+  requireTurnoverAmount?: number;
   status?: number;
 }
 
@@ -41,6 +49,13 @@ export interface VipRewardConfigForm {
     needBet?: number;
     amount?: number;
     capAmount?: number;
+    windowDays?: number;
+    conditionType?: number;
+    conditionValue?: number;
+    requireRechargeCount?: number;
+    requireRechargeAmount?: number;
+    requireRechargeDays?: number;
+    requireTurnoverAmount?: number;
     status?: number;
   }>;
 }

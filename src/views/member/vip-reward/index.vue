@@ -109,6 +109,7 @@
             />
             <el-input v-else v-model="disburseForm.uid" placeholder="晋级奖金需填会员ID" style="width: 190px" />
             <el-button v-hasPermi="['member:vip-reward:edit']" type="primary" :loading="saving" @click="handleDisburse">触发发放</el-button>
+            <el-button v-hasPermi="['member:vip-reward:edit']" plain :loading="saving" @click="handleDisbursePending">批量触发待发放</el-button>
           </div>
         </div>
       </template>
@@ -188,8 +189,8 @@
       </el-table>
     </el-card>
 
-    <!-- ===== 保级考核（原有能力，保留） ===== -->
-    <el-card shadow="hover" class="mt-3">
+    <!-- ===== 保级考核（2026-10-19 需求：页签隐藏） ===== -->
+    <el-card v-if="false" shadow="hover" class="mt-3">
       <template #header>
         <div class="toolbar-shell">
           <div class="table-heading">
@@ -218,8 +219,8 @@
     </el-card>
 
     <!-- ===== 单等级修改（图4 操作列「修改」） ===== -->
-    <el-dialog v-model="rowDialog.visible" :title="`修改 ${rowDialog.levelName} 奖励配置`" width="880px" append-to-body destroy-on-close>
-      <el-alert type="info" :closable="false" class="mb-2" title="单位：VND1000（1 = 1,000 VND）。保存时按 ×100,000 落库为「分」。" />
+    <el-dialog v-model="rowDialog.visible" :title="`修改 ${rowDialog.levelName} 奖励配置`" width="1240px" append-to-body destroy-on-close>
+      <el-alert type="info" :closable="false" class="mb-2" title="金额单位：分（原值直接保存，不再缩放）。条件类型：1累计充值金额 2累计打码金额 3打码≥期间充值N倍（条件值=倍数×100）。" />
       <el-table border :data="rowDialog.items">
         <el-table-column label="奖励类型" prop="label" align="center" width="110" />
         <el-table-column label="本周期充值门槛" align="center" width="150">
@@ -241,6 +242,33 @@
           <template #default="{ row }">
             <el-input-number v-model="row.capAmount" :min="0" :controls="false" style="width: 100%" />
           </template>
+        </el-table-column>
+        <el-table-column label="最近N天" align="center" width="90">
+          <template #default="{ row }"><el-input-number v-model="row.windowDays" :min="1" :controls="false" style="width: 100%" /></template>
+        </el-table-column>
+        <el-table-column label="条件类型" align="center" width="150">
+          <template #default="{ row }">
+            <el-select v-model="row.conditionType" style="width: 100%">
+              <el-option label="累计充值金额" :value="1" />
+              <el-option label="累计打码金额" :value="2" />
+              <el-option label="打码≥充值N倍" :value="3" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="条件值" align="center" width="110">
+          <template #default="{ row }"><el-input-number v-model="row.conditionValue" :min="0" :controls="false" style="width: 100%" /></template>
+        </el-table-column>
+        <el-table-column label="充值次数" align="center" width="100">
+          <template #default="{ row }"><el-input-number v-model="row.requireRechargeCount" :min="0" :controls="false" style="width: 100%" /></template>
+        </el-table-column>
+        <el-table-column label="充值金额" align="center" width="115">
+          <template #default="{ row }"><el-input-number v-model="row.requireRechargeAmount" :min="0" :controls="false" style="width: 100%" /></template>
+        </el-table-column>
+        <el-table-column label="充值天数" align="center" width="100">
+          <template #default="{ row }"><el-input-number v-model="row.requireRechargeDays" :min="0" :controls="false" style="width: 100%" /></template>
+        </el-table-column>
+        <el-table-column label="打码金额" align="center" width="115">
+          <template #default="{ row }"><el-input-number v-model="row.requireTurnoverAmount" :min="0" :controls="false" style="width: 100%" /></template>
         </el-table-column>
         <el-table-column label="启用" align="center" width="80">
           <template #default="{ row }">
@@ -319,6 +347,7 @@ import {
   listVipRewardSetting,
   previewVipRewardCurrency,
   retryVipRewardRecord,
+  disburseVipRewardRecords,
   saveVipRewardConfig,
   saveVipRewardSetting
 } from '@/api/member/vip';
@@ -333,6 +362,13 @@ interface MatrixCell {
   needBet: number;
   amount: number;
   capAmount: number;
+  windowDays?: number;
+  conditionType?: number;
+  conditionValue?: number;
+  requireRechargeCount?: number;
+  requireRechargeAmount?: number;
+  requireRechargeDays?: number;
+  requireTurnoverAmount?: number;
   status: number;
 }
 
@@ -342,10 +378,10 @@ interface MatrixRow extends VipLevelConfigVO {
 }
 
 /**
- * 显示单位换算系数：截图币种为 VND1000:1（1 显示单位 = 1,000 VND），
- * 库内统一存「分」（1 VND = 100 分），因此 1 显示单位 = 1000 × 100 = 100,000 分。
+ * 2026-10-19 需求：VIP 金额改为原值，不再做缩小/放大。
+ * 库内与页面统一使用「分」，历史配置已在 Liquibase v2.6.64 一次性除以 100000。
  */
-const VIP_UNIT = 100000;
+const VIP_UNIT = 1;
 
 const GROUP_COLUMNS = [
   { key: 'month', label: '月工资', rewardType: 4, depositLabel: '当月充值', betLabel: '当月打码', capLabel: '月累计封顶' },
@@ -510,6 +546,13 @@ const openRowDialog = (row: MatrixRow) => {
       needBet: c.needBet / VIP_UNIT,
       amount: c.amount / VIP_UNIT,
       capAmount: c.capAmount / VIP_UNIT,
+      windowDays: c.windowDays ?? 1,
+      conditionType: c.conditionType ?? 2,
+      conditionValue: c.conditionValue ?? 0,
+      requireRechargeCount: c.requireRechargeCount ?? 1,
+      requireRechargeAmount: c.requireRechargeAmount ?? 1,
+      requireRechargeDays: c.requireRechargeDays ?? 1,
+      requireTurnoverAmount: c.requireTurnoverAmount ?? 1,
       status: c.status
     };
   });
@@ -526,6 +569,13 @@ const submitRowDialog = async () => {
         needBet: Math.round(Number(item.needBet ?? 0) * VIP_UNIT),
         amount: Math.round(Number(item.amount ?? 0) * VIP_UNIT),
         capAmount: Math.round(Number(item.capAmount ?? 0) * VIP_UNIT),
+        windowDays: item.windowDays,
+        conditionType: item.conditionType,
+        conditionValue: item.conditionValue,
+        requireRechargeCount: item.requireRechargeCount,
+        requireRechargeAmount: item.requireRechargeAmount,
+        requireRechargeDays: item.requireRechargeDays,
+        requireTurnoverAmount: item.requireTurnoverAmount,
         status: item.status
       }))
     })
@@ -646,6 +696,17 @@ const handleDisburse = async () => {
 const handleRetry = async (row: VipRewardRecordVO) => {
   const res = (await retryVipRewardRecord(row.recordId)) as unknown as DataBody<number>;
   modal.msgSuccess(`重试完成（影响 ${res.data ?? 0} 条）`);
+  await loadRecords();
+};
+
+const handleDisbursePending = async () => {
+  const ids = records.value.filter((r) => r.status === 1).map((r) => r.recordId);
+  if (ids.length === 0) {
+    ElMessage.warning('当前页没有待发放记录');
+    return;
+  }
+  const res = (await disburseVipRewardRecords(ids)) as unknown as DataBody<number>;
+  ElMessage.success(`已触发 ${res.data ?? 0} 条`);
   await loadRecords();
 };
 

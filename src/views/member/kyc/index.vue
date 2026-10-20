@@ -38,6 +38,8 @@
             <el-table-column label="厂商名称" prop="vendorName" align="center" min-width="140" show-overflow-tooltip />
             <el-table-column label="支持国家" prop="supportCountries" align="left" min-width="180" show-overflow-tooltip />
             <el-table-column label="启用国家" prop="enabledCountries" align="left" min-width="180" show-overflow-tooltip />
+            <el-table-column label="证件类型" prop="documentTypes" align="left" min-width="220" show-overflow-tooltip />
+            <el-table-column label="最低年龄" prop="minAge" align="center" width="90" />
             <el-table-column label="收费说明" prop="feeDesc" align="left" min-width="140" show-overflow-tooltip />
             <el-table-column label="每日封顶" align="center" width="100">
               <template #default="{ row }">{{ row.dailyCap && row.dailyCap > 0 ? row.dailyCap : '不限' }}</template>
@@ -153,6 +155,43 @@
         <el-form-item label="启用国家">
           <el-input v-model="vendorForm.enabledCountries" placeholder="逗号分隔，留空表示全部启用" />
         </el-form-item>
+        <el-form-item label="国家编码">
+          <el-input v-model="vendorForm.countryCode" placeholder="如 VN" maxlength="8" />
+        </el-form-item>
+        <el-form-item label="证件类型">
+          <el-input v-model="vendorForm.documentTypes" placeholder="CCCD_CHIP,CCCD_OLD,PASSPORT,DRIVER_LICENSE" />
+        </el-form-item>
+        <el-form-item label="必填字段">
+          <el-input v-model="vendorForm.requiredFields" type="textarea" :rows="2"
+                    placeholder="fullName,idNumber,dob,gender,address,issueDate,issuePlace,expiryDate,frontImage,backImage,faceImage" />
+        </el-form-item>
+        <el-form-item label="最低年龄">
+          <el-input-number v-model="vendorForm.minAge" :min="0" :max="120" controls-position="right" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="活体检测">
+          <el-switch v-model="vendorForm.livenessRequired" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="人脸比对">
+          <el-switch v-model="vendorForm.faceMatchRequired" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="OCR">
+          <el-switch v-model="vendorForm.ocrEnabled" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="AML 检查">
+          <el-switch v-model="vendorForm.amlCheck" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="手机核验">
+          <el-switch v-model="vendorForm.phoneVerify" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item label="流程配置">
+          <el-input v-model="vendorForm.flowConfigJson" type="textarea" :rows="2" placeholder='{"step":["document","liveness","faceMatch"]}' />
+        </el-form-item>
+        <el-form-item label="成功文案">
+          <el-input v-model="vendorForm.successMessage" maxlength="500" />
+        </el-form-item>
+        <el-form-item label="失败文案">
+          <el-input v-model="vendorForm.failMessage" maxlength="500" />
+        </el-form-item>
         <el-form-item label="收费说明">
           <el-input v-model="vendorForm.feeDesc" placeholder="如 0.15 USDT/次" />
         </el-form-item>
@@ -218,7 +257,8 @@ const auditDialog = reactive({ visible: false, action: 'PASS', reason: '', id: 0
 const data = reactive<{ vendorQuery: KycVendorQuery; recordQuery: KycRecordQuery; vendorForm: KycVendorForm }>({
   vendorQuery: { pageNum: 1, pageSize: 10 },
   recordQuery: { pageNum: 1, pageSize: 10 },
-  vendorForm: { vendorCode: '', vendorName: '', priority: 999, dailyCap: 0, status: 1 }
+  vendorForm: { vendorCode: '', vendorName: '', priority: 999, dailyCap: 0, status: 1, countryCode: 'VN', minAge: 18,
+    livenessRequired: 1, faceMatchRequired: 1, ocrEnabled: 1, amlCheck: 0, phoneVerify: 0 }
 });
 const { vendorQuery, recordQuery, vendorForm } = toRefs(data);
 
@@ -263,7 +303,8 @@ const resetRecordQuery = () => {
 };
 
 const handleAddVendor = () => {
-  vendorForm.value = { vendorCode: '', vendorName: '', priority: 999, dailyCap: 0, status: 1 };
+  vendorForm.value = { vendorCode: '', vendorName: '', priority: 999, dailyCap: 0, status: 1, countryCode: 'VN', minAge: 18,
+    livenessRequired: 1, faceMatchRequired: 1, ocrEnabled: 1, amlCheck: 0, phoneVerify: 0 };
   vendorDialog.title = '新增 KYC 厂商';
   vendorDialog.visible = true;
 };
@@ -277,6 +318,18 @@ const handleUpdateVendor = (row: KycVendorVO) => {
     supportCountries: row.supportCountries,
     enabledCountries: row.enabledCountries,
     feeDesc: row.feeDesc,
+    countryCode: row.countryCode,
+    documentTypes: row.documentTypes,
+    requiredFields: row.requiredFields,
+    minAge: row.minAge ?? 18,
+    livenessRequired: row.livenessRequired ?? 1,
+    faceMatchRequired: row.faceMatchRequired ?? 1,
+    ocrEnabled: row.ocrEnabled ?? 1,
+    amlCheck: row.amlCheck ?? 0,
+    phoneVerify: row.phoneVerify ?? 0,
+    flowConfigJson: row.flowConfigJson,
+    successMessage: row.successMessage,
+    failMessage: row.failMessage,
     dailyCap: row.dailyCap ?? 0,
     status: row.status ?? 1
   };

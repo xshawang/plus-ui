@@ -1,7 +1,8 @@
 <template>
   <div class="p-2 app-container member-quest-center-page">
     <el-tabs v-model="activeTab" class="quest-tabs">
-      <el-tab-pane label="新人福利设置" name="welfare">
+      <!-- 2026-10-19：新人福利配置唯一入口改为「优惠-任务中心」 -->
+      <el-tab-pane v-if="false" label="新人福利设置" name="welfare">
         <el-card shadow="hover" class="search-panel">
           <el-form :inline="true" class="query-form">
             <el-form-item label="任务条件">
@@ -557,7 +558,7 @@ const addRules = {
 };
 
 /* ---------------- 新人福利设置（17 文档） ---------------- */
-const activeTab = ref('welfare');
+const activeTab = ref('reward');
 const { loading: questLoading, withLoading: withQuestLoading } = useLoading(false);
 const { loading: questSaving, withLoading: withQuestSaving } = useLoading(false);
 const { loading: recordLoading, withLoading: withRecordLoading } = useLoading(false);

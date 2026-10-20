@@ -3,312 +3,251 @@
     <el-card shadow="hover" class="search-panel">
       <el-form :inline="true" class="query-form">
         <el-form-item label="时间">
-          <el-radio-group v-model="period" @change="applyPeriod">
-            <el-radio-button value="DAY">日</el-radio-button>
-            <el-radio-button value="WEEK">周</el-radio-button>
-            <el-radio-button value="MONTH">月</el-radio-button>
-          </el-radio-group>
+          <el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD"
+                          range-separator="-" start-placeholder="开始日期" end-placeholder="结束日期" style="width: 280px" />
         </el-form-item>
-        <el-form-item>
-          <!-- 截图：区间到时分秒（2026-09-08 00:00:00 ~ 2026-09-14 23:59:59） -->
-          <el-date-picker v-model="dateRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss"
-                          range-separator="-" start-placeholder="开始时间" end-placeholder="结束时间" style="width: 380px" />
-        </el-form-item>
-        <el-form-item>
-          <!-- 截图：账号检索维度下拉（精准/模糊/会员ID/上级代理ID/会员层级/渠道名称(ID)） -->
-          <el-select v-model="query.accountField" style="width: 170px">
-            <el-option label="精准会员账号" value="EXACT_ACCOUNT" />
-            <el-option label="模糊会员账号" value="FUZZY_ACCOUNT" />
+        <el-form-item label="会员">
+          <el-select v-model="query.accountField" style="width: 120px">
+            <el-option label="会员账号" value="LOGIN_NAME" />
             <el-option label="会员ID" value="UID" />
-            <!-- 截图：检索维度里「上级代理」与「上级代理ID」是两个不同项（前者按登录名模糊、后者按代理 ID 精确） -->
-            <el-option label="上级代理" value="PARENT_AGENT" />
-            <el-option label="上级代理ID" value="PARENT_AGENT_ID" />
-            <el-option label="会员层级" value="MEMBER_LEVEL" />
-            <el-option label="渠道名称(ID)" value="CHANNEL" />
           </el-select>
+          <el-input v-model="query.accountValue" placeholder="账号或UID" clearable style="width: 190px" @keyup.enter="getList" />
         </el-form-item>
-        <el-form-item>
-          <el-input v-model="query.accountValue" :placeholder="accountPlaceholder" clearable
-                    style="width: 260px" @keyup.enter="getList" />
-        </el-form-item>
-        <el-form-item label="分类">
-          <el-select v-model="query.gameType" placeholder="请选择分类" clearable style="width: 150px">
-            <el-option v-for="t in typeOptions" :key="t.typeCode" :label="t.typeName" :value="t.typeCode" />
+        <el-form-item label="游戏">
+          <el-select v-model="query.gameCode" placeholder="全部" clearable filterable style="width: 160px">
+            <el-option v-for="g in gameOptions" :key="g.value" :label="g.label" :value="g.value" />
           </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="getList">搜索</el-button>
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-          <el-button type="primary" plain icon="Download" @click="exportData">导出报表</el-button>
+          <el-button plain @click="toggleCumulative">{{ showCumulative ? '隐藏累计' : '显示累计' }}</el-button>
         </el-form-item>
       </el-form>
+    </el-card>
+
+    <el-card v-if="showCumulative" shadow="hover" class="summary-panel">
+      <div class="cumulative">
+        <span>累计投注：<b>{{ fmt(cumulative.betAmount) }}</b></span>
+        <span>累计派发：<b>{{ fmt(cumulative.payoutAmount) }}</b></span>
+        <span>累计差额：<b :class="diffClass(cumulative.netWinLoss)">{{ fmt(cumulative.netWinLoss) }}</b></span>
+      </div>
+    </el-card>
+
+    <el-card shadow="hover" class="summary-panel">
+      <template #header><div class="table-heading"><h3>按游戏汇总</h3></div></template>
+      <el-table :data="gameSummary" border size="small">
+        <el-table-column label="游戏编码" prop="gameCode" width="140" />
+        <el-table-column label="游戏名称" prop="gameName" min-width="180" show-overflow-tooltip />
+        <el-table-column label="投注金额" align="right" width="150">
+          <template #default="{ row }">{{ fmt(row.betAmount) }}</template>
+        </el-table-column>
+        <el-table-column label="派发金额" align="right" width="150">
+          <template #default="{ row }">{{ fmt(row.payoutAmount) }}</template>
+        </el-table-column>
+        <el-table-column label="有效投注" align="right" width="150">
+          <template #default="{ row }">{{ fmt(row.validBetAmount) }}</template>
+        </el-table-column>
+        <el-table-column label="盈亏金额" align="right" width="150">
+          <template #default="{ row }">
+            <span :class="diffClass(row.netWinLoss)">{{ fmt(row.netWinLoss) }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
     </el-card>
 
     <el-card shadow="hover" class="table-panel">
       <template #header>
         <div class="table-heading">
           <h3>会员投注细目</h3>
-          <span class="tip">口径：会员输赢 = 派彩 − 投注（负=会员输）；杀率 = 会员输赢 ÷ 有效投注；单次最多 92 天</span>
+          <span class="tip">数据源：user_game_daily_summary（T+1，GMT+8）；盈亏 = 派发 - 投注</span>
         </div>
       </template>
       <el-table v-loading="loading" border :data="rows">
-        <el-table-column label="币种" align="center" prop="currency" width="120" />
-        <el-table-column label="渠道名称(ID)" align="center" width="170">
-          <template #default="{ row }">
-            <div>{{ row.channelName || '—' }}</div>
-            <div class="sub">({{ row.channelId || '—' }})</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="上级代理(ID)" align="center" width="170">
-          <template #default="{ row }">
-            <div>{{ row.parentAgent || '—' }}</div>
-            <div v-if="row.parentAgentId" class="sub">({{ row.parentAgentId }})</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="会员账号(ID)" align="center" width="180">
+        <el-table-column label="会员账号(ID)" align="center" width="190">
           <template #default="{ row }">
             <div>{{ row.loginName || '—' }}</div>
             <div class="sub">({{ row.uid }})</div>
           </template>
         </el-table-column>
-        <!-- 截图：「会员ID」是与「会员账号(ID)」并列的独立列，行内「输赢分析」入口挂在会员ID 列下 -->
-        <el-table-column label="会员ID" align="center" width="170">
+        <el-table-column label="会员层级" align="center" prop="levelName" width="120" />
+        <el-table-column label="游戏编码" align="center" prop="gameCode" width="130" />
+        <el-table-column label="游戏名称" align="center" prop="gameName" min-width="160" show-overflow-tooltip />
+        <el-table-column label="注单数量" align="center" prop="betCount" width="110" sortable />
+        <el-table-column label="投注金额" align="right" width="150">
+          <template #default="{ row }">{{ fmt(row.betAmount) }}</template>
+        </el-table-column>
+        <el-table-column label="有效投注" align="right" width="150">
+          <template #default="{ row }">{{ fmt(row.validBetAmount) }}</template>
+        </el-table-column>
+        <el-table-column label="派发金额" align="right" width="150">
+          <template #default="{ row }">{{ fmt(row.payoutAmount) }}</template>
+        </el-table-column>
+        <el-table-column label="盈亏金额" align="right" width="150" sortable>
           <template #default="{ row }">
-            <div>{{ row.uid }}</div>
-            <el-link type="primary" @click="openWinLoss(row)">输赢分析</el-link>
+            <span :class="diffClass(row.netWinLoss)">{{ fmt(row.netWinLoss) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="会员层级" align="center" width="120">
-          <template #default="{ row }">{{ row.memberLevel || '—' }}</template>
+        <el-table-column label="杀率" align="center" width="100">
+          <template #default="{ row }">{{ Number(row.killRate ?? 0).toFixed(2) }}%</template>
         </el-table-column>
-        <el-table-column label="游戏类型" align="center" prop="gameTypeName" width="110" />
-        <el-table-column label="游戏平台" align="center" prop="platformName" width="130" />
-        <el-table-column label="游戏名称" align="center" prop="gameName" min-width="150" />
-      <!--
-        FIX(2026-10-12): 注单来源列改为完整映射 + tooltip。
-        原因：原实现只区分 MINIGAME 与非 MINIGAME（其余一律显示"棋牌/荷官桌"），
-        SLOT/ROOM/LIVE 被误标；且后端新增了 LEDGER 兜底来源（该游戏期间无注单行，
-        数据取自资金账本），若不标注会被运营误读为注单来源。
-      -->
-      <el-table-column label="注单来源" align="center" width="150">
-        <template #default="{ row }">
-          <el-tooltip :content="sourceTip(row.source)" placement="top">
-            <el-tag :type="sourceTagType(row.source)">{{ sourceLabel(row.source) }}</el-tag>
-          </el-tooltip>
-        </template>
-      </el-table-column>
-        <el-table-column label="注单数量" align="center" prop="betCount" width="120" sortable />
-        <el-table-column label="投注金额" align="center" prop="betAmount" width="140" sortable />
-        <el-table-column label="有效投注" align="center" prop="validBet" width="140" sortable />
-        <el-table-column label="会员输赢" align="center" prop="memberWin" width="140" sortable>
+        <el-table-column label="操作" align="center" width="110" fixed="right">
           <template #default="{ row }">
-            <span :class="row.memberWin < 0 ? 'text-red' : 'text-green'">{{ row.memberWin }}</span>
+            <el-button link type="primary" @click="openWinLoss(row)">输赢分析</el-button>
           </template>
-        </el-table-column>
-        <el-table-column label="杀率" align="center" width="110">
-          <template #default="{ row }">{{ row.killRate }}%</template>
         </el-table-column>
       </el-table>
       <pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="getList" />
     </el-card>
 
-    <!-- 输赢分析（截图会员账号旁的「输赢分析」入口，数据源为既有 member:bet 接口） -->
-    <el-dialog v-model="analysis.visible" :title="`输赢分析 - ${analysis.loginName}`" width="760px" append-to-body>
+    <el-dialog v-model="analysis.visible" :title="`输赢分析 - ${analysis.loginName}`" width="800px" append-to-body>
+      <el-tabs v-model="analysis.granularity" @tab-change="loadAnalysis">
+        <el-tab-pane label="日" name="DAY" />
+        <el-tab-pane label="周" name="WEEK" />
+        <el-tab-pane label="月" name="MONTH" />
+      </el-tabs>
       <el-table :data="analysis.rows" height="360">
-        <el-table-column label="日期" align="center" prop="statDate" width="130" />
-        <el-table-column label="投注金额" align="center" prop="betAmount" />
-        <el-table-column label="有效投注" align="center" prop="validBet" />
-        <el-table-column label="会员输赢" align="center" prop="winAmount" />
-        <el-table-column label="备注" align="center" prop="remark" />
+        <el-table-column label="周期" align="center" prop="statDate" width="130" />
+        <el-table-column label="注单数" align="center" prop="betCount" width="100" />
+        <el-table-column label="投注金额" align="right" width="140">
+          <template #default="{ row }">{{ fmt(row.betAmount) }}</template>
+        </el-table-column>
+        <el-table-column label="有效投注" align="right" width="140">
+          <template #default="{ row }">{{ fmt(row.validBetAmount) }}</template>
+        </el-table-column>
+        <el-table-column label="派发金额" align="right" width="140">
+          <template #default="{ row }">{{ fmt(row.payoutAmount) }}</template>
+        </el-table-column>
+        <el-table-column label="盈亏" align="right">
+          <template #default="{ row }"><span :class="diffClass(row.netWinLoss)">{{ fmt(row.netWinLoss) }}</span></template>
+        </el-table-column>
+        <el-table-column label="杀率" align="center" width="90">
+          <template #default="{ row }">{{ Number(row.killRate ?? 0).toFixed(2) }}%</template>
+        </el-table-column>
       </el-table>
       <template #footer><el-button @click="analysis.visible = false">关 闭</el-button></template>
     </el-dialog>
   </div>
 </template>
 
-<script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+<script setup name="MemberBetDetail" lang="ts">
+import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { memberBetDetailPage } from '@/api/game/bet';
-import { gameTypeOptions } from '@/api/game/manage';
-import { listMemberWinLoss } from '@/api/member/bet';
+import {
+  getMemberBetCumulative,
+  listMemberBetDetail,
+  listMemberBetGameCodes,
+  listMemberBetSummary,
+  listMemberWinLoss
+} from '@/api/member/bet';
 
-/**
- * 会员投注细目（截图「会员投注细目」）。
- *
- * 背景：截图列 = 币种 / 渠道名称(ID) / 上级代理 / 会员账号(ID) / 会员层级 / 游戏类型 / 游戏平台 /
- * 游戏名称 / 注单数量 / 投注金额 / 有效投注 / 会员输赢 / 杀率，会员账号旁有「输赢分析」入口；
- * 筛选支持 6 个检索维度（精准/模糊账号、会员ID、上级代理ID、会员层级、渠道名称(ID)）。
- * 数据源：本批次新增的 /infra/game/bet/member-detail/page（会员 × 游戏 聚合，join 会员画像/层级/渠道/代理）。
- * 协作关系：输赢分析复用会员域既有接口 /infra/member/bet/win-loss/{uid}，不重复实现。
- */
 defineOptions({ name: 'MemberBetDetail' });
 
 const loading = ref(false);
 const rows = ref<any[]>([]);
 const total = ref(0);
-const period = ref('DAY');
-const dateRange = ref<any>([]);
-const typeOptions = ref<any[]>([]);
-const analysis = reactive<any>({ visible: false, loginName: '', rows: [] });
-const query = reactive<any>({ pageNum: 1, pageSize: 10, accountField: 'FUZZY_ACCOUNT', accountValue: undefined,
-  gameType: undefined, currency: 'VND1000:1' });
+const dateRange = ref<string[]>([]);
+const gameOptions = ref<Array<{ value: string; label: string }>>([]);
+const gameSummary = ref<any[]>([]);
+const cumulative = ref<any>({ betAmount: 0, payoutAmount: 0, netWinLoss: 0 });
+const showCumulative = ref(false);
+const query = reactive<any>({ pageNum: 1, pageSize: 10, accountField: 'LOGIN_NAME', accountValue: undefined, gameCode: undefined });
+const analysis = reactive<any>({ visible: false, loginName: '', granularity: 'DAY', uid: undefined, rows: [] });
 
-const accountPlaceholder = computed(() => {
-  switch (query.accountField) {
-    case 'EXACT_ACCOUNT':
-      return '多个精准会员账号需用空格或逗号隔开，最多5个';
-    case 'UID':
-      return '请输入会员ID';
-    case 'PARENT_AGENT':
-      return '请输入上级代理账号';
-    case 'PARENT_AGENT_ID':
-      return '请输入上级代理ID';
-    case 'MEMBER_LEVEL':
-      return '请输入会员层级名称';
-    case 'CHANNEL':
-      return '请输入渠道名称或渠道ID';
-    default:
-      return '请输入会员账号';
-  }
-});
+const fmt = (value: any) => Number(value ?? 0).toLocaleString('en-US');
+/** 盈利红色、亏损绿色（运营口径）。 */
+const diffClass = (value: any) => (Number(value ?? 0) > 0 ? 'text-red' : Number(value ?? 0) < 0 ? 'text-green' : '');
 
-function applyPeriod() {
-  const end = new Date();
-  const start = new Date();
-  if (period.value === 'WEEK') start.setDate(end.getDate() - 6);
-  else if (period.value === 'MONTH') start.setMonth(end.getMonth() - 1);
+const yesterday = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
   const p = (n: number) => String(n).padStart(2, '0');
-  const fmt = (d: Date, tail: string) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${tail}`;
-  dateRange.value = [fmt(start, '00:00:00'), fmt(end, '23:59:59')];
-  getList();
-}
-
-/**
- * 取日期部分（YYYY-MM-DD）。
- *
- * 为什么需要：本页日期控件是 datetimerange（值为 "YYYY-MM-DD HH:mm:ss"），
- * 而会员域的统计接口（投注明细列表、输赢分析）入参都是 LocalDate（ISO 日期），
- * 直接透传会报参数类型不匹配；后端按日粒度聚合，时分秒不参与计算。
- */
-const dateOnly = (value?: string) => (value ? value.slice(0, 10) : undefined);
-
-/**
- * 「注单来源」列映射（2026-10-12 新增）。
- *
- * 口径来源：后端 MemberBetSourceSql.ROW_UNION 的各分支 source 取值
- * （CARD / MINIGAME / SLOT / CARD_HAND / ROOM / LIVE / DICE / LEDGER）。
- * LEDGER 是**账本兜底**：该会员在该游戏期间完全没有注单行，数据取自 wallet 资金账本，
- * 属"注单缺失"信号而非注单来源，因此单独用 warning 标签并在 tooltip 里说明，
- * 避免运营把它当成正常注单渠道。
- */
-const SOURCE_LABELS: Record<string, string> = {
-  CARD: '棋牌/荷官桌',
-  CARD_HAND: '棋牌/翻牌',
-  MINIGAME: '迷你',
-  SLOT: '老虎机',
-  ROOM: '房间玩法',
-  LIVE: '直播',
-  DICE: '骰子',
-  LEDGER: '资金账本(注单缺失)'
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
-const sourceLabel = (source?: string) => SOURCE_LABELS[source ?? ''] ?? (source || '—');
-
-const sourceTagType = (source?: string): 'warning' | 'success' | 'info' => {
-  if (source === 'LEDGER') return 'warning';
-  if (source === 'MINIGAME' || source === 'SLOT') return 'success';
-  return 'info';
-};
-
-const sourceTip = (source?: string) => {
-  if (source === 'LEDGER') {
-    return '该会员在此期间该游戏没有任何注单行，此行为资金账本兜底数据（注单缺失，请联系研发核查写单链路）';
+const buildQuery = () => {
+  const q: any = { pageNum: query.pageNum, pageSize: query.pageSize, gameCode: query.gameCode };
+  if (query.accountField === 'UID') {
+    q.uid = query.accountValue;
+  } else {
+    q.loginName = query.accountValue;
   }
-  return `注单来源：${sourceLabel(source)}`;
+  q.startDate = dateRange.value?.[0];
+  q.endDate = dateRange.value?.[1];
+  return q;
 };
 
 async function getList() {
   loading.value = true;
   try {
-    const res: any = await memberBetDetailPage({
-      ...query,
-      // 后端按 stat_date（日粒度）聚合，区间到时分秒仅用于与截图控件形态对齐，取日期部分传参
-      startDate: dateOnly(dateRange.value?.[0]),
-      endDate: dateOnly(dateRange.value?.[1])
-    });
+    const res: any = await listMemberBetDetail(buildQuery());
     rows.value = res.rows ?? [];
     total.value = res.total ?? 0;
+    const summaryRes: any = await listMemberBetSummary(buildQuery());
+    gameSummary.value = summaryRes.data ?? [];
+    if (showCumulative.value) {
+      await loadCumulative();
+    }
   } finally {
     loading.value = false;
   }
 }
 
-function resetQuery() {
-  Object.assign(query, { pageNum: 1, accountField: 'FUZZY_ACCOUNT', accountValue: undefined, gameType: undefined });
-  applyPeriod();
+async function loadCumulative() {
+  const res: any = await getMemberBetCumulative(buildQuery());
+  cumulative.value = res.data ?? { betAmount: 0, payoutAmount: 0, netWinLoss: 0 };
 }
 
-/** 输赢分析（复用会员域既有接口） */
-async function openWinLoss(row: any) {
-  analysis.loginName = row.loginName || row.uid;
-  // FIX(2026-10-08): 必须只传日期部分。
-  // 原因：接口 /infra/member/bet/win-loss/{uid} 的 startDate/endDate 是 LocalDate（ISO 日期），
-  // 而本页日期控件是 datetimerange（值形如 "2026-09-08 00:00:00"），直接透传会报
-  // "参数[startDate]要求类型为：'java.time.LocalDate'，但输入值为：'2026-09-08 00:00:00'"。
-  // 与 getList() 保持同一口径（后端按日粒度聚合，时分秒不参与计算）。
-  const data: any = ((await listMemberWinLoss(row.uid, dateOnly(dateRange.value?.[0]), dateOnly(dateRange.value?.[1]))) as unknown as any)?.data;
-  analysis.rows = data ?? [];
-  analysis.visible = true;
-}
-
-async function exportData() {
-  if (!rows.value.length) {
-    ElMessage.warning('暂无可导出数据');
-    return;
+async function toggleCumulative() {
+  showCumulative.value = !showCumulative.value;
+  if (showCumulative.value) {
+    await loadCumulative();
+    ElMessage.success('已加载累计统计');
   }
-  // 表头用中文列名（原实现导出 Object.keys 原始字段名，运营无法直接使用）
-  const cols: Array<[string, string]> = [
-    ['币种', 'currency'], ['渠道名称', 'channelName'], ['渠道ID', 'channelId'],
-    ['上级代理', 'parentAgent'], ['上级代理ID', 'parentAgentId'],
-    ['会员账号', 'loginName'], ['会员ID', 'uid'], ['会员层级', 'memberLevel'],
-    ['游戏类型', 'gameTypeName'], ['游戏平台', 'platformName'], ['游戏名称', 'gameName'],
-    ['注单数量', 'betCount'], ['投注金额', 'betAmount'], ['有效投注', 'validBet'],
-    ['会员输赢', 'memberWin'], ['杀率(%)', 'killRate']
-  ];
-  const header = cols.map((c) => c[0]).join(',');
-  const body = rows.value.map((row: any) => cols.map((c) => `"${row[c[1]] ?? ''}"`).join(',')).join('\n');
-  const blob = new Blob([`\ufeff${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `会员投注细目_${dateRange.value?.[0]}_${dateRange.value?.[1]}.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+}
+
+function resetQuery() {
+  query.pageNum = 1;
+  query.accountField = 'LOGIN_NAME';
+  query.accountValue = undefined;
+  query.gameCode = undefined;
+  dateRange.value = [yesterday(), yesterday()];
+  getList();
+}
+
+async function openWinLoss(row: any) {
+  analysis.uid = row.uid;
+  analysis.loginName = row.loginName || String(row.uid);
+  analysis.granularity = 'DAY';
+  analysis.visible = true;
+  await loadAnalysis();
+}
+
+async function loadAnalysis() {
+  const res: any = await listMemberWinLoss(
+    analysis.uid,
+    dateRange.value?.[0],
+    dateRange.value?.[1],
+    analysis.granularity
+  );
+  analysis.rows = res.data ?? [];
 }
 
 onMounted(async () => {
-  typeOptions.value = ((await gameTypeOptions('VND1000:1')) as unknown as any)?.data ?? [];
-  applyPeriod();
+  dateRange.value = [yesterday(), yesterday()];
+  const res: any = await listMemberBetGameCodes();
+  gameOptions.value = (res.data ?? []).map((code: string) => ({ value: code, label: code }));
+  getList();
 });
 </script>
 
 <style scoped>
-.table-heading h3 {
-  margin: 0 0 4px;
-  font-size: 15px;
-}
-.tip {
-  color: #909399;
-  font-size: 12px;
-}
-.sub {
-  color: #909399;
-  font-size: 12px;
-}
-.text-red {
-  color: #f56c6c;
-}
-.text-green {
-  color: #67c23a;
-}
+.table-heading h3 { margin: 0 0 4px; font-size: 15px; }
+.tip { color: #909399; font-size: 12px; }
+.sub { color: #909399; font-size: 12px; }
+.text-red { color: #f56c6c; font-weight: 600; }
+.text-green { color: #67c23a; font-weight: 600; }
+.summary-panel { margin-bottom: 12px; }
+.cumulative { display: flex; gap: 32px; font-size: 14px; }
+.cumulative b { font-size: 16px; }
 </style>

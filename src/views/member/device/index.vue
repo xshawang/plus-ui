@@ -39,6 +39,7 @@
             <p>已选择 {{ selectedIds.length }} 台设备，共 {{ total }} 条</p>
           </div>
           <div class="toolbar-actions">
+            <el-button plain @click="showAllColumns = !showAllColumns">{{ showAllColumns ? '精简列' : '显示全部列' }}</el-button>
             <el-button v-hasPermi="['member:device:edit']" plain :disabled="selectedIds.length === 0" @click="handleAction('TRUST')">批量信任</el-button>
             <el-button v-hasPermi="['member:device:edit']" plain :disabled="selectedIds.length === 0" @click="handleAction('UNTRUST')">批量解除</el-button>
             <el-button v-hasPermi="['member:device:edit']" type="danger" plain :disabled="selectedIds.length === 0" @click="handleAction('BLACKLIST')">
@@ -49,31 +50,31 @@
       </template>
       <el-table v-loading="loading" border :data="rows" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" />
-        <el-table-column label="最近登录时间" prop="lastLoginAt" align="center" width="180" />
+        <el-table-column v-if="showAllColumns" label="最近登录时间" prop="lastLoginAt" align="center" width="180" />
         <el-table-column label="会员ID" prop="uid" align="center" width="170" show-overflow-tooltip />
-        <el-table-column label="会员账号" prop="loginName" align="center" min-width="120" show-overflow-tooltip />
-        <el-table-column label="设备号" prop="deviceId" align="center" min-width="180" show-overflow-tooltip />
+        <el-table-column v-if="showAllColumns" label="会员账号" prop="loginName" align="center" min-width="120" show-overflow-tooltip />
+        <el-table-column v-if="showAllColumns" label="设备号" prop="deviceId" align="center" min-width="180" show-overflow-tooltip />
         <el-table-column label="设备指纹" prop="deviceFingerprint" align="center" min-width="200" show-overflow-tooltip />
-        <el-table-column label="客户端" align="center" min-width="130">
+        <el-table-column v-if="showAllColumns" label="客户端" align="center" min-width="130">
           <template #default="{ row }">{{ row.clientType || '—' }} {{ row.appVersion ? '(' + row.appVersion + ')' : '' }}</template>
         </el-table-column>
-        <el-table-column label="浏览器" align="center" min-width="150" show-overflow-tooltip>
+        <el-table-column v-if="showAllColumns" label="浏览器" align="center" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">{{ row.browser ? row.browser + ' ' + (row.browserVersion || '') : '—' }}</template>
         </el-table-column>
-        <el-table-column label="操作系统" align="center" min-width="130">
+        <el-table-column v-if="showAllColumns" label="操作系统" align="center" min-width="130">
           <template #default="{ row }">{{ row.os || '—' }} {{ row.osVersion || '' }}</template>
         </el-table-column>
-        <el-table-column label="设备品牌/型号" align="center" min-width="150">
+        <el-table-column v-if="showAllColumns" label="设备品牌/型号" align="center" min-width="150">
           <template #default="{ row }">{{ (row.deviceBrand || '') + ' ' + (row.deviceModel || '') || '—' }}</template>
         </el-table-column>
-        <el-table-column label="IP/归属地" align="center" min-width="170">
+        <el-table-column v-if="showAllColumns" label="IP/归属地" align="center" min-width="170">
           <template #default="{ row }">
             <div>{{ row.lastLoginIp || '—' }}</div>
             <div class="text-gray-400 text-sm">{{ row.ipRegion || '—' }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="使用次数" prop="useCount" align="center" width="100" />
-        <el-table-column label="信任设备" align="center" width="110">
+        <el-table-column v-if="showAllColumns" label="使用次数" prop="useCount" align="center" width="100" />
+        <el-table-column v-if="showAllColumns" label="信任设备" align="center" width="110">
           <template #default="{ row }">
             <el-tag v-if="row.isTrustDevice === 1" type="success">是</el-tag>
             <el-tag v-else type="info">否</el-tag>
@@ -117,6 +118,7 @@ type PageBody<T> = { rows?: T[]; total?: number };
 type DataBody<T> = { data?: T };
 
 const { loading, withLoading } = useLoading(true);
+const showAllColumns = ref(false);
 const rows = ref<MemberDeviceVO[]>([]);
 const total = ref(0);
 const selectedIds = ref<number[]>([]);

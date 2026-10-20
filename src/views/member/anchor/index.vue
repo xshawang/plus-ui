@@ -247,51 +247,25 @@
           />
         </el-tab-pane>
 
-        <el-tab-pane label="操作历史" name="log">
-          <el-table v-loading="logLoading" border :data="remarkLogs">
-            <el-table-column label="时间" prop="createdAt" align="center" width="180" />
-            <el-table-column label="业务类型" align="center" width="110">
-              <template #default="{ row }">{{ bizTypeLabel(row.bizType) }}</template>
-            </el-table-column>
-            <el-table-column label="变更前" prop="oldValue" align="left" min-width="140" show-overflow-tooltip />
-            <el-table-column label="变更后" prop="newValue" align="left" min-width="140" show-overflow-tooltip />
-            <el-table-column label="原因" prop="reason" align="left" min-width="180" show-overflow-tooltip />
-            <el-table-column label="操作人" prop="operatorName" align="center" width="130" />
+        <el-tab-pane label="投注明细" name="bets">
+          <el-table v-loading="betLoading" border :data="betRows" max-height="380">
+            <el-table-column label="会员UID" prop="uid" align="center" width="180" show-overflow-tooltip />
+            <el-table-column label="局号" prop="roundNo" align="center" min-width="160" show-overflow-tooltip />
+            <el-table-column label="游戏/game_code" prop="gameCode" align="center" width="140" />
+            <el-table-column label="投注额(分)" prop="betAmount" align="right" width="120" />
+            <el-table-column label="赔率" prop="odds" align="right" width="90" />
+            <el-table-column label="派彩(分)" prop="payout" align="right" width="120" />
+            <el-table-column label="时间" prop="createTime" align="center" width="170" />
           </el-table>
+          <pagination
+            v-show="betTotal > 0"
+            v-model:page="betQuery.pageNum"
+            v-model:limit="betQuery.pageSize"
+            :total="betTotal"
+            @pagination="loadBets"
+          />
         </el-tab-pane>
     </el-tabs>
-
-    <!-- 投注明细（批次 7，只读）：按主播号映射的真实玩家账号查询注单 -->
-    <el-card v-if="detail.visible" shadow="never" class="mt-3">
-      <template #header>
-        <div class="toolbar-shell">
-          <div class="table-heading">
-            <h3>投注明细</h3>
-            <p>{{ betMapping.note || '按主播号映射的真实玩家账号查询注单' }}</p>
-          </div>
-          <div class="toolbar-actions">
-            <el-button icon="Refresh" :loading="betLoading" @click="loadBets">刷新</el-button>
-          </div>
-        </div>
-      </template>
-      <el-table v-loading="betLoading" border :data="betRows" max-height="360">
-        <el-table-column label="会员UID" prop="uid" align="center" width="180" show-overflow-tooltip />
-        <el-table-column label="局号" prop="roundNo" align="center" min-width="160" show-overflow-tooltip />
-        <el-table-column label="游戏" prop="gameCode" align="center" width="130" />
-        <el-table-column label="投注额(分)" prop="betAmount" align="right" width="120" />
-        <el-table-column label="赔率" prop="odds" align="right" width="90" />
-        <el-table-column label="派彩(分)" prop="payout" align="right" width="120" />
-        <el-table-column label="结算状态" prop="settleStatus" align="center" width="130" />
-        <el-table-column label="投注时间" prop="createTime" align="center" width="170" />
-      </el-table>
-      <pagination
-        v-show="betTotal > 0"
-        v-model:page="betQuery.pageNum"
-        v-model:limit="betQuery.pageSize"
-        :total="betTotal"
-        @pagination="loadBets"
-      />
-    </el-card>
     </el-dialog>
 
     <!-- 人工变更弹窗（一次一个维度） -->

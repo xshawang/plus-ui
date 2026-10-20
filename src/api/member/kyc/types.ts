@@ -16,6 +16,18 @@ export interface KycVendorVO {
   supportCountries?: string;
   enabledCountries?: string;
   feeDesc?: string;
+  countryCode?: string;
+  documentTypes?: string;
+  requiredFields?: string;
+  livenessRequired?: number;
+  faceMatchRequired?: number;
+  minAge?: number;
+  ocrEnabled?: number;
+  amlCheck?: number;
+  phoneVerify?: number;
+  flowConfigJson?: string;
+  successMessage?: string;
+  failMessage?: string;
   dailyCap?: number;
   todayCount?: number;
   totalCount?: number;
@@ -39,6 +51,18 @@ export interface KycVendorForm {
   supportCountries?: string;
   enabledCountries?: string;
   feeDesc?: string;
+  countryCode?: string;
+  documentTypes?: string;
+  requiredFields?: string;
+  livenessRequired?: number;
+  faceMatchRequired?: number;
+  minAge?: number;
+  ocrEnabled?: number;
+  amlCheck?: number;
+  phoneVerify?: number;
+  flowConfigJson?: string;
+  successMessage?: string;
+  failMessage?: string;
   dailyCap?: number;
   status?: number;
 }

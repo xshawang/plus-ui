@@ -72,6 +72,9 @@
         <el-form-item label="晋级需累计充值(VND)">
           <el-input-number v-model="form.minPayTotal" :min="0" :precision="2" :controls="false" style="width: 100%" />
         </el-form-item>
+        <el-form-item label="晋级需累计打码(分)">
+          <el-input-number v-model="form.minTurnoverAmount" :min="0" :controls="false" style="width: 100%" />
+        </el-form-item>
         <el-form-item label="晋级需有效局数">
           <el-input-number v-model="form.minRounds" :min="0" :controls="false" style="width: 100%" />
         </el-form-item>
@@ -160,6 +163,7 @@ const handleAdd = () => {
     currency: rows.value[0]?.currency ?? 'VND1000:1',
     badgeIcon: '',
     minPayTotal: 0,
+    minTurnoverAmount: 0,
     minRounds: 0,
     dailyGift: 0,
     feeDiscountRate: 0,
