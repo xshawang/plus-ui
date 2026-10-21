@@ -68,6 +68,9 @@
           <el-table-column label="返水活动名称" prop="configName" min-width="180" show-overflow-tooltip />
           <el-table-column label="币种" prop="currency" align="center" width="100" />
           <el-table-column label="游戏分类" prop="gameCategory" align="center" width="130" />
+          <el-table-column label="游戏范围" prop="gameCodes" align="center" min-width="160" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.gameCodes || '按分类' }}</template>
+          </el-table-column>
           <el-table-column label="返水口径" align="center" width="120">
             <template #default="{ row }">{{ rebateTypeText(row.rebateType) }}</template>
           </el-table-column>
@@ -179,11 +182,12 @@
             <el-option label="彩票" value="彩票" />
           </el-select>
         </el-form-item>
+        <el-form-item label="游戏编码（逗号分隔）">
+          <el-input v-model="configForm.gameCodes" placeholder="留空=按游戏分类生效，如 kts_9848,vgmn_224" />
+        </el-form-item>
         <el-form-item label="返水口径">
           <el-select v-model="configForm.rebateType" style="width: 200px">
             <el-option label="有效投注" :value="1" />
-            <el-option label="输额" :value="2" />
-            <el-option label="净赢" :value="3" />
           </el-select>
         </el-form-item>
         <el-form-item label="返水比例(%)" prop="rebateRate">
@@ -192,7 +196,7 @@
         <el-form-item label="单笔最低有效投注(分)">
           <el-input-number v-model="configForm.minBetAmount" :min="0" :controls="false" style="width: 200px" />
         </el-form-item>
-        <el-form-item label="单次返水封顶(分,0=不限)">
+        <el-form-item label="单注返水封顶(分,0=不限)">
           <el-input-number v-model="configForm.maxRebateAmount" :min="0" :controls="false" style="width: 200px" />
         </el-form-item>
         <el-form-item label="结算周期">
@@ -235,6 +239,7 @@
         <el-descriptions-item label="活动名称">{{ detail.configName }}</el-descriptions-item>
         <el-descriptions-item label="币种">{{ detail.currency }}</el-descriptions-item>
         <el-descriptions-item label="游戏分类">{{ detail.gameCategory }}</el-descriptions-item>
+        <el-descriptions-item label="游戏范围">{{ detail.gameCodes || '按分类' }}</el-descriptions-item>
         <el-descriptions-item label="返水口径">{{ rebateTypeText(detail.rebateType) }}</el-descriptions-item>
         <el-descriptions-item label="返水比例">{{ Number(detail.rebateRate ?? 0).toFixed(4) }}%</el-descriptions-item>
         <el-descriptions-item label="单次封顶">
@@ -301,6 +306,7 @@ const configForm = reactive({
   configName: '',
   currency: 'VND',
   gameCategory: '电子',
+  gameCodes: '',
   rebateType: 1,
   rebateRate: 0,
   minBetAmount: 0,
@@ -332,7 +338,7 @@ const setting = usePromoKvConfig('rebate-setting', [
 ]);
 
 const fmtMoney = (value?: number) =>
-  value === undefined || value === null ? '-' : (Number(value) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  value === undefined || value === null ? '-' : Number(value).toLocaleString('en-US');
 
 const rebateTypeText = (type?: number) => ({ 1: '有效投注', 2: '输额', 3: '净赢' } as Record<number, string>)[type ?? -1] ?? '未知';
 
@@ -388,6 +394,7 @@ const openConfigForm = (row?: PromoRebateConfigVO) => {
     configName: row?.configName ?? '',
     currency: row?.currency ?? 'VND',
     gameCategory: row?.gameCategory ?? '电子',
+    gameCodes: row?.gameCodes ?? '',
     rebateType: row?.rebateType ?? 1,
     rebateRate: row?.rebateRate ?? 0,
     minBetAmount: row?.minBetAmount ?? 0,
@@ -427,7 +434,7 @@ const openDetail = async (row: PromoRebateConfigVO) => {
   detailDialog.loading = true;
   try {
     const res = (await getPromoRebateDetail(row.configId)) as { data?: Row };
-    Object.assign(detail, { categoryBreakdown: [], ...(res.data ?? {}) });
+    Object.assign(detail, { categoryBreakdown: [] }, res.data);
   } finally {
     detailDialog.loading = false;
   }

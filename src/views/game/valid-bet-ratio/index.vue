@@ -11,6 +11,16 @@
             <el-option label="停用" :value="0" />
           </el-select>
         </el-form-item>
+        <el-form-item label="游戏类型">
+          <el-select v-model="query.gameType" placeholder="全部" clearable style="width: 140px">
+            <el-option
+              v-for="item in typeOptions"
+              :key="item.gameType"
+              :label="item.gameTypeName || String(item.gameType)"
+              :value="item.gameType"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="load">搜索</el-button>
           <el-button icon="Refresh" @click="reset">重置</el-button>
@@ -21,6 +31,11 @@
       <el-table v-loading="loading" border :data="rows">
         <el-table-column label="游戏编码" prop="gameCode" min-width="140" />
         <el-table-column label="游戏名称" prop="gameName" min-width="180" show-overflow-tooltip />
+        <el-table-column label="游戏类型" width="120" align="center">
+          <template #default="{ row }">
+            {{ row.gameTypeName || row.gameType || '—' }}
+          </template>
+        </el-table-column>
         <el-table-column label="有效投注比例" prop="ratioPercent" width="140" align="right">
           <template #default="{ row }">{{ Number(row.ratioPercent ?? 0).toFixed(2) }}%</template>
         </el-table-column>
@@ -34,7 +49,9 @@
         <el-table-column label="更新时间" prop="updatedAt" width="180" />
         <el-table-column label="操作" width="110" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button v-hasPermi="['game:valid-bet-ratio:edit']" link type="primary" @click="openEdit(row)">修改</el-button>
+            <el-button v-hasPermi="['game:valid-bet-ratio:edit']" link type="primary" @click="openEdit(row as ValidBetRatioVO)">
+              修改
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -71,18 +88,33 @@ import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import {
   listValidBetRatio,
+  listValidBetRatioTypeOptions,
   saveValidBetRatio,
-  seedMissingValidBetRatio,
-  type ValidBetRatioVO
+  seedMissingValidBetRatio
+} from '@/api/game/valid-bet-ratio';
+import type {
+  ValidBetRatioQuery,
+  ValidBetRatioTypeOption,
+  ValidBetRatioVO
 } from '@/api/game/valid-bet-ratio';
 
 defineOptions({ name: 'GameValidBetRatio' });
 
 const loading = ref(false);
 const rows = ref<ValidBetRatioVO[]>([]);
-const query = reactive<{ keyword?: string; status?: number }>({});
+const typeOptions = ref<ValidBetRatioTypeOption[]>([]);
+const query = reactive<ValidBetRatioQuery>({});
 const dialog = reactive({ visible: false });
 const form = reactive<ValidBetRatioVO>({ gameCode: '', gameName: '', ratioPercent: 100, status: 1, remark: '' });
+
+const loadTypeOptions = async () => {
+  try {
+    const res: any = await listValidBetRatioTypeOptions();
+    typeOptions.value = res.data ?? [];
+  } catch {
+    typeOptions.value = [];
+  }
+};
 
 const load = async () => {
   loading.value = true;
@@ -97,6 +129,7 @@ const load = async () => {
 const reset = () => {
   query.keyword = undefined;
   query.status = undefined;
+  query.gameType = undefined;
   load();
 };
 
@@ -106,7 +139,13 @@ const openEdit = (row: ValidBetRatioVO) => {
 };
 
 const submit = async () => {
-  await saveValidBetRatio({ ...form });
+  await saveValidBetRatio({
+    gameCode: form.gameCode,
+    gameName: form.gameName,
+    ratioPercent: form.ratioPercent,
+    status: form.status,
+    remark: form.remark
+  });
   ElMessage.success('保存成功');
   dialog.visible = false;
   load();
@@ -118,5 +157,8 @@ const handleSeed = async () => {
   load();
 };
 
-onMounted(load);
+onMounted(async () => {
+  await loadTypeOptions();
+  await load();
+});
 </script>

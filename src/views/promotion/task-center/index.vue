@@ -5,7 +5,7 @@
         <div class="toolbar-shell">
           <div class="table-heading">
             <h3>任务中心</h3>
-            <p>新人福利 / 每日任务 / 每周任务 / 三日神秘任务 / 活跃度；任务奖励统一生成「领取与审核」发放单。</p>
+            <p>新人福利 / 每日任务 / 每周任务；配置统一落 quest_config，客户端按任务类型读取。</p>
           </div>
         </div>
       </template>
@@ -14,10 +14,6 @@
         <el-tab-pane label="新人福利" name="newbie" />
         <el-tab-pane label="每日任务" name="daily" />
         <el-tab-pane label="每周任务" name="weekly" />
-        <el-tab-pane label="三日神秘任务" name="mystery" />
-        <el-tab-pane label="活跃度宝箱" name="box" />
-        <el-tab-pane label="活跃度记录" name="pointLog" />
-        <el-tab-pane label="剩余活跃度" name="pointSummary" />
       </el-tabs>
 
       <!-- 任务配置类页签 -->

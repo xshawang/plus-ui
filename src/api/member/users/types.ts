@@ -34,6 +34,10 @@ export interface MemberUserVO {
   registerDevice?: string;
   /** 注册渠道 */
   registerChannel?: number;
+  /** 注册平台代码 */
+  appId?: string;
+  /** 注册渠道代码 */
+  affId?: string;
   /** 允许多端登录 0否 1是 */
   allowMultiDevice?: number;
   /** 禁止Web端登录 0否 1是 */
@@ -147,6 +151,7 @@ export interface MemberUserResetPasswordForm {
 }
 
 export interface MemberUserQuery extends PageQuery {
+  affId?: string;
   /** 用户UID */
   uid?: string | number;
   /** 登录名 */

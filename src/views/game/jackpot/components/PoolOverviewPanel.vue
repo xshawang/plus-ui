@@ -201,6 +201,9 @@
           <template #default="{ row }">{{ pct(row.shareSum) }}</template>
         </el-table-column>
       </el-table>
+      <el-alert v-if="paramDialog.rows[0]?.source === 'DB'" type="warning" :closable="false" show-icon
+                style="margin-top: 10px"
+                title="该游戏不是 slot 注册游戏，当前展示 slot_jackpot_pool 的只读落盘快照，不支持在线修改。" />
       <el-table v-loading="paramDialog.loading" border size="small" :data="paramDialog.rows" style="margin-top: 12px">
         <el-table-column label="层级序号" align="center" prop="level" width="90" />
         <el-table-column label="池层级" align="center" prop="jackpotType" width="120" />

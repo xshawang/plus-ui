@@ -28,7 +28,6 @@
         <el-tab-pane label="注入逐笔" name="contribution" />
         <el-tab-pane label="参数变更" name="audit" />
         <el-tab-pane label="资金日报" name="daily" />
-        <el-tab-pane label="大厅展示配置" name="display" />
       </el-tabs>
 
       <PoolOverviewPanel v-if="tab === 'pool'" />
@@ -36,7 +35,6 @@
       <PoolContributionPanel v-else-if="tab === 'contribution'" />
       <PoolAuditPanel v-else-if="tab === 'audit'" />
       <PoolDailyPanel v-else-if="tab === 'daily'" />
-      <DisplayConfigPanel v-else-if="tab === 'display'" />
     </el-card>
   </div>
 </template>
@@ -48,7 +46,6 @@ import PoolRecordPanel from './components/PoolRecordPanel.vue';
 import PoolContributionPanel from './components/PoolContributionPanel.vue';
 import PoolAuditPanel from './components/PoolAuditPanel.vue';
 import PoolDailyPanel from './components/PoolDailyPanel.vue';
-import DisplayConfigPanel from './components/DisplayConfigPanel.vue';
 
 defineOptions({ name: 'GameJackpot' });
 

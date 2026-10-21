@@ -73,6 +73,26 @@ export const getBetChartEnhanced = (query?: StatQuery): AxiosPromise<StatRow[]> 
   return request({ url: '/infra/ops/stat/bet/chart', method: 'get', params: query });
 };
 
+/** 用户留存报表（快照：D1/D3/D7/D14/D30 + 沉默/回流） */
+export const getRetentionReport = (query?: StatQuery): AxiosPromise<StatRow[]> => {
+  return request({ url: '/infra/ops/stat/retention', method: 'get', params: query });
+};
+
+/** 日/周活跃报表（快照） */
+export const getActiveReport = (
+  query?: StatQuery & { granularity?: 'day' | 'week' }
+): AxiosPromise<StatRow[]> => {
+  return request({ url: '/infra/ops/stat/active-report', method: 'get', params: query });
+};
+
+/** 未登录/未充值分桶快照 */
+export const getMemberStatus = (query?: {
+  statDate?: string;
+  analysisType?: 'not_login' | 'not_recharge';
+}): AxiosPromise<StatRow[]> => {
+  return request({ url: '/infra/ops/stat/member-status', method: 'get', params: query });
+};
+
 /** 未登入 / 未充值分析：按分桶导出会员明细（进入「报表 → 导出下载」） */
 export const exportMemberBucket = (type: string, bucket: string): AxiosPromise<StatRow> => {
   return request({ url: '/infra/ops/stat/member/bucket/export', method: 'post', params: { type, bucket } });

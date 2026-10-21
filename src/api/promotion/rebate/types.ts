@@ -8,6 +8,8 @@ export interface PromoRebateQuery {
   configName?: string;
   currency?: string;
   gameCategory?: string;
+  /** 游戏编码 CSV；空=按游戏分类 */
+  gameCodes?: string;
   status?: number;
   account?: string;
   timeStart?: string;
@@ -19,6 +21,7 @@ export interface PromoRebateConfigVO {
   configName: string;
   currency: string;
   gameCategory?: string;
+  gameCodes?: string;
   /** 1=有效投注 2=输额 3=净赢 */
   rebateType?: number;
   rebateRate?: number;
@@ -43,6 +46,7 @@ export interface PromoRebateConfigForm {
   configName: string;
   currency: string;
   gameCategory: string;
+  gameCodes?: string;
   rebateType?: number;
   rebateRate: number;
   minBetAmount?: number;

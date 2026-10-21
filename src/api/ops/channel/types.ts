@@ -33,6 +33,7 @@ export interface ChannelStateForm {
 }
 
 export interface ChannelStatQuery {
+  type?: string;
   channelId?: number;
   channelType?: number;
   keyword?: string;

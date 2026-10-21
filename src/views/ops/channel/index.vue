@@ -15,6 +15,12 @@
       <el-tabs v-model="activeTab">
         <el-tab-pane label="渠道列表" name="list">
           <el-form :inline="true" class="query-form mb-2">
+            <el-form-item label="统计口径">
+              <el-radio-group v-model="statType" @change="loadStats">
+                <el-radio-button value="direct">按渠道</el-radio-button>
+                <el-radio-button value="aff">按 aff_id</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
             <el-form-item label="类型">
               <el-select v-model="queryParams.channelType" clearable style="width: 120px">
                 <el-option label="直营" :value="1" />
@@ -85,7 +91,20 @@
               <el-button type="primary" icon="Search" @click="loadStats">查询</el-button>
             </el-form-item>
           </el-form>
-          <el-table v-loading="statsLoading" border :data="statsRows">
+          <el-table v-if="statType === 'aff'" v-loading="statsLoading" border :data="statsRows">
+            <el-table-column label="aff_id" prop="affId" min-width="160" show-overflow-tooltip />
+            <el-table-column label="渠道ID" prop="channelId" align="center" width="100" />
+            <el-table-column label="日期" prop="statDate" align="center" width="120" />
+            <el-table-column label="注册用户" prop="registerUserCount" align="right" width="100" />
+            <el-table-column label="登录用户" prop="loginUserCount" align="right" width="100" />
+            <el-table-column label="下注用户" prop="betUserCount" align="right" width="100" />
+            <el-table-column label="下注金额" prop="betAmount" align="right" min-width="120" />
+            <el-table-column label="提现用户" prop="withdrawUserCount" align="right" width="100" />
+            <el-table-column label="游戏局数" prop="gameRounds" align="right" width="100" />
+            <el-table-column label="营收" prop="revenueAmount" align="right" min-width="120" />
+            <el-table-column label="任务名" prop="jobName" align="center" min-width="160" />
+          </el-table>
+          <el-table v-else v-loading="statsLoading" border :data="statsRows">
             <el-table-column label="渠道编码" prop="channelCode" width="120" />
             <el-table-column label="渠道名称" prop="channelName" min-width="150" />
             <el-table-column label="注册" prop="registerCount" align="right" width="90" />
@@ -161,6 +180,7 @@ const { loading: statsLoading, withLoading: withStatsLoading } = useLoading(true
 const rows = ref<ChannelVO[]>([]);
 const total = ref(0);
 const statsRows = ref<ChannelStatVO[]>([]);
+const statType = ref('direct');
 const dialog = reactive({ visible: false, title: '' });
 const isEdit = ref(false);
 
@@ -190,7 +210,7 @@ const resetQuery = () => {
 };
 const loadStats = async () => {
   await withStatsLoading(async () => {
-    const res = await getChannelStats(statQuery.value);
+    const res = await getChannelStats({ ...statQuery.value, type: statType.value });
     statsRows.value = res.data || [];
   });
 };

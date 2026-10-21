@@ -12,38 +12,6 @@
             <el-option v-for="item in platformList" :key="item.providerCode" :label="item.platformName" :value="item.providerCode" />
           </el-select>
         </el-form-item>
-        <el-form-item label="子类别">
-          <el-select v-model="query.subCategory" placeholder="全部子类别" clearable style="width: 140px">
-            <el-option label="桌面游戏" value="桌面游戏" />
-            <el-option label="街机游戏" value="街机游戏" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="维护状态">
-          <el-select v-model="query.maintenance" placeholder="维护状态" clearable style="width: 120px">
-            <el-option label="维护中" :value="1" /><el-option label="正常" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="游戏状态">
-          <el-select v-model="query.status" placeholder="游戏状态" clearable style="width: 120px">
-            <el-option label="启用" :value="1" /><el-option label="停用" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="角标名称">
-          <el-select v-model="query.cornerName" placeholder="角标名称" clearable style="width: 120px">
-            <el-option label="无" value="无" /><el-option label="热门" value="热门" />
-            <el-option label="新" value="新" /><el-option label="推荐" value="推荐" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="主播展示状态">
-          <el-select v-model="query.showToStreamer" placeholder="主播展示状态" clearable style="width: 140px">
-            <el-option label="展示" :value="1" /><el-option label="不展示" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="独立展示到类型">
-          <el-select v-model="query.independentType" placeholder="独立展示到类型" clearable style="width: 160px">
-            <el-option label="打开" :value="1" /><el-option label="关闭" :value="0" />
-          </el-select>
-        </el-form-item>
         <el-form-item>
           <el-select v-model="query.gameField" style="width: 120px">
             <el-option label="子游戏ID" value="GAME_ID" /><el-option label="子游戏名称" value="GAME_NAME" />
@@ -51,21 +19,6 @@
         </el-form-item>
         <el-form-item>
           <el-input v-model="query.gameValue" placeholder="请输入子游戏ID" clearable style="width: 170px" @keyup.enter="getList" />
-        </el-form-item>
-        <el-form-item label="算有效投注">
-          <el-select v-model="query.countValidBet" placeholder="算有效投注" clearable style="width: 130px">
-            <el-option label="是" :value="1" /><el-option label="否" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="风险人工锁">
-          <el-select v-model="query.riskManualLock" placeholder="风险人工锁" clearable style="width: 130px">
-            <el-option label="已解除" :value="0" /><el-option label="锁定中" :value="1" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="认证">
-          <el-select v-model="query.authStatus" placeholder="认证" clearable style="width: 120px">
-            <el-option label="已认证" :value="1" /><el-option label="未认证" :value="0" />
-          </el-select>
         </el-form-item>
         <el-form-item label="系统备注">
           <el-select v-model="query.remarkField" style="width: 120px">
@@ -95,63 +48,19 @@
           </template>
         </el-table-column>
         <el-table-column label="平台名称" align="center" prop="platformName" width="130" />
-        <el-table-column label="子类别" align="center" prop="subCategory" width="110" />
         <el-table-column label="子游戏ID" align="center" prop="gameCode" width="120" />
         <el-table-column label="子游戏名称" align="center" prop="gameName" min-width="170" />
-        <el-table-column label="icon缩略图" align="center" width="100">
+        <el-table-column label="子游戏名称（越南语）" align="center" prop="gameNameVn" min-width="180" show-overflow-tooltip />
+        <el-table-column label="子类型" align="center" prop="gameTypeName" width="110" />
+        <el-table-column label="有效投注比例" align="center" width="130">
           <template #default="{ row }">
-            <el-image v-if="row.iconUrl" :src="row.iconUrl" style="width: 36px; height: 36px" fit="cover" />
-            <span v-else>--</span>
+            <span v-if="row.validBetRatio !== null && row.validBetRatio !== undefined">
+              {{ Number(row.validBetRatio).toFixed(4) }}%
+            </span>
+            <el-tag v-else type="warning" size="small">未配置</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="币种" align="center" prop="currency" width="110" />
-        <el-table-column label="认证" align="center" width="90">
-          <template #default="{ row }">{{ row.authStatus === 1 ? '已认证' : '—' }}</template>
-        </el-table-column>
-        <el-table-column label="热门开关" align="center" width="100">
-          <template #default="{ row }">
-            <div>一 <el-switch :model-value="row.hotTpl1 === 1" @change="v => switchField(row, 'hot_tpl1', 'hotTpl1', v, 'hot_1', 1)" /></div>
-            <div>二 <el-switch :model-value="row.hotTpl2 === 1" @change="v => switchField(row, 'hot_tpl2', 'hotTpl2', v, 'hot_2', 1)" /></div>
-          </template>
-        </el-table-column>
-        <el-table-column label="特色开关" align="center" width="100">
-          <template #default="{ row }">
-            <div>一 <el-switch :model-value="row.featureTpl1 === 1" @change="v => switchField(row, 'feature_tpl1', 'featureTpl1', v, 'feature_1', 2)" /></div>
-            <div>二 <el-switch :model-value="row.featureTpl2 === 1" @change="v => switchField(row, 'feature_tpl2', 'featureTpl2', v, 'feature_2', 2)" /></div>
-          </template>
-        </el-table-column>
-        <!-- 角标名称：无角标时原站显示「无」（截图口径），空值不能留白 -->
-        <el-table-column label="角标名称" align="center" width="100">
-          <template #default="{ row }">{{ row.cornerName || '无' }}</template>
-        </el-table-column>
-        <el-table-column label="维护开关" align="center" width="110">
-          <template #default="{ row }">
-            <el-switch :model-value="row.maintenance === 1" @change="v => openMaintenance(row, v)" />
-          </template>
-        </el-table-column>
-        <el-table-column label="游戏开关" align="center" width="110">
-          <template #default="{ row }">
-            <el-switch :model-value="row.status === 1" @change="v => switchField(row, 'status', 'status', v, null, null)" />
-          </template>
-        </el-table-column>
-        <el-table-column label="展示给主播" align="center" width="110">
-          <template #default="{ row }">
-            <el-switch :model-value="row.showToStreamer === 1" @change="v => switchField(row, 'show_to_streamer', 'showToStreamer', v, null, null)" />
-          </template>
-        </el-table-column>
-        <el-table-column label="独立展示到类型" align="center" width="140">
-          <template #default="{ row }">{{ row.independentType === 1 ? '打开' : '关闭' }}</template>
-        </el-table-column>
-        <el-table-column label="算有效投注" align="center" width="110">
-          <template #default="{ row }">
-            <el-switch :model-value="row.countValidBet === 1" @change="v => switchField(row, 'count_valid_bet', 'countValidBet', v, null, null)" />
-          </template>
-        </el-table-column>
-        <el-table-column label="风险人工锁" align="center" width="110">
-          <template #default="{ row }">
-            <el-switch :model-value="row.riskManualLock === 1" @change="v => switchField(row, 'risk_manual_lock', 'riskManualLock', v, null, null)" />
-          </template>
-        </el-table-column>
         <el-table-column label="备注" align="center" prop="remark" min-width="110" />
         <el-table-column label="系统备注" align="center" prop="sysRemark" min-width="110" />
         <el-table-column label="操作" align="center" width="100" fixed="right">

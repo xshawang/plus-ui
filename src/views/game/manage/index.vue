@@ -14,18 +14,12 @@
     -->
     <el-card shadow="hover">
       <el-tabs v-model="tab">
-        <el-tab-pane label="平台管理" name="platform" />
         <el-tab-pane label="子游戏管理" name="subgame" />
-        <!-- 模板页签名称与「(生效中)」标记来自模板主数据，设为生效后标签随之变化 -->
-        <el-tab-pane v-for="tpl in templates" :key="tpl.templateCode" :name="tpl.templateCode"
-                     :label="tpl.templateName + (tpl.templateStatus === 1 ? '(生效中)' : '')" />
         <el-tab-pane label="类型管理" name="gametype" />
         <el-tab-pane label="游戏全网排名" name="rank" />
       </el-tabs>
 
-      <PlatformPanel v-if="tab === 'platform'" />
-      <SubGamePanel v-else-if="tab === 'subgame'" />
-      <TemplatePanel v-else-if="isTemplateTab" :template-code="tab" embedded @active-changed="loadTemplates" />
+      <SubGamePanel v-if="tab === 'subgame'" />
       <GameTypePanel v-else-if="tab === 'gametype'" />
       <RankPanel v-else-if="tab === 'rank'" />
     </el-card>
@@ -33,36 +27,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { ElMessage } from 'element-plus';
-import { listTemplate } from '@/api/game/manage';
-import PlatformPanel from '../platform/index.vue';
+import { ref } from 'vue';
 import SubGamePanel from '../subgame/index.vue';
-import TemplatePanel from '../template/index.vue';
 import GameTypePanel from '../gametype/index.vue';
 import RankPanel from '../rank/index.vue';
 
 defineOptions({ name: 'GameManage' });
 
-/** 与平台/类型页一致：本地按越南币种（VND1000:1）配置 */
-const CURRENCY = 'VND1000:1';
-
-const tab = ref('platform');
-const templates = ref<any[]>([]);
-const templateCodes = computed(() => templates.value.map((t) => t.templateCode));
-const isTemplateTab = computed(() => templateCodes.value.includes(tab.value));
-
-/** 模板主数据（4 个模板页签的标题与生效标记） */
-async function loadTemplates() {
-  try {
-    templates.value = ((await listTemplate(CURRENCY)) as unknown as any)?.data ?? [];
-  } catch (e) {
-    templates.value = [];
-    ElMessage.warning('模板列表加载失败，模板页签暂不可用');
-  }
-}
-
-onMounted(loadTemplates);
+const tab = ref('subgame');
 </script>
 
 <style scoped>

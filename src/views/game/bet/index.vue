@@ -123,6 +123,12 @@
               <div class="sub">({{ row.platformName }})</div>
             </template>
           </el-table-column>
+          <el-table-column label="记录表" align="center" width="190" show-overflow-tooltip>
+            <template #default="{ row }">
+              <div>{{ row.sourceTable || '—' }}</div>
+              <div class="sub">{{ row.gameName }}（{{ row.gameCode }}）</div>
+            </template>
+          </el-table-column>
           <el-table-column label="投注时间" align="center" prop="betTime" width="170" />
           <el-table-column label="结算时间" align="center" prop="settleTime" width="170" />
           <el-table-column label="投注结算时间差" align="center" prop="settleCostSeconds" width="150" />
@@ -153,8 +159,8 @@
         </el-table>
         <!-- 截图底部：投注明细=「全选当前页 + 批量操作 ▾ + 已选择 N 条 + 共 N 条」；其余页签只显示「共 N 条」 -->
         <div class="footer-bar">
-          <span v-if="tab === 'DETAIL'">全选当前页 | 已选择 {{ selection.length }} 条数据 | 共 {{ total }} 条</span>
-          <span v-else>共 {{ total }} 条</span>
+          <span v-if="tab === 'DETAIL'">全选当前页 | 已选择 {{ selection.length }} 条数据 | 不统计总记录数</span>
+          <span v-else>不统计总记录数</span>
           <el-dropdown v-if="tab === 'DETAIL'" @command="onBatchCommand">
             <el-button>批量操作 ▾</el-button>
             <template #dropdown>
@@ -165,7 +171,11 @@
             </template>
           </el-dropdown>
         </div>
-        <pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="loadDetail" />
+        <div class="page-actions">
+          <el-button :disabled="query.pageNum <= 1" @click="prevPage">上一页</el-button>
+          <span class="page-no">第 {{ query.pageNum }} 页</span>
+          <el-button :disabled="!hasNext" @click="nextPage">下一页</el-button>
+        </div>
       </template>
 
       <!-- 投注统计 -->
@@ -225,6 +235,7 @@ const tab = ref('DETAIL');
 const loading = ref(false);
 const rows = ref<any[]>([]);
 const total = ref(0);
+const hasNext = ref(false);
 const selection = ref<any[]>([]);
 const range = ref<any>([]);
 const options = reactive<any>({ tip: '' });
@@ -314,7 +325,8 @@ async function exportReport() {
     ['注单编号', 'bizNo'], ['牌局编号', 'roundNo'], ['会员账号', 'loginName'], ['会员ID', 'uid'],
     ['上级代理账号', 'parentAgent'], ['上级代理ID', 'parentAgentId'],
     ['顶层代理账号', 'topAgent'], ['顶层代理ID', 'topAgentId'],
-    ['子游戏名称', 'gameName'], ['子游戏名称(越南文)', 'gameNameVn'], ['平台名称', 'platformName'], ['投注时间', 'betTime'],
+    ['子游戏名称', 'gameName'], ['子游戏名称(越南文)', 'gameNameVn'], ['平台名称', 'platformName'],
+    ['记录表', 'sourceTable'], ['游戏编码', 'gameCode'], ['投注时间', 'betTime'],
     ['结算时间', 'settleTime'], ['投注结算时间差(秒)', 'settleCostSeconds'], ['币种', 'currency'],
     ['投注金额', 'betAmount'], ['有效投注', 'validBet'], ['预扣税', 'taxAmount'],
     ['会员输赢', 'memberWin'], ['投注后余额', 'afterBalance'], ['状态', 'settleStatus']
@@ -353,9 +365,24 @@ async function loadDetail() {
   try {
     const res: any = await listGameBetDetail(buildParams());
     rows.value = res.rows ?? [];
-    total.value = res.total ?? 0;
+    total.value = -1;
+    hasNext.value = res.hasNext ?? rows.value.length >= (query.pageSize || 10);
   } finally {
     loading.value = false;
+  }
+}
+
+function prevPage() {
+  if (query.pageNum > 1) {
+    query.pageNum -= 1;
+    loadDetail();
+  }
+}
+
+function nextPage() {
+  if (hasNext.value) {
+    query.pageNum += 1;
+    loadDetail();
   }
 }
 

@@ -31,6 +31,7 @@
         <el-table-column label="平台名称" align="center" prop="platformName" width="130" />
         <el-table-column label="游戏ID" align="center" prop="gameId" width="120" />
         <el-table-column label="子游戏名称" align="center" prop="gameName" min-width="160" />
+        <el-table-column label="子游戏名称（越南语）" align="center" prop="gameNameVn" min-width="170" show-overflow-tooltip />
         <el-table-column label="注单排名" align="center" prop="orderRank" width="100" />
         <el-table-column label="注单量" align="center" prop="orderCount" width="130" sortable="custom" />
         <!-- 金额列按原站口径展示：≥100 万走「1/5×10^k 档位 + `+`」，否则千分位 + 2 位小数（见 utils/money.ts） -->
@@ -107,9 +108,20 @@ async function exportData() {
     ElMessage.warning('暂无可导出数据');
     return;
   }
-  const header = Object.keys(data[0]).join(',');
-  const body = data.map((row: any) => Object.values(row).join(',')).join('\n');
-  const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
+  const columns: Array<[string, string]> = [
+    ['statDate', '统计日期'], ['statRange', '统计范围'], ['currency', '币种'],
+    ['gameTypeName', '游戏类型'], ['platformId', '平台ID'], ['platformName', '平台名称'],
+    ['gameId', '游戏ID'], ['gameName', '子游戏名称'], ['gameNameVn', '子游戏名称（越南语）'],
+    ['orderRank', '注单排名'], ['orderCount', '注单量'], ['totalBet', '总投注'],
+    ['validBet', '有效投注'], ['profit', '盈亏'], ['killRate', '杀率']
+  ];
+  const escape = (v: any) => {
+    const s = v === null || v === undefined ? '' : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const header = columns.map(([, label]) => escape(label)).join(',');
+  const body = data.map((row: any) => columns.map(([key]) => escape(row[key])).join(',')).join('\n');
+  const blob = new Blob([`\uFEFF${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = `游戏全网排名_${new Date().toISOString().slice(0, 10)}.csv`;

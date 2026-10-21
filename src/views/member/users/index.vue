@@ -144,6 +144,9 @@
             <el-link type="primary" :underline="false" @click="handleUpdate(row)">{{ row.loginName }}</el-link>
           </template>
         </el-table-column>
+        <el-table-column label="aff_id（注册渠道）" align="center" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.affId || '—' }}</template>
+        </el-table-column>
         <el-table-column label="是否主播号" align="center" width="110">
           <template #default="{ row }">
             <el-tag :type="row.isStreamer === 1 ? 'danger' : 'info'">{{ row.isStreamer === 1 ? '主播号' : '否' }}</el-tag>
