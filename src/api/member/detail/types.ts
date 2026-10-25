@@ -8,7 +8,16 @@ export interface MemberDetailOverviewVO {
   currency?: string;
   status?: number;
   accountType?: string;
+  /** 是否主播号：0否 1是（与账号类型分开展示，避免把主播号误判为测试账号） */
+  isStreamer?: number;
   registerType?: string;
+  /**
+   * 注册终端：web/h5/app。
+   *
+   * 按 player_account.register_device 匹配 player_device.device_fingerprint，
+   * 取最早一条设备记录的 client_type；不是最近登录终端。
+   */
+  registerClientType?: string;
   verifyType?: string;
   vipLevel?: number;
   levelId?: number;
@@ -28,6 +37,12 @@ export interface MemberDetailOverviewVO {
   bonusDepositRatio?: number;
   vipUpgradeNeedPay?: number;
   vipUpgradeNeedRounds?: number;
+  /** VIP 打码进度使用的累计局数（player_stats.total_rounds） */
+  totalRounds?: number;
+  /** 累计有效打码（分，player_stats.total_valid_bet_amount） */
+  totalValidBetAmount?: number;
+  /** 提现仍需完成的打码（分，player_stats.withdraw_required_turnover） */
+  withdrawRequiredTurnover?: number;
   availableBalance?: number;
   frozenBalance?: number;
   bonusBalance?: number;
@@ -75,11 +90,26 @@ export interface MemberProfileVO {
 export interface MemberWithdrawAccountVO {
   accountId: number;
   uid: number;
+  /** LEGACY_BANK / WITHDRAW_BENEFICIARY / CRYPTO_ADDRESS */
+  sourceType?: string;
+  /** 后台展示用账户分类。 */
+  accountKind?: string;
   accountType?: number;
   bankCode?: string;
   bankName?: string;
   accountName?: string;
+  /** 已解密的完整提现账号或链上地址。 */
+  accountNo?: string;
   accountNoMask?: string;
+  address?: string;
+  coinName?: string;
+  networkName?: string;
+  addressLabel?: string;
+  platform?: string;
+  tabCode?: string;
+  channelCode?: string;
+  /** 历史账户只有哈希时无法还原完整账号。 */
+  plaintextAvailable?: boolean;
   ifscCode?: string;
   mobile?: string;
   isPrimary?: number;
@@ -87,6 +117,7 @@ export interface MemberWithdrawAccountVO {
   verifiedAt?: string;
   lastUsedAt?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface MemberTransactionQuery {

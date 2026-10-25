@@ -24,7 +24,7 @@
         <el-form-item>
           <el-button type="primary" icon="Search" @click="load">搜索</el-button>
           <el-button icon="Refresh" @click="reset">重置</el-button>
-          <el-button v-hasPermi="['game:valid-bet-ratio:edit']" plain @click="handleSeed">补齐缺失游戏</el-button>
+          <el-button v-hasPermi="['game:validbetratio:edit']" plain @click="handleSeed">补齐缺失游戏</el-button>
         </el-form-item>
       </el-form>
 
@@ -49,7 +49,7 @@
         <el-table-column label="更新时间" prop="updatedAt" width="180" />
         <el-table-column label="操作" width="110" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button v-hasPermi="['game:valid-bet-ratio:edit']" link type="primary" @click="openEdit(row as ValidBetRatioVO)">
+            <el-button v-hasPermi="['game:validbetratio:edit']" link type="primary" @click="openEdit(row as ValidBetRatioVO)">
               修改
             </el-button>
           </template>

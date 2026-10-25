@@ -44,7 +44,36 @@
           </div>
         </div>
       </template>
-      <el-table v-loading="loading" border :data="rows">
+      <el-table v-loading="loading" border :data="rows" @expand-change="handleExpandChange">
+        <el-table-column type="expand" width="46">
+          <template #default="{ row }">
+            <div class="method-panel">
+              <div class="method-heading">
+                <span>支付 / 提现方式</span>
+                <el-button link type="primary" @click="goChannelConfig(row as FinanceMerchantVO)">去高级配置</el-button>
+              </div>
+              <el-table v-loading="methodLoading[row.merchantId]" :data="methodRows[row.merchantId] || []" size="small" border>
+                <el-table-column label="方向" width="80" align="center">
+                  <template #default="{ row: method }">{{ method.direction === 2 ? '提现' : '支付' }}</template>
+                </el-table-column>
+                <el-table-column label="方式" prop="methodType" width="130" />
+                <el-table-column label="客户端编码" prop="routeCode" width="140" />
+                <el-table-column label="名称" prop="channelName" min-width="160" show-overflow-tooltip />
+                <el-table-column label="币种" prop="currency" width="80" />
+                <el-table-column label="费率(%)" prop="feeRate" width="100" align="right" />
+                <el-table-column label="限额" width="180" align="right">
+                  <template #default="{ row: method }">{{ formatMoneyRange(method.amountMin ?? 0, method.amountMax ?? 0) }}</template>
+                </el-table-column>
+                <el-table-column label="维护码" prop="maintenanceCode" width="130" />
+                <el-table-column label="状态" width="90" align="center">
+                  <template #default="{ row: method }">
+                    <el-tag :type="method.status === 1 ? 'success' : 'info'">{{ method.status === 1 ? '启用' : '停用' }}</el-tag>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="商户编码" prop="merchantCode" align="center" width="150" show-overflow-tooltip />
         <el-table-column label="商户名称" prop="merchantName" align="left" min-width="190" show-overflow-tooltip />
         <el-table-column label="类型" align="center" width="120">
@@ -187,11 +216,14 @@
 
 <script setup name="FinanceMerchant" lang="ts">
 import { reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import type { FormInstance, FormRules } from 'element-plus';
 import modal from '@/plugins/modal';
 import { changeMerchantStatus, deleteMerchant, listMerchant, saveMerchant } from '@/api/finance/merchant';
 import type { FinanceMerchantForm, FinanceMerchantQuery, FinanceMerchantVO } from '@/api/finance/merchant/types';
 import { formatMoneyRange } from '@/utils/money';
+import { listChannelRoutes } from '@/api/finance/channel';
+import type { FinanceChannelRouteVO } from '@/api/finance/channel/types';
 
 /**
  * 第三方支付/代付商户管理页（需求文档 2_财务/03、08）。
@@ -199,8 +231,11 @@ import { formatMoneyRange } from '@/utils/money';
  * 说明：密钥只保存与展示掩码（后端 apiSecretMask），修改时留空表示保持原值。
  */
 const loading = ref(false);
+const router = useRouter();
 const submitting = ref(false);
 const rows = ref<FinanceMerchantVO[]>([]);
+const methodRows = reactive<Record<number, FinanceChannelRouteVO[]>>({});
+const methodLoading = reactive<Record<number, boolean>>({});
 const total = ref(0);
 const dialogVisible = ref(false);
 const formRef = ref<FormInstance>();
@@ -255,6 +290,23 @@ const getList = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const handleExpandChange = async (row: FinanceMerchantVO, expanded: boolean | FinanceMerchantVO[]) => {
+  if (Array.isArray(expanded) ? !expanded.some((item) => item.merchantId === row.merchantId) : !expanded) {
+    return;
+  }
+  methodLoading[row.merchantId] = true;
+  try {
+    const res = await listChannelRoutes({ merchantId: row.merchantId });
+    methodRows[row.merchantId] = (res as unknown as { data?: FinanceChannelRouteVO[] }).data ?? [];
+  } finally {
+    methodLoading[row.merchantId] = false;
+  }
+};
+
+const goChannelConfig = (row: FinanceMerchantVO) => {
+  router.push({ path: '/finance/channel', query: { merchantId: String(row.merchantId) } });
 };
 
 const resetQuery = () => {

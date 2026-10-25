@@ -42,7 +42,7 @@
         </el-form-item>
         <el-form-item>
           <el-button type="warning" plain icon="Setting" @click="openQueryDays">前端数据展示天数</el-button>
-          <el-button v-hasPermi="['ops:report:ledger:export']" type="success" plain icon="Download" @click="handleExport">导出报表</el-button>
+          <el-button v-hasPermi="['ops:reportledger:export']" type="success" plain icon="Download" @click="handleExport">导出报表</el-button>
         </el-form-item>
       </el-form>
     </el-card>

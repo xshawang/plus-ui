@@ -148,19 +148,32 @@
             <span class="font-mono">{{ row.ledgerNo }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="UID" align="center" prop="uid" min-width="170" show-overflow-tooltip>
+        <el-table-column label="UID / 用户名称" align="center" min-width="260" show-overflow-tooltip>
           <template #default="{ row }">
-            <span class="font-mono">{{ row.uid }}</span>
+            <div class="member-identity">
+              <el-link
+                v-if="row.uid"
+                type="primary"
+                :underline="false"
+                class="font-mono"
+                @click.stop="openMemberDetail(row.uid)"
+              >
+                {{ row.uid }}
+              </el-link>
+              <span v-else>-</span>
+              <span class="member-divider">/</span>
+              <span>{{ row.loginName || '-' }}</span>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column label="用户名称" align="center" min-width="140" show-overflow-tooltip>
+        <el-table-column label="昵称" align="center" min-width="140" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ row.loginName || row.nickName || '-' }}
+            {{ row.nickName || '-' }}
           </template>
         </el-table-column>
         <el-table-column label="游戏" align="center" min-width="140" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ row.gameCode || row.gameId || '-' }}
+            {{ ledgerGameLabel(row) }}
           </template>
         </el-table-column>
         <el-table-column label="业务类型" align="center" width="110">
@@ -217,9 +230,10 @@ import { useLoading } from '@/hooks/async/useLoading';
 import { useDateRangeQuery } from '@/hooks/form/useDateRangeQuery';
 import { useSearchReset } from '@/hooks/form/useSearchReset';
 import { computed, onMounted, reactive, ref, toRefs, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
+const router = useRouter();
 
 /**
  * 业务类型（WalletBizTypeEnum.code）：
@@ -274,6 +288,19 @@ const bizTypeOf = (row: WalletLedgerVO): {
   if (cmd === 'BET_CANCEL' || cmd === 'REFUND') return { label: '下注退款', type: 'info' };
   if (cmd === 'INTERNAL_TRANSFER') return { label: '保险箱互转', type: 'warning' };
   return { label: bizTypeMap[row.bizType ?? -1] ?? String(row.bizType ?? '-'), type: bizTypeTag(row.bizType) };
+};
+
+/** 充值流水按业务类型或命令类型识别，游戏列固定留空 */
+const isRechargeLedger = (row: WalletLedgerVO) => row.bizType === 1 || row.commandType === 'DEPOSIT';
+
+const ledgerGameLabel = (row: WalletLedgerVO) => {
+  if (isRechargeLedger(row)) return '';
+  return row.gameCode || row.gameId || '-';
+};
+
+const openMemberDetail = (uid?: string | number) => {
+  if (uid === null || uid === undefined || uid === '') return;
+  router.push({ path: '/member/detail', query: { uid: String(uid) } });
 };
 
 /** 变动类型：1加款 2扣款 3冻结 4解冻 */
@@ -519,5 +546,17 @@ onMounted(() => {
   margin-right: 4px;
   color: #909399;
   font-size: 12px;
+}
+
+.member-identity {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.member-divider {
+  color: #c0c4cc;
 }
 </style>

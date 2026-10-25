@@ -9,8 +9,8 @@
             <p>仅支持单账号精准查询；合计总余额 = 账户余额 + 利息宝余额</p>
           </div>
           <div class="toolbar-actions">
-            <el-button v-hasPermi="['finance:manual-adjust:edit']" type="primary" :disabled="!member" @click="openAddDialog">手动加款</el-button>
-            <el-button v-hasPermi="['finance:manual-adjust:edit']" type="danger" :disabled="!member" @click="openDeductDialog">手动扣除</el-button>
+            <el-button v-hasPermi="['finance:manualadjust:edit']" type="primary" :disabled="!member" @click="openAddDialog">手动加款</el-button>
+            <el-button v-hasPermi="['finance:manualadjust:edit']" type="danger" :disabled="!member" @click="openDeductDialog">手动扣除</el-button>
           </div>
         </div>
       </template>
@@ -92,7 +92,7 @@
           </div>
           <div class="toolbar-actions">
             <el-button :disabled="!member" @click="loadVendors">刷新场馆余额</el-button>
-            <el-button v-hasPermi="['finance:manual-adjust:edit']" type="primary" :disabled="!member" @click="openPullBack">
+            <el-button v-hasPermi="['finance:manualadjust:edit']" type="primary" :disabled="!member" @click="openPullBack">
               场馆资金拉回
             </el-button>
           </div>
@@ -217,8 +217,8 @@
         <el-table-column label="操作" align="center" fixed="right" width="150">
           <template #default="{ row }">
             <template v-if="row.status === 0">
-              <el-button v-hasPermi="['finance:manual-adjust:edit']" link type="primary" @click="handleApprove(row as FinanceManualAdjustVO)">通过</el-button>
-              <el-button v-hasPermi="['finance:manual-adjust:edit']" link type="danger" @click="handleReject(row as FinanceManualAdjustVO)">拒绝</el-button>
+              <el-button v-hasPermi="['finance:manualadjust:edit']" link type="primary" @click="handleApprove(row as FinanceManualAdjustVO)">通过</el-button>
+              <el-button v-hasPermi="['finance:manualadjust:edit']" link type="danger" @click="handleReject(row as FinanceManualAdjustVO)">拒绝</el-button>
             </template>
             <span v-else class="text-gray-400">-</span>
           </template>

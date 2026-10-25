@@ -4,7 +4,7 @@ import type { ConfigBatchForm, ConfigItemVO } from './types';
 
 /**
  * 防刷风控配置接口（10 文档 §1）。
- * 权限：member:anti-fraud:list / member:anti-fraud:edit
+ * 权限：member:antifraud:list / member:antifraud:edit
  */
 export const listAntiFraudConfig = (): AxiosPromise<ConfigItemVO[]> => {
   return request({

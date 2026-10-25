@@ -3,8 +3,13 @@
 </template>
 
 <script setup name="DashboardTrendChart" lang="ts">
-import * as echarts from 'echarts';
+import { LineChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent } from 'echarts/components';
+import { init, use } from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+
+use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
 type TrendUnit = 'count' | 'money' | 'signed';
 
@@ -28,7 +33,7 @@ const props = withDefaults(
 );
 
 const chartEl = ref<HTMLDivElement>();
-let chart: echarts.ECharts | undefined;
+let chart: ReturnType<typeof init> | undefined;
 let resizeObserver: ResizeObserver | undefined;
 
 const compactNumber = (value: number) => {
@@ -94,10 +99,17 @@ const buildOption = () => {
         itemStyle: { color: props.color },
         areaStyle: props.area
           ? {
-              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: props.color + '33' },
-                { offset: 1, color: props.color + '00' }
-              ])
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  { offset: 0, color: props.color + '33' },
+                  { offset: 1, color: props.color + '00' }
+                ]
+              }
             }
           : undefined
       }
@@ -109,15 +121,14 @@ const render = async () => {
   await nextTick();
   if (!chartEl.value) return;
   if (!chart) {
-    chart = echarts.init(chartEl.value);
+    chart = init(chartEl.value);
   }
   chart.setOption(buildOption(), true);
 };
 
 watch(
   () => [props.labels, props.values, props.unit, props.color],
-  () => void render(),
-  { deep: true }
+  () => void render()
 );
 
 onMounted(() => {

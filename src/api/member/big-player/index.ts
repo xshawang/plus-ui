@@ -4,7 +4,7 @@ import type { BigPlayerConfigForm, BigPlayerConfigVO, BigPlayerReportQuery, BigP
 
 /**
  * 大R提醒与报表接口（09 文档）。
- * 权限：member:big-player:list / member:big-player:edit
+ * 权限：member:bigplayer:list / member:bigplayer:edit
  */
 export const listBigPlayerConfig = (currency?: string): AxiosPromise<BigPlayerConfigVO[]> => {
   return request({

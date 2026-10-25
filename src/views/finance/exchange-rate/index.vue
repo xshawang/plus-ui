@@ -17,7 +17,7 @@
             <el-form-item>
               <el-button type="primary" icon="Search" @click="loadRates">搜索</el-button>
               <el-button icon="Refresh" @click="resetRateQuery">重置</el-button>
-              <el-button v-hasPermi="['finance:exchange-rate:edit']" type="primary" icon="Plus" @click="handleAddRate">新增汇率</el-button>
+              <el-button v-hasPermi="['finance:exchangerate:edit']" type="primary" icon="Plus" @click="handleAddRate">新增汇率</el-button>
             </el-form-item>
           </el-form>
           <div class="text-gray-400 text-sm mb-2">
@@ -44,9 +44,9 @@
             <el-table-column label="备注" prop="remark" align="left" min-width="140" show-overflow-tooltip />
             <el-table-column label="操作" align="center" fixed="right" width="220">
               <template #default="{ row }">
-                <el-button v-hasPermi="['finance:exchange-rate:edit']" link type="primary" @click="handleEditRate(row as FinanceExchangeRateVO)">修改</el-button>
-                <el-button v-hasPermi="['finance:exchange-rate:edit']" link type="primary" @click="handleEffective(row as FinanceExchangeRateVO)">设为生效</el-button>
-                <el-button v-hasPermi="['finance:exchange-rate:edit']" link type="primary" @click="handleToggleRate(row as FinanceExchangeRateVO)">
+                <el-button v-hasPermi="['finance:exchangerate:edit']" link type="primary" @click="handleEditRate(row as FinanceExchangeRateVO)">修改</el-button>
+                <el-button v-hasPermi="['finance:exchangerate:edit']" link type="primary" @click="handleEffective(row as FinanceExchangeRateVO)">设为生效</el-button>
+                <el-button v-hasPermi="['finance:exchangerate:edit']" link type="primary" @click="handleToggleRate(row as FinanceExchangeRateVO)">
                   {{ row.status === 1 ? '停用' : '启用' }}
                 </el-button>
               </template>
@@ -106,7 +106,7 @@
             </el-table-column>
             <el-table-column label="操作" align="center" fixed="right" width="120">
               <template #default="{ row }">
-                <el-button v-hasPermi="['finance:exchange-rate:edit']" link type="primary" @click="handleSortBank(row as FinanceBankVO)">调整排序</el-button>
+                <el-button v-hasPermi="['finance:exchangerate:edit']" link type="primary" @click="handleSortBank(row as FinanceBankVO)">调整排序</el-button>
               </template>
             </el-table-column>
           </el-table>

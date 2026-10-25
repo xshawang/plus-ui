@@ -6,7 +6,7 @@ import type { FinanceBankVO, FinanceExchangeRateForm, FinanceExchangeRateQuery, 
  * 汇率与银行管理接口（需求文档 2_财务/14）。
  *
  * 后端：go88-service-infra /infra/finance/exchange-rate/** 与 /infra/finance/bank/**；
- * 权限：finance:exchange-rate:list | finance:exchange-rate:edit
+ * 权限：finance:exchangerate:list | finance:exchangerate:edit
  */
 export const listExchangeRate = (query?: FinanceExchangeRateQuery): AxiosPromise<FinanceExchangeRateVO[]> =>
   request({ url: '/infra/finance/exchange-rate/list', method: 'get', params: query });

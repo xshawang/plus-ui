@@ -6,12 +6,9 @@
         <p class="dash-subtitle">核心经营指标 · 今日实时运营 · 今日排行榜 · 多日趋势 · 运营总览</p>
       </div>
       <div class="topbar-actions">
-        <span class="muted small">
-          口径：{{ meta.site || '-' }} / 金额单位：{{ meta.currency }}</span>
+        <span class="muted small">口径：{{ meta.site || '-' }} / 金额单位：{{ meta.currency }}</span>
         <span v-if="meta.timezone" class="muted small">统计时区：{{ meta.timezone }}</span>
-        <el-button type="primary" plain icon="Refresh" :loading="refreshing" @click="refreshAll">
-          刷新全部
-        </el-button>
+        <el-button type="primary" plain icon="Refresh" :loading="refreshing" @click="refreshAll">刷新全部</el-button>
       </div>
     </div>
 
@@ -20,7 +17,10 @@
       <template #header>
         <div class="card-head">
           <h3>核心经营指标</h3>
-          <span v-if="kpiData" class="updated-text">最后更新时间：{{ shortTime(kpiData.snapshotAt) }}</span>
+          <span v-if="kpiData" class="updated-text">
+            最后更新时间：{{ shortTime(kpiData.snapshotAt) }}
+            <span v-if="kpiStale" class="stale-text">· 更新失败</span>
+          </span>
         </div>
       </template>
       <StateBox :loading="kpiLoading" :error="kpiError" :empty="!kpiItems.length" :reload="loadKpi">
@@ -51,9 +51,9 @@
       <template #header>
         <div class="card-head">
           <h3>今日实时运营</h3>
-          <div class="live-badge">
+          <div class="live-badge" :class="{ stale: realtimeStale }">
             <span class="live-dot" />
-            实时更新 · 最后更新时间：{{ lastRealtimeTime }}
+            {{ realtimeStale ? '更新失败' : '实时更新' }} · 最后采样时间：{{ lastRealtimeTime }}
           </div>
         </div>
       </template>
@@ -144,335 +144,355 @@
     </el-card>
 
     <!-- 3. 今日排行榜 -->
-    <el-card shadow="hover" class="dash-card">
-      <template #header>
-        <div class="card-head">
-          <h3>今日排行榜</h3>
-          <span class="muted small">Top 10 · 默认展示充值排行，切换 Tab 按类别加载</span>
-        </div>
-      </template>
-      <el-tabs v-model="rankingType" class="rank-tabs" @tab-change="loadRanking">
-        <el-tab-pane v-for="meta in rankingTabs" :key="meta.type" :label="meta.label" :name="meta.type" />
-      </el-tabs>
-      <StateBox
-        :loading="rankingLoading"
-        :error="rankingError"
-        :empty="!rankingItems.length"
-        empty-text="今日暂无排行数据"
-        :reload="() => loadRanking()"
-      >
-        <el-table v-loading="rankingLoading" border class="data-table" :data="rankingItems" size="default">
-          <el-table-column label="排名" align="center" width="76">
-            <template #default="{ row }">
-              <span class="rank-badge" :class="'rank-' + row.rank">{{ row.rank }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="用户" align="left" min-width="180">
-            <template #default="{ row }">
-              <div class="user-cell">
-                <span class="user-name">{{ row.name }}</span>
-                <span class="user-uid font-mono">{{ row.uid }}</span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column :label="rankingMeta[rankingType].amountLabel" align="right" min-width="150">
-            <template #default="{ row }">
-              <span class="font-mono" :class="{ negative: rankingMeta[rankingType].signed && row.amount < 0 }">
-                {{ rankingMeta[rankingType].signed ? formatSigned(row.amount) : formatMoney(row.amount) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="次数" align="right" width="100">
-            <template #default="{ row }">{{ formatCount(row.count) }}</template>
-          </el-table-column>
-          <el-table-column label="时间" align="center" min-width="170">
-            <template #default="{ row }">
-              <span class="font-mono">{{ fullTime(row.lastAt) }}</span>
-            </template>
-          </el-table-column>
-        </el-table>
-      </StateBox>
-    </el-card>
+    <div ref="rankingSection" class="dash-section">
+      <el-card shadow="hover" class="dash-card">
+        <template #header>
+          <div class="card-head">
+            <h3>今日排行榜</h3>
+            <span class="muted small">Top 10 · 默认展示充值排行，切换 Tab 按类别加载</span>
+          </div>
+        </template>
+        <el-tabs v-model="rankingType" class="rank-tabs" @tab-change="loadRanking">
+          <el-tab-pane v-for="meta in rankingTabs" :key="meta.type" :label="meta.label" :name="meta.type" />
+        </el-tabs>
+        <StateBox
+          :loading="rankingLoading"
+          :error="rankingError"
+          :empty="!rankingItems.length"
+          empty-text="今日暂无排行数据"
+          :reload="() => loadRanking()"
+        >
+          <el-table v-loading="rankingLoading" border class="data-table" :data="rankingItems" size="default">
+            <el-table-column label="排名" align="center" width="76">
+              <template #default="{ row }">
+                <span class="rank-badge" :class="'rank-' + row.rank">{{ row.rank }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="用户" align="left" min-width="180">
+              <template #default="{ row }">
+                <div class="user-cell">
+                  <span class="user-name">{{ row.name }}</span>
+                  <span class="user-uid font-mono">{{ row.uid }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column :label="rankingMeta[rankingType].amountLabel" align="right" min-width="150">
+              <template #default="{ row }">
+                <span class="font-mono" :class="{ negative: rankingMeta[rankingType].signed && row.amount < 0 }">
+                  {{ rankingMeta[rankingType].signed ? formatSigned(row.amount) : formatMoney(row.amount) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="次数" align="right" width="100">
+              <template #default="{ row }">{{ formatCount(row.count) }}</template>
+            </el-table-column>
+            <el-table-column label="时间" align="center" min-width="170">
+              <template #default="{ row }">
+                <span class="font-mono">{{ fullTime(row.lastAt) }}</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </StateBox>
+      </el-card>
+    </div>
 
     <!-- 4. 多日数据对比 -->
-    <el-card shadow="hover" class="dash-card">
-      <template #header>
-        <div class="card-head">
-          <h3>多日数据对比</h3>
-          <div class="head-controls">
-            <el-radio-group v-model="trendRangeKind" size="small" @change="handleTrendRangeChange">
-              <el-radio-button :value="7">近7天</el-radio-button>
-              <el-radio-button :value="30">近30天</el-radio-button>
-              <el-radio-button :value="90">近90天</el-radio-button>
-              <el-radio-button value="custom">自定义</el-radio-button>
-            </el-radio-group>
-            <template v-if="trendRangeKind === 'custom'">
-              <el-date-picker
-                v-model="trendCustomRange"
-                class="mx-1"
-                type="daterange"
-                range-separator="-"
-                start-placeholder="开始日期"
-                end-placeholder="结束日期"
-                value-format="YYYY-MM-DD"
-                :clearable="false"
-                size="small"
-              />
-              <el-button size="small" type="primary" plain @click="loadTrend">查询</el-button>
-            </template>
+    <div ref="trendSection" class="dash-section">
+      <el-card shadow="hover" class="dash-card">
+        <template #header>
+          <div class="card-head">
+            <h3>多日数据对比</h3>
+            <div class="head-controls">
+              <el-radio-group v-model="trendRangeKind" size="small" @change="handleTrendRangeChange">
+                <el-radio-button :value="7">近7天</el-radio-button>
+                <el-radio-button :value="30">近30天</el-radio-button>
+                <el-radio-button :value="90">近90天</el-radio-button>
+                <el-radio-button value="custom">自定义</el-radio-button>
+              </el-radio-group>
+              <template v-if="trendRangeKind === 'custom'">
+                <el-date-picker
+                  v-model="trendCustomRange"
+                  class="mx-1"
+                  type="daterange"
+                  range-separator="-"
+                  start-placeholder="开始日期"
+                  end-placeholder="结束日期"
+                  value-format="YYYY-MM-DD"
+                  :clearable="false"
+                  size="small"
+                />
+                <el-button size="small" type="primary" plain @click="loadTrend">查询</el-button>
+              </template>
+            </div>
           </div>
-        </div>
-      </template>
-      <div class="metric-tabs">
-        <el-radio-group v-model="trendMetric" size="small">
-          <el-radio-button value="register">每日注册</el-radio-button>
-          <el-radio-button value="online">在线趋势</el-radio-button>
-          <el-radio-button value="recharge">充值金额</el-radio-button>
-        </el-radio-group>
-      </div>
-      <StateBox
-        :loading="trendLoading"
-        :error="trendError"
-        :empty="!trendHasData"
-        :reload="loadTrend"
-      >
-        <TrendChart
-          v-if="trendHasData"
-          :labels="trendChartLabels"
-          :values="trendChartValues"
-          :unit="trendMetric === 'register' || trendMetric === 'online' ? 'count' : 'money'"
-          :series-name="trendMetric === 'recharge' ? '充值金额' : trendMetric === 'online' ? '在线用户' : '新增会员'"
-          :height="320"
-          :color="trendMetric === 'register' ? '#4f7cff' : trendMetric === 'online' ? '#22b07d' : '#f59a3c'"
-        />
-      </StateBox>
-      <div class="chart-note muted small">
-        <template v-if="trendMetric === 'online'">
-          在线趋势取“每日有登录/在线连接的去重真人用户”（user_activity_daily）；今日为 T+1 前暂无数据，不伪造历史。
         </template>
-        <template v-else>历史日取自日汇总事实表，今日按实时明细现算。</template>
-      </div>
-    </el-card>
+        <div class="metric-tabs">
+          <el-radio-group v-model="trendMetric" size="small">
+            <el-radio-button value="register">每日注册</el-radio-button>
+            <el-radio-button value="online">在线趋势</el-radio-button>
+            <el-radio-button value="recharge">充值金额</el-radio-button>
+          </el-radio-group>
+        </div>
+        <StateBox :loading="trendLoading" :error="trendError" :empty="!trendHasData" :reload="loadTrend">
+          <TrendChart
+            v-if="trendHasData"
+            :labels="trendChartLabels"
+            :values="trendChartValues"
+            :unit="trendMetric === 'register' || trendMetric === 'online' ? 'count' : 'money'"
+            :series-name="trendMetric === 'recharge' ? '充值金额' : trendMetric === 'online' ? '在线用户' : '新增会员'"
+            :height="320"
+            :color="trendMetric === 'register' ? '#4f7cff' : trendMetric === 'online' ? '#22b07d' : '#f59a3c'"
+          />
+        </StateBox>
+        <div class="chart-note muted small">
+          <template v-if="trendMetric === 'online'">
+            在线趋势取“每日有登录/在线连接的去重真人用户”（user_activity_daily）；今日为 T+1 前暂无数据，不伪造历史。
+          </template>
+          <template v-else>历史日取自日汇总事实表，今日按实时明细现算。</template>
+        </div>
+      </el-card>
+    </div>
 
     <!-- 5. 运营总览 -->
-    <el-card shadow="hover" class="dash-card">
-      <template #header>
-        <div class="card-head">
-          <h3>运营总览</h3>
-          <div class="head-controls">
-            <el-radio-group v-model="overviewPeriod" size="small" @change="handleOverviewPeriodChange">
-              <el-radio-button value="today">今日</el-radio-button>
-              <el-radio-button value="yesterday">昨日</el-radio-button>
-              <el-radio-button value="thisWeek">本周</el-radio-button>
-              <el-radio-button value="thisMonth">本月</el-radio-button>
-              <el-radio-button value="last7">近7天</el-radio-button>
-              <el-radio-button value="last30">近30天</el-radio-button>
-              <el-radio-button value="custom">自定义</el-radio-button>
-            </el-radio-group>
-            <template v-if="overviewPeriod === 'custom'">
-              <el-date-picker
-                v-model="overviewCustomRange"
-                class="mx-1"
-                type="daterange"
-                range-separator="-"
-                start-placeholder="开始日期"
-                end-placeholder="结束日期"
-                value-format="YYYY-MM-DD"
-                :clearable="false"
-                size="small"
-              />
-              <el-button size="small" type="primary" plain @click="loadOverview">查询</el-button>
-            </template>
-          </div>
-        </div>
-      </template>
-      <StateBox :loading="overviewLoading" :error="overviewError" :reload="loadOverview">
-        <template v-if="overview">
-          <div class="summary-strip">
-            <div class="summary-item">
-              <span class="summary-label">新增会员</span>
-              <span class="summary-value">{{ formatCount(overview.summary.newMembers) }}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">充值总额</span>
-              <span class="summary-value success">{{ formatMoney(overview.summary.rechargeAmount) }}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">提现总额</span>
-              <span class="summary-value warning">{{ formatMoney(overview.summary.withdrawAmount) }}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">投注总额</span>
-              <span class="summary-value">{{ formatMoney(overview.summary.betAmount) }}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">平台损益</span>
-              <span class="summary-value signed" :class="{ negative: overview.summary.pnl < 0 }">
-                {{ formatSigned(overview.summary.pnl) }}
-              </span>
-            </div>
-          </div>
-
-          <div class="overview-grid">
-            <div class="panel overview-panel">
-              <div class="panel-title">用户趋势</div>
-              <TrendChart
-                v-if="overviewUserPoints.length"
-                :labels="overviewUserPoints.map(p => p.date)"
-                :values="overviewUserPoints.map(p => p.newMembers)"
-                unit="count"
-                series-name="新增会员"
-                :height="220"
-                color="#4f7cff"
-              />
-              <el-empty v-else description="暂无数据" :image-size="56" />
-            </div>
-
-            <div class="panel overview-panel">
-              <div class="panel-title-row">
-                <span class="panel-title">充值趋势</span>
-                <el-radio-group v-model="rechargeMetric" size="small">
-                  <el-radio-button value="amount">金额</el-radio-button>
-                  <el-radio-button value="users">人数</el-radio-button>
-                  <el-radio-button value="count">次数</el-radio-button>
-                </el-radio-group>
-              </div>
-              <TrendChart
-                v-if="rechargePoints.length"
-                :labels="rechargePoints.map(p => p.date)"
-                :values="rechargePoints.map(p => pickMetric(p, rechargeMetric))"
-                :unit="rechargeMetric === 'amount' ? 'money' : 'count'"
-                :series-name="rechargeMetric === 'amount' ? '充值金额' : rechargeMetric === 'users' ? '充值人数' : '充值次数'"
-                :height="220"
-                color="#22b07d"
-              />
-              <el-empty v-else description="暂无数据" :image-size="56" />
-            </div>
-
-            <div class="panel overview-panel">
-              <div class="panel-title-row">
-                <span class="panel-title">提现趋势</span>
-                <el-radio-group v-model="withdrawMetric" size="small">
-                  <el-radio-button value="amount">金额</el-radio-button>
-                  <el-radio-button value="users">人数</el-radio-button>
-                  <el-radio-button value="count">次数</el-radio-button>
-                </el-radio-group>
-              </div>
-              <TrendChart
-                v-if="withdrawPoints.length"
-                :labels="withdrawPoints.map(p => p.date)"
-                :values="withdrawPoints.map(p => pickMetric(p, withdrawMetric))"
-                :unit="withdrawMetric === 'amount' ? 'money' : 'count'"
-                :series-name="withdrawMetric === 'amount' ? '提现金额' : withdrawMetric === 'users' ? '提现人数' : '提现次数'"
-                :height="220"
-                color="#f59a3c"
-              />
-              <el-empty v-else description="暂无数据" :image-size="56" />
-            </div>
-
-            <div class="panel overview-panel">
-              <div class="panel-title-row">
-                <span class="panel-title">游戏经营</span>
-                <el-radio-group v-model="gameMetric" size="small">
-                  <el-radio-button value="betAmount">投注总额</el-radio-button>
-                  <el-radio-button value="validBet">有效投注</el-radio-button>
-                  <el-radio-button value="betUsers">投注人数</el-radio-button>
-                  <el-radio-button value="pnl">损益</el-radio-button>
-                </el-radio-group>
-              </div>
-              <TrendChart
-                v-if="gamePoints.length"
-                :labels="gamePoints.map(p => p.date)"
-                :values="gamePoints.map(p => pickMetric(p, gameMetric))"
-                :unit="gameMetric === 'betUsers' ? 'count' : gameMetric === 'pnl' ? 'signed' : 'money'"
-                :series-name="gameMetricLabel"
-                :height="220"
-                color="#7c5cff"
-              />
-              <el-empty v-else description="暂无数据" :image-size="56" />
+    <div ref="overviewSection" class="dash-section">
+      <el-card shadow="hover" class="dash-card">
+        <template #header>
+          <div class="card-head">
+            <h3>运营总览</h3>
+            <div class="head-controls">
+              <el-radio-group v-model="overviewPeriod" size="small" @change="handleOverviewPeriodChange">
+                <el-radio-button value="today">今日</el-radio-button>
+                <el-radio-button value="yesterday">昨日</el-radio-button>
+                <el-radio-button value="thisWeek">本周</el-radio-button>
+                <el-radio-button value="thisMonth">本月</el-radio-button>
+                <el-radio-button value="last7">近7天</el-radio-button>
+                <el-radio-button value="last30">近30天</el-radio-button>
+                <el-radio-button value="custom">自定义</el-radio-button>
+              </el-radio-group>
+              <template v-if="overviewPeriod === 'custom'">
+                <el-date-picker
+                  v-model="overviewCustomRange"
+                  class="mx-1"
+                  type="daterange"
+                  range-separator="-"
+                  start-placeholder="开始日期"
+                  end-placeholder="结束日期"
+                  value-format="YYYY-MM-DD"
+                  :clearable="false"
+                  size="small"
+                />
+                <el-button size="small" type="primary" plain @click="loadOverview">查询</el-button>
+              </template>
             </div>
           </div>
         </template>
-      </StateBox>
-    </el-card>
+        <StateBox :loading="overviewLoading" :error="overviewError" :reload="loadOverview">
+          <template v-if="overview">
+            <div class="summary-strip">
+              <div class="summary-item">
+                <span class="summary-label">新增会员</span>
+                <span class="summary-value">{{ formatCount(overview.summary.newMembers) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">充值总额</span>
+                <span class="summary-value success">{{ formatMoney(overview.summary.rechargeAmount) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">提现总额</span>
+                <span class="summary-value warning">{{ formatMoney(overview.summary.withdrawAmount) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">投注总额</span>
+                <span class="summary-value">{{ formatMoney(overview.summary.betAmount) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">平台损益</span>
+                <span class="summary-value signed" :class="{ negative: overview.summary.pnl < 0 }">
+                  {{ formatSigned(overview.summary.pnl) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="overview-grid">
+              <div class="panel overview-panel">
+                <div class="panel-title">用户趋势</div>
+                <TrendChart
+                  v-if="overviewUserPoints.length"
+                  :labels="overviewUserPoints.map(p => p.date)"
+                  :values="overviewUserPoints.map(p => p.newMembers)"
+                  unit="count"
+                  series-name="新增会员"
+                  :height="220"
+                  color="#4f7cff"
+                />
+                <el-empty v-else description="暂无数据" :image-size="56" />
+              </div>
+
+              <div class="panel overview-panel">
+                <div class="panel-title-row">
+                  <span class="panel-title">充值趋势</span>
+                  <el-radio-group v-model="rechargeMetric" size="small">
+                    <el-radio-button value="amount">金额</el-radio-button>
+                    <el-radio-button value="users">人数</el-radio-button>
+                    <el-radio-button value="count">次数</el-radio-button>
+                  </el-radio-group>
+                </div>
+                <TrendChart
+                  v-if="rechargePoints.length"
+                  :labels="rechargePoints.map(p => p.date)"
+                  :values="rechargePoints.map(p => pickMetric(p, rechargeMetric))"
+                  :unit="rechargeMetric === 'amount' ? 'money' : 'count'"
+                  :series-name="
+                    rechargeMetric === 'amount' ? '充值金额' : rechargeMetric === 'users' ? '充值人数' : '充值次数'
+                  "
+                  :height="220"
+                  color="#22b07d"
+                />
+                <el-empty v-else description="暂无数据" :image-size="56" />
+              </div>
+
+              <div class="panel overview-panel">
+                <div class="panel-title-row">
+                  <span class="panel-title">提现趋势</span>
+                  <el-radio-group v-model="withdrawMetric" size="small">
+                    <el-radio-button value="amount">金额</el-radio-button>
+                    <el-radio-button value="users">人数</el-radio-button>
+                    <el-radio-button value="count">次数</el-radio-button>
+                  </el-radio-group>
+                </div>
+                <TrendChart
+                  v-if="withdrawPoints.length"
+                  :labels="withdrawPoints.map(p => p.date)"
+                  :values="withdrawPoints.map(p => pickMetric(p, withdrawMetric))"
+                  :unit="withdrawMetric === 'amount' ? 'money' : 'count'"
+                  :series-name="
+                    withdrawMetric === 'amount' ? '提现金额' : withdrawMetric === 'users' ? '提现人数' : '提现次数'
+                  "
+                  :height="220"
+                  color="#f59a3c"
+                />
+                <el-empty v-else description="暂无数据" :image-size="56" />
+              </div>
+
+              <div class="panel overview-panel">
+                <div class="panel-title-row">
+                  <span class="panel-title">游戏经营</span>
+                  <el-radio-group v-model="gameMetric" size="small">
+                    <el-radio-button value="betAmount">投注总额</el-radio-button>
+                    <el-radio-button value="betUsers">投注人数</el-radio-button>
+                    <el-radio-button value="pnl">损益</el-radio-button>
+                  </el-radio-group>
+                </div>
+                <TrendChart
+                  v-if="gamePoints.length"
+                  :labels="gamePoints.map(p => p.date)"
+                  :values="gamePoints.map(p => pickMetric(p, gameMetric))"
+                  :unit="gameMetric === 'betUsers' ? 'count' : gameMetric === 'pnl' ? 'signed' : 'money'"
+                  :series-name="gameMetricLabel"
+                  :height="220"
+                  color="#7c5cff"
+                />
+                <el-empty v-else description="暂无数据" :image-size="56" />
+              </div>
+            </div>
+            <div class="chart-note muted small">
+              有效投注需按游戏有效投注配置折算，当前接口未返回独立折算结果，本页暂不展示，避免与投注总额混淆。
+            </div>
+          </template>
+        </StateBox>
+      </el-card>
+    </div>
 
     <!-- 6. 风控态势（统一采集风控小时事实） -->
-    <el-card shadow="hover" class="dash-card">
-      <template #header>
-        <div class="card-head">
-          <h3>风控态势</h3>
-          <span v-if="riskToday" class="updated-text">截止：{{ fullTime(riskToday.snapshotAt) }}</span>
-        </div>
-      </template>
-      <StateBox :loading="riskLoading" :error="riskError" :reload="loadRisk">
-        <template v-if="riskToday">
-          <div class="risk-summary">
-            <div class="risk-item">
-              <span class="risk-label">登录失败</span>
-              <span class="risk-value danger">{{ formatCount(riskToday.metrics.loginFailCount) }}</span>
-            </div>
-            <div class="risk-item">
-              <span class="risk-label">去重 IP / 设备</span>
-              <span class="risk-value">
-                {{ formatCount(riskToday.metrics.loginFailIp) }} / {{ formatCount(riskToday.metrics.loginFailDevice) }}
-              </span>
-            </div>
-            <div class="risk-item">
-              <span class="risk-label">新增封禁</span>
-              <span class="risk-value danger">{{ formatCount(riskToday.metrics.banCount) }}</span>
-            </div>
-            <div class="risk-item">
-              <span class="risk-label">风控命中</span>
-              <span class="risk-value warning">{{ formatCount(riskToday.metrics.riskControlCount) }}</span>
-            </div>
-            <div class="risk-item">
-              <span class="risk-label">风控事件</span>
-              <span class="risk-value warning">{{ formatCount(riskToday.metrics.riskEventCount) }}</span>
-            </div>
-            <div class="risk-item">
-              <span class="risk-label">提现风险单</span>
-              <span class="risk-value warning">{{ formatCount(riskToday.metrics.withdrawRiskFlagCount) }}</span>
-            </div>
-            <div class="risk-item">
-              <span class="risk-label">高风险用户</span>
-              <span class="risk-value">{{ formatCount(riskToday.metrics.highRiskUserCount) }}</span>
-            </div>
-            <div class="risk-item">
-              <span class="risk-label">人工调账</span>
-              <span class="risk-value">{{ formatCount(riskToday.metrics.manualAdjustCount) }}</span>
-            </div>
+    <div ref="riskSection" class="dash-section">
+      <el-card shadow="hover" class="dash-card">
+        <template #header>
+          <div class="card-head">
+            <h3>风控态势</h3>
+            <span v-if="riskToday" class="updated-text">截止：{{ fullTime(riskToday.snapshotAt) }}</span>
           </div>
-          <div class="metric-tabs">
-            <el-radio-group v-model="riskMetric" size="small">
-              <el-radio-button value="loginFailCount">登录失败</el-radio-button>
-              <el-radio-button value="banCount">封禁</el-radio-button>
-              <el-radio-button value="riskControlCount">风控命中</el-radio-button>
-              <el-radio-button value="withdrawRiskFlagCount">提现风险单</el-radio-button>
-            </el-radio-group>
-            <span class="chart-note muted small">近 7 天每日风控趋势（事实表小时聚合）</span>
-          </div>
-          <TrendChart
-            v-if="riskTrendPoints.length"
-            :labels="riskTrendLabels"
-            :values="riskTrendPoints"
-            unit="count"
-            :series-name="riskMetricLabel"
-            :height="240"
-            color="#d15454"
-          />
-          <el-empty v-else description="暂无风控趋势数据" :image-size="56" />
         </template>
-      </StateBox>
-    </el-card>
+        <StateBox :loading="riskLoading" :error="riskError" :reload="loadRisk">
+          <template v-if="riskToday">
+            <div class="risk-summary">
+              <div class="risk-item">
+                <span class="risk-label">登录失败</span>
+                <span class="risk-value danger">{{ formatCount(riskToday.metrics.loginFailCount) }}</span>
+              </div>
+              <div class="risk-item">
+                <span class="risk-label">去重 IP / 设备</span>
+                <span class="risk-value">
+                  {{ formatCount(riskToday.metrics.loginFailIp) }} /
+                  {{ formatCount(riskToday.metrics.loginFailDevice) }}
+                </span>
+              </div>
+              <div class="risk-item">
+                <span class="risk-label">新增封禁</span>
+                <span class="risk-value danger">{{ formatCount(riskToday.metrics.banCount) }}</span>
+              </div>
+              <div class="risk-item">
+                <span class="risk-label">风控命中</span>
+                <span class="risk-value warning">{{ formatCount(riskToday.metrics.riskControlCount) }}</span>
+              </div>
+              <div class="risk-item">
+                <span class="risk-label">风控事件</span>
+                <span class="risk-value warning">{{ formatCount(riskToday.metrics.riskEventCount) }}</span>
+              </div>
+              <div class="risk-item">
+                <span class="risk-label">提现风险单</span>
+                <span class="risk-value warning">{{ formatCount(riskToday.metrics.withdrawRiskFlagCount) }}</span>
+              </div>
+              <div class="risk-item">
+                <span class="risk-label">高风险用户</span>
+                <span class="risk-value">{{ formatCount(riskToday.metrics.highRiskUserCount) }}</span>
+              </div>
+              <div class="risk-item">
+                <span class="risk-label">人工调账</span>
+                <span class="risk-value">{{ formatCount(riskToday.metrics.manualAdjustCount) }}</span>
+              </div>
+            </div>
+            <div class="metric-tabs">
+              <el-radio-group v-model="riskMetric" size="small">
+                <el-radio-button value="loginFailCount">登录失败</el-radio-button>
+                <el-radio-button value="banCount">封禁</el-radio-button>
+                <el-radio-button value="riskControlCount">风控命中</el-radio-button>
+                <el-radio-button value="withdrawRiskFlagCount">提现风险单</el-radio-button>
+              </el-radio-group>
+              <span class="chart-note muted small">近 7 天每日风控趋势（事实表小时聚合）</span>
+            </div>
+            <TrendChart
+              v-if="riskTrendPoints.length"
+              :labels="riskTrendLabels"
+              :values="riskTrendPoints"
+              unit="count"
+              :series-name="riskMetricLabel"
+              :height="240"
+              color="#d15454"
+            />
+            <el-empty v-else description="暂无风控趋势数据" :image-size="56" />
+          </template>
+        </StateBox>
+      </el-card>
+    </div>
   </div>
 </template>
 
 <script setup name="Index" lang="ts">
-import DashboardStateBox from '@/components/Dashboard/StateBox.vue';
-import DashboardTrendChart from '@/components/Dashboard/TrendChart.vue';
+import { computed, defineAsyncComponent, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import type { RiskMetrics, RiskTodayResult } from '@/api/report/dashboard/risk-types';
+import type {
+  KpiItem,
+  KpiResult,
+  OverviewPeriod,
+  OverviewResult,
+  RankingResult,
+  RankingType,
+  RealtimeResult,
+  TrendPoint,
+  TrendResult
+} from '@/api/report/dashboard/types';
 import {
   getDashboardKpi,
-  getDashboardHealth,
   getDashboardMeta,
   getDashboardOverview,
   getDashboardRanking,
@@ -480,23 +500,12 @@ import {
   getDashboardTrend
 } from '@/api/report/dashboard';
 import { getDashboardRiskToday, getDashboardRiskTrend } from '@/api/report/dashboard/risk';
-import type { RiskMetrics, RiskTodayResult } from '@/api/report/dashboard/risk-types';
-import type {
-  KpiItem,
-  KpiResult,
-  OverviewPeriod,
-  OverviewResult,
-  RankingType,
-  RealtimeResult,
-  TrendPoint,
-  TrendResult
-} from '@/api/report/dashboard/types';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import DashboardStateBox from '@/components/Dashboard/StateBox.vue';
 
 type TrendMetric = 'register' | 'online' | 'recharge';
 
 const StateBox = DashboardStateBox;
-const TrendChart = DashboardTrendChart;
+const TrendChart = defineAsyncComponent(() => import('@/components/Dashboard/TrendChart.vue'));
 
 /* ---------------- 基础格式化 ---------------- */
 const toNumber = (value?: unknown) => Number(value ?? 0);
@@ -504,28 +513,18 @@ const toNumber = (value?: unknown) => Number(value ?? 0);
 /* ---------------- 0. 口径与数据健康度 ---------------- */
 /**
  * 口径条：明确"当前看的是哪个站点、按什么币种与时区统计"，
- * 健康度数据用于区分"断链导致的 0"与"业务真的为 0"。
- *
- * FIX: 2026-10-09 按需求移除首页顶部的「数据链路异常，以下指标可能不是最新值」红色提示。
- * 原因：本地/测试环境存在长期处于断链态的数据源（无真实玩家流量时 onlineUserMinute / metricHourly /
- * activityDaily / financeDaily 都会被判 BROKEN），提示常驻在首页顶部，干扰运营看看板。
- * 解决方案：只去掉页面上的提示渲染（不再渲染 el-alert），健康度数据仍照常取回，
- * 排查时可在浏览器控制台查看 health.value；后端 GET /infra/report/dashboard/health 契约不变，
- * 后续若要恢复提示，直接重新渲染 health 即可。
+ * 健康度接口不在首屏请求链路内，避免为未展示的数据额外增加一次数据库探测。
  */
 const meta = ref<{ site: string; currency: string; timezone: string }>({ site: '', currency: 'VND', timezone: '' });
-const health = ref<{ healthy: boolean; broken: string[]; snapshotAt: string; sources: any[] } | null>(null);
 
-const loadMetaAndHealth = async () => {
+const loadMeta = async () => {
   try {
-    const [metaRes, healthRes] = await Promise.all([getDashboardMeta(), getDashboardHealth()]);
+    const metaRes = await getDashboardMeta();
     if (metaRes.data) {
       meta.value = metaRes.data;
     }
-    health.value = healthRes.data ?? null;
-  } catch (error) {
-    // 口径/健康度属于辅助信息，失败不阻塞主数据展示
-    health.value = null;
+  } catch {
+    // 口径属于辅助信息，失败不阻塞主数据展示
   }
 };
 
@@ -561,19 +560,31 @@ const rateClass = (rate?: number | null) => (rate !== null && rate !== undefined
 const kpiData = ref<KpiResult>();
 const kpiLoading = ref(false);
 const kpiError = ref<string | boolean>(false);
+const kpiStale = ref(false);
+let kpiRequestSeq = 0;
+let lastKpiSuccessAt = 0;
 
 const kpiItems = computed(() => kpiData.value?.items ?? []);
 
 const loadKpi = async () => {
-  kpiLoading.value = true;
+  const requestId = ++kpiRequestSeq;
+  if (!kpiData.value) kpiLoading.value = true;
   kpiError.value = false;
   try {
     const res = await getDashboardKpi();
+    if (requestId !== kpiRequestSeq) return;
     kpiData.value = res.data;
+    kpiStale.value = false;
+    lastKpiSuccessAt = Date.now();
   } catch (error) {
-    kpiError.value = typeof error === 'string' ? error : '请求异常';
+    if (requestId !== kpiRequestSeq) return;
+    if (kpiData.value) {
+      kpiStale.value = true;
+    } else {
+      kpiError.value = typeof error === 'string' ? error : '请求异常';
+    }
   } finally {
-    kpiLoading.value = false;
+    if (requestId === kpiRequestSeq) kpiLoading.value = false;
   }
 };
 
@@ -581,34 +592,51 @@ const loadKpi = async () => {
 const realtime = ref<RealtimeResult>();
 const realtimeLoading = ref(false);
 const realtimeError = ref<string | boolean>(false);
+const realtimeStale = ref(false);
+let realtimeRequestSeq = 0;
+let lastRealtimeSuccessAt = 0;
 
 const finance = computed(() => realtime.value?.finance);
-const lastRealtimeTime = computed(() =>
-  realtime.value ? shortTime(realtime.value.online.updatedAt || realtime.value.snapshotAt) : '--'
-);
+const lastRealtimeTime = computed(() => {
+  if (!realtime.value) return '--';
+  const trend = realtime.value.online.trend;
+  const lastPoint = trend[trend.length - 1];
+  return lastPoint?.t || shortTime(realtime.value.online.updatedAt || realtime.value.snapshotAt);
+});
 const onlineSpark = computed(() => {
   const trend = realtime.value?.online.trend ?? [];
   return trend.slice(-90);
 });
 
 const loadRealtime = async () => {
-  realtimeLoading.value = true;
+  const requestId = ++realtimeRequestSeq;
+  if (!realtime.value) realtimeLoading.value = true;
   realtimeError.value = false;
   try {
     const res = await getDashboardRealtime();
+    if (requestId !== realtimeRequestSeq) return;
     realtime.value = res.data;
+    realtimeStale.value = false;
+    lastRealtimeSuccessAt = Date.now();
   } catch (error) {
-    realtimeError.value = typeof error === 'string' ? error : '请求异常';
+    if (requestId !== realtimeRequestSeq) return;
+    if (realtime.value) {
+      realtimeStale.value = true;
+    } else {
+      realtimeError.value = typeof error === 'string' ? error : '请求异常';
+    }
   } finally {
-    realtimeLoading.value = false;
+    if (requestId === realtimeRequestSeq) realtimeLoading.value = false;
   }
 };
 
 /* ---------------- 3. 排行榜 ---------------- */
 const rankingType = ref<RankingType>('recharge');
-const rankingData = ref<Partial<Record<RankingType, unknown>>>({});
-const rankingLoading = ref(false);
+const rankingData = ref<Partial<Record<RankingType, RankingResult>>>({});
+const rankingLoading = ref(true);
 const rankingError = ref<string | boolean>(false);
+const rankingRequested = ref(false);
+let rankingRequestSeq = 0;
 
 const rankingTabs: Array<{ type: RankingType; label: string }> = [
   { type: 'recharge', label: '充值排行' },
@@ -627,27 +655,38 @@ const rankingMeta: Record<RankingType, { label: string; amountLabel: string; sig
 };
 
 const rankingItems = computed(() => {
-  const result = rankingData.value[rankingType.value] as { items?: Array<{ rank: number }> } | undefined;
-  return result?.items ?? [];
+  return rankingData.value[rankingType.value]?.items ?? [];
 });
 
 const loadRanking = async () => {
-  rankingLoading.value = true;
+  const requestId = ++rankingRequestSeq;
+  const requestedType = rankingType.value;
+  if (!rankingData.value[requestedType]) rankingLoading.value = true;
   rankingError.value = false;
   try {
-    const res = await getDashboardRanking(rankingType.value);
-    rankingData.value = { ...rankingData.value, [rankingType.value]: res.data };
+    const res = await getDashboardRanking(requestedType);
+    if (requestId !== rankingRequestSeq) return;
+    rankingData.value = { ...rankingData.value, [requestedType]: res.data };
   } catch (error) {
+    if (requestId !== rankingRequestSeq) return;
     rankingError.value = typeof error === 'string' ? error : '请求异常';
   } finally {
-    rankingLoading.value = false;
+    if (requestId === rankingRequestSeq) rankingLoading.value = false;
   }
+};
+
+const ensureRanking = (force = false) => {
+  if (rankingRequested.value && !force) return Promise.resolve();
+  rankingRequested.value = true;
+  return loadRanking();
 };
 
 /* ---------------- 4. 多日趋势 ---------------- */
 const trend = ref<TrendResult>();
-const trendLoading = ref(false);
+const trendLoading = ref(true);
 const trendError = ref<string | boolean>(false);
+const trendRequested = ref(false);
+let trendRequestSeq = 0;
 const trendRangeKind = ref<number | 'custom'>(7);
 const trendCustomRange = ref<[string, string] | null>(null);
 const trendMetric = ref<TrendMetric>('register');
@@ -664,15 +703,18 @@ const trendChartPoints = computed(() => trendRows.value ?? []);
 const trendChartLabels = computed(() => trendChartPoints.value.map(p => p.date));
 const trendChartValues = computed(() =>
   trendChartPoints.value.map(p =>
-    trendMetric.value === 'recharge' ? toNumber(p.amount) : p.value === null || p.value === undefined ? null : toNumber(p.value)
+    trendMetric.value === 'recharge'
+      ? toNumber(p.amount)
+      : p.value === null || p.value === undefined
+        ? null
+        : toNumber(p.value)
   )
 );
-const trendHasData = computed(() =>
-  trendChartValues.value.some(value => value !== null && value !== undefined)
-);
+const trendHasData = computed(() => trendChartValues.value.some(value => value !== null && value !== undefined));
 
 const loadTrend = async () => {
-  trendLoading.value = true;
+  const requestId = ++trendRequestSeq;
+  if (!trend.value) trendLoading.value = true;
   trendError.value = false;
   try {
     const params: { days?: number; startDate?: string; endDate?: string } = {};
@@ -688,12 +730,20 @@ const loadTrend = async () => {
       params.days = trendRangeKind.value as number;
     }
     const res = await getDashboardTrend(params);
+    if (requestId !== trendRequestSeq) return;
     trend.value = res.data;
   } catch (error) {
+    if (requestId !== trendRequestSeq) return;
     trendError.value = typeof error === 'string' ? error : '请求异常';
   } finally {
-    trendLoading.value = false;
+    if (requestId === trendRequestSeq) trendLoading.value = false;
   }
+};
+
+const ensureTrend = (force = false) => {
+  if (trendRequested.value && !force) return Promise.resolve();
+  trendRequested.value = true;
+  return loadTrend();
 };
 
 const handleTrendRangeChange = () => {
@@ -707,19 +757,20 @@ const handleTrendRangeChange = () => {
 
 /* ---------------- 5. 运营总览 ---------------- */
 const overview = ref<OverviewResult>();
-const overviewLoading = ref(false);
+const overviewLoading = ref(true);
 const overviewError = ref<string | boolean>(false);
+const overviewRequested = ref(false);
+let overviewRequestSeq = 0;
 const overviewPeriod = ref<OverviewPeriod>('today');
 const overviewCustomRange = ref<[string, string] | null>(null);
 
 const rechargeMetric = ref<'amount' | 'users' | 'count'>('amount');
 const withdrawMetric = ref<'amount' | 'users' | 'count'>('amount');
-const gameMetric = ref<'betAmount' | 'validBet' | 'betUsers' | 'pnl'>('betAmount');
+const gameMetric = ref<'betAmount' | 'betUsers' | 'pnl'>('betAmount');
 
 const gameMetricLabel = computed(() => {
   const map: Record<string, string> = {
     betAmount: '投注总额',
-    validBet: '有效投注',
     betUsers: '投注人数',
     pnl: '损益'
   };
@@ -737,7 +788,8 @@ const withdrawPoints = computed(() => overview.value?.trends.withdraw ?? []);
 const gamePoints = computed(() => overview.value?.trends.game ?? []);
 
 const loadOverview = async () => {
-  overviewLoading.value = true;
+  const requestId = ++overviewRequestSeq;
+  if (!overview.value) overviewLoading.value = true;
   overviewError.value = false;
   try {
     let startDate: string | undefined;
@@ -752,12 +804,20 @@ const loadOverview = async () => {
       endDate = overviewCustomRange.value[1];
     }
     const res = await getDashboardOverview(overviewPeriod.value, startDate, endDate);
+    if (requestId !== overviewRequestSeq) return;
     overview.value = res.data;
   } catch (error) {
+    if (requestId !== overviewRequestSeq) return;
     overviewError.value = typeof error === 'string' ? error : '请求异常';
   } finally {
-    overviewLoading.value = false;
+    if (requestId === overviewRequestSeq) overviewLoading.value = false;
   }
+};
+
+const ensureOverview = (force = false) => {
+  if (overviewRequested.value && !force) return Promise.resolve();
+  overviewRequested.value = true;
+  return loadOverview();
 };
 
 const handleOverviewPeriodChange = () => {
@@ -771,8 +831,10 @@ const handleOverviewPeriodChange = () => {
 
 /* ---------------- 6. 风控态势 ---------------- */
 const riskToday = ref<RiskTodayResult>();
-const riskLoading = ref(false);
+const riskLoading = ref(true);
 const riskError = ref<string | boolean>(false);
+const riskRequested = ref(false);
+let riskRequestSeq = 0;
 const riskMetric = ref<keyof RiskMetrics>('loginFailCount');
 const riskTrendRows = ref<Array<{ date: string; [key: string]: unknown }>>([]);
 
@@ -795,20 +857,26 @@ const riskTrendPoints = computed(() =>
 const riskTrendLabels = computed(() => riskTrendRows.value.map(row => row.date as string));
 
 const loadRisk = async () => {
-  riskLoading.value = true;
+  const requestId = ++riskRequestSeq;
+  if (!riskToday.value) riskLoading.value = true;
   riskError.value = false;
   try {
-    const [todayRes, trendRes] = await Promise.all([
-      getDashboardRiskToday(),
-      getDashboardRiskTrend({ days: 7 })
-    ]);
+    const [todayRes, trendRes] = await Promise.all([getDashboardRiskToday(), getDashboardRiskTrend({ days: 7 })]);
+    if (requestId !== riskRequestSeq) return;
     riskToday.value = todayRes.data;
     riskTrendRows.value = (trendRes.data?.rows ?? []) as Array<{ date: string; [key: string]: unknown }>;
   } catch (error) {
+    if (requestId !== riskRequestSeq) return;
     riskError.value = typeof error === 'string' ? error : '请求异常';
   } finally {
-    riskLoading.value = false;
+    if (requestId === riskRequestSeq) riskLoading.value = false;
   }
+};
+
+const ensureRisk = (force = false) => {
+  if (riskRequested.value && !force) return Promise.resolve();
+  riskRequested.value = true;
+  return loadRisk();
 };
 
 /* ---------------- 生命周期与刷新 ---------------- */
@@ -824,41 +892,105 @@ const refreshAll = async () => {
   refreshing.value = true;
   try {
     await Promise.all([
-      loadMetaAndHealth(),
+      loadMeta(),
       loadKpi(),
       loadRealtime(),
-      loadRanking(),
-      loadTrend(),
-      loadOverview(),
-      loadRisk()
+      ensureRanking(true),
+      ensureTrend(true),
+      ensureOverview(true),
+      ensureRisk(true)
     ]);
   } finally {
     refreshing.value = false;
   }
 };
 
+const rankingSection = ref<HTMLElement>();
+const trendSection = ref<HTMLElement>();
+const overviewSection = ref<HTMLElement>();
+const riskSection = ref<HTMLElement>();
+const sectionObservers: IntersectionObserver[] = [];
+
+const loadWhenVisible = (element: HTMLElement | undefined, load: () => Promise<unknown>) => {
+  if (!element) return;
+  if (typeof IntersectionObserver === 'undefined') {
+    void load();
+    return;
+  }
+  const observer = new IntersectionObserver(
+    entries => {
+      if (!entries.some(entry => entry.isIntersecting)) return;
+      observer.disconnect();
+      const observerIndex = sectionObservers.indexOf(observer);
+      if (observerIndex >= 0) sectionObservers.splice(observerIndex, 1);
+      void load();
+    },
+    { rootMargin: '240px 0px' }
+  );
+  sectionObservers.push(observer);
+  observer.observe(element);
+};
+
 let realtimeTimer: number | undefined;
 let kpiTimer: number | undefined;
+let pollingActive = false;
+let pageActive = false;
 
-onMounted(() => {
-  void loadMetaAndHealth();
-  void loadKpi();
-  void loadRealtime();
-  void loadRanking();
-  void loadTrend();
-  void loadOverview();
-  void loadRisk();
+const stopPolling = () => {
+  pollingActive = false;
+  if (realtimeTimer) window.clearInterval(realtimeTimer);
+  if (kpiTimer) window.clearInterval(kpiTimer);
+  realtimeTimer = undefined;
+  kpiTimer = undefined;
+};
+
+const refreshVisibleDataIfStale = () => {
+  if (!pageActive || document.visibilityState === 'hidden') return;
+  const now = Date.now();
+  if (lastRealtimeSuccessAt && !realtimeLoading.value && now - lastRealtimeSuccessAt >= 30_000) void loadRealtime();
+  if (lastKpiSuccessAt && !kpiLoading.value && now - lastKpiSuccessAt >= 60_000) void loadKpi();
+};
+
+const startPolling = () => {
+  if (pollingActive) return;
+  pollingActive = true;
   realtimeTimer = window.setInterval(() => {
-    if (!realtimeError.value) void loadRealtime();
+    if (pageActive && document.visibilityState !== 'hidden' && !realtimeLoading.value) void loadRealtime();
   }, 30_000);
   kpiTimer = window.setInterval(() => {
-    if (!kpiError.value) void loadKpi();
+    if (pageActive && document.visibilityState !== 'hidden' && !kpiLoading.value) void loadKpi();
   }, 60_000);
+};
+
+onMounted(() => {
+  pageActive = true;
+  void loadMeta();
+  void loadKpi();
+  void loadRealtime();
+  loadWhenVisible(rankingSection.value, ensureRanking);
+  loadWhenVisible(trendSection.value, ensureTrend);
+  loadWhenVisible(overviewSection.value, ensureOverview);
+  loadWhenVisible(riskSection.value, ensureRisk);
+  document.addEventListener('visibilitychange', refreshVisibleDataIfStale);
+  startPolling();
+});
+
+onActivated(() => {
+  pageActive = true;
+  startPolling();
+  refreshVisibleDataIfStale();
+});
+
+onDeactivated(() => {
+  pageActive = false;
+  stopPolling();
 });
 
 onBeforeUnmount(() => {
-  if (realtimeTimer) window.clearInterval(realtimeTimer);
-  if (kpiTimer) window.clearInterval(kpiTimer);
+  pageActive = false;
+  stopPolling();
+  sectionObservers.splice(0).forEach(observer => observer.disconnect());
+  document.removeEventListener('visibilitychange', refreshVisibleDataIfStale);
 });
 </script>
 
@@ -912,6 +1044,10 @@ onBeforeUnmount(() => {
   }
 }
 
+.dash-section {
+  min-width: 0;
+}
+
 .card-head {
   display: flex;
   align-items: center;
@@ -936,6 +1072,10 @@ onBeforeUnmount(() => {
 .updated-text {
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.stale-text {
+  color: var(--el-color-warning);
 }
 
 .panel {
@@ -1059,6 +1199,15 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   background: var(--el-color-success);
   animation: dash-live 1.6s ease-in-out infinite;
+}
+
+.live-badge.stale {
+  color: var(--el-color-warning);
+}
+
+.live-badge.stale .live-dot {
+  background: var(--el-color-warning);
+  animation: none;
 }
 
 @keyframes dash-live {

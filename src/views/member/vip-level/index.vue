@@ -8,7 +8,7 @@
             <p>共 {{ rows.length }} 个等级；提现金额上限/提现次数填 0 表示不限制。等级奖励（晋级奖金/日周月工资/生日礼金）在「VIP奖励配置」中维护。</p>
           </div>
           <div class="toolbar-actions">
-            <el-button v-hasPermi="['member:vip-reward:list']" type="primary" icon="Present" @click="goRewardConfig()">VIP奖励配置</el-button>
+            <el-button v-hasPermi="['member:vipreward:list']" type="primary" icon="Present" @click="goRewardConfig()">VIP奖励配置</el-button>
             <el-button plain icon="QuestionFilled" @click="showGuide">操作教程</el-button>
             <el-button v-hasPermi="['member:vip:edit']" type="primary" plain icon="Plus" @click="handleAdd">新增等级</el-button>
           </div>

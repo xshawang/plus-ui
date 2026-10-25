@@ -34,7 +34,7 @@
       </el-table-column>
       <el-table-column label="操作" align="center" width="120">
         <template #default="{ row }">
-          <el-button v-hasPermi="['game:lottery:autoreduce:edit']" link type="primary" @click="openEdit(row)">设置</el-button>
+          <el-button v-hasPermi="['game:lotteryautoreduce:edit']" link type="primary" @click="openEdit(row)">设置</el-button>
         </template>
       </el-table-column>
     </el-table>

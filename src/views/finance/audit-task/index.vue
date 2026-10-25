@@ -43,8 +43,8 @@
             <p>共 {{ total }} 条</p>
           </div>
           <div class="toolbar-actions">
-            <el-button v-hasPermi="['finance:audit-task:edit']" type="primary" icon="Plus" @click="handleAdd">新增稽核</el-button>
-            <el-button v-hasPermi="['finance:audit-task:edit']" icon="Setting" @click="openSettingDialog">稽核设置</el-button>
+            <el-button v-hasPermi="['finance:audittask:edit']" type="primary" icon="Plus" @click="handleAdd">新增稽核</el-button>
+            <el-button v-hasPermi="['finance:audittask:edit']" icon="Setting" @click="openSettingDialog">稽核设置</el-button>
             <el-button icon="Refresh" @click="getList">刷新</el-button>
           </div>
         </div>
@@ -74,7 +74,7 @@
         <el-table-column label="创建时间" prop="createdAt" align="center" width="180" show-overflow-tooltip />
         <el-table-column label="操作" align="center" fixed="right" width="150">
           <template #default="{ row }">
-            <el-button v-hasPermi="['finance:audit-task:edit']" link type="primary" :disabled="row.status !== 0" @click="handleRelease(row as FinanceAuditTaskVO)">
+            <el-button v-hasPermi="['finance:audittask:edit']" link type="primary" :disabled="row.status !== 0" @click="handleRelease(row as FinanceAuditTaskVO)">
               手动解除
             </el-button>
             <el-button link type="primary" @click="handleDetail(row as FinanceAuditTaskVO)">详情</el-button>

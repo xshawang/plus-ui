@@ -8,7 +8,7 @@
             <p>控制采集哪些会员资料、哪些必填，以及会员自主修改与每日修改次数上限。</p>
           </div>
           <div class="toolbar-actions">
-            <el-button v-hasPermi="['member:info-config:edit']" type="primary" :loading="saving" @click="handleSave">保存配置</el-button>
+            <el-button v-hasPermi="['member:infoconfig:edit']" type="primary" :loading="saving" @click="handleSave">保存配置</el-button>
           </div>
         </div>
       </template>

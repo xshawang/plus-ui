@@ -10,7 +10,7 @@
           <div class="toolbar-actions">
             <el-button
               v-if="activeTab === 'template'"
-              v-hasPermi="['ops:message:template:add']"
+              v-hasPermi="['ops:messagetemplate:add']"
               type="primary"
               plain
               icon="Plus"
@@ -18,7 +18,7 @@
             >新增模板</el-button>
             <el-button
               v-else
-              v-hasPermi="['ops:message:task:add']"
+              v-hasPermi="['ops:messagetask:add']"
               type="primary"
               plain
               icon="Plus"

@@ -26,6 +26,8 @@ export interface BannerVO {
   /** 0停用 1启用 */
   status?: number;
   remark?: string;
+  effectiveStart?: string | null;
+  effectiveEnd?: string | null;
   updatedAt?: string;
 }
 
@@ -66,4 +68,6 @@ export interface BannerForm {
   vipMinAmount?: number;
   status?: number;
   remark?: string;
+  effectiveStart?: string | null;
+  effectiveEnd?: string | null;
 }

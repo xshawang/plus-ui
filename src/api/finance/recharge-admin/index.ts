@@ -6,7 +6,7 @@ import request from '@/utils/request';
  * 财务侧充值订单与回调异常接口（需求文档 2_财务/04、05）。
  *
  * 后端：go88-service-infra /infra/finance/recharge/**；权限：
- * finance:recharge-all:list|edit（充值订单）、finance:callback-error:list|edit（回调异常）。
+ * finance:rechargeall:list|edit（充值订单）、finance:callbackerror:list|edit（回调异常）。
  */
 export interface RechargeAdminQuery {
   uid?: number;

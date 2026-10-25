@@ -12,7 +12,7 @@ import type {
 
 /**
  * 待删除会员接口（08 文档 §3）。
- * 权限：member:pending-delete:list / :edit / :clear（高危单独收口）
+ * 权限：member:pendingdelete:list / :edit / :clear（高危单独收口）
  */
 export const listPendingDelete = (query?: PendingDeleteQuery): AxiosPromise<PendingDeleteVO[]> => {
   const params = { ...query } as Record<string, unknown>;

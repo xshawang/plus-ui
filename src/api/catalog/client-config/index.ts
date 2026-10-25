@@ -40,6 +40,8 @@ export const saveClientConfig = (data: ClientConfigSaveBody): AxiosPromise<Clien
   return request({
     url: '/infra/catalog/client-config/save',
     method: 'put',
-    data: data
+    data,
+    // 配置值本身是 JSON 文本，可能包含客户端富文本标签；Unicode 转义可避免 XSS 过滤器删除业务数据。
+    transformRequest: [requestData => JSON.stringify(requestData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')]
   });
 };

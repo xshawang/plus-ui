@@ -23,7 +23,7 @@ export const saveVipLevel = (data: VipLevelConfigVO) => {
 
 /**
  * VIP 奖励接口（06 文档，真实资金发放）。
- * 权限：member:vip-reward:list / member:vip-reward:edit
+ * 权限：member:vipreward:list / member:vipreward:edit
  */
 export const listVipRewardConfig = (vipLevel?: number): AxiosPromise<VipRewardConfigVO[]> => {
   return request({ url: '/infra/member/vip-reward/config/list', method: 'get', params: { vipLevel } });
@@ -35,7 +35,7 @@ export const saveVipRewardConfig = (data: VipRewardConfigForm): AxiosPromise<num
 
 /**
  * 矩阵批量维护（图4 列表右上角：应用到所有币种 / 导入修正 / 批量修改）。
- * 权限沿用 member:vip-reward:list / member:vip-reward:edit。
+ * 权限沿用 member:vipreward:list / member:vipreward:edit。
  */
 export const batchVipRewardConfig = (data: VipRewardBatchForm): AxiosPromise<number> => {
   return request({ url: '/infra/member/vip-reward/config/batch', method: 'put', data });

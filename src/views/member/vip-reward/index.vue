@@ -14,7 +14,7 @@
           <div class="table-heading">
             <h3>VIP设置</h3>
             <p>金额单位 VND1000（1 = 1,000 VND）；落库按「分」存储（×100,000）。封顶填 0 表示不封顶。</p>
-            <el-button v-hasPermi="['member:vip-reward:edit']" plain size="small" class="mt-2" @click="openCurrencyApply">应用到所有币种</el-button>
+            <el-button v-hasPermi="['member:vipreward:edit']" plain size="small" class="mt-2" @click="openCurrencyApply">应用到所有币种</el-button>
           </div>
           <div class="toolbar-actions">
             <span class="vip-switch-label">VIP开关</span>
@@ -25,10 +25,10 @@
               :loading="vipSwitchSaving"
               @change="toggleVipEnabled"
             />
-            <el-button v-hasPermi="['member:vip-reward:edit']" plain icon="SetUp" @click="openDetail('other')">VIP公共设置</el-button>
+            <el-button v-hasPermi="['member:vipreward:edit']" plain icon="SetUp" @click="openDetail('other')">VIP公共设置</el-button>
             <el-button plain icon="Document" @click="openDetail('salary')">详情</el-button>
-            <el-button v-hasPermi="['member:vip-reward:edit']" plain icon="Upload" @click="openImport">导入修正</el-button>
-            <el-button v-hasPermi="['member:vip-reward:edit']" plain icon="EditPen" @click="openBatch">批量修改</el-button>
+            <el-button v-hasPermi="['member:vipreward:edit']" plain icon="Upload" @click="openImport">导入修正</el-button>
+            <el-button v-hasPermi="['member:vipreward:edit']" plain icon="EditPen" @click="openBatch">批量修改</el-button>
           </div>
         </div>
       </template>
@@ -74,8 +74,8 @@
         </el-table-column>
         <el-table-column label="操作" align="center" width="130" fixed="right">
           <template #default="{ row }">
-            <el-button v-hasPermi="['member:vip-reward:edit']" link type="primary" @click="openRowDialog(row as MatrixRow)">修改</el-button>
-            <el-button v-hasPermi="['member:vip-reward:edit']" link type="danger" :disabled="!isLastLevel(row as MatrixRow)" @click="handleDeleteLevel(row as MatrixRow)">删除</el-button>
+            <el-button v-hasPermi="['member:vipreward:edit']" link type="primary" @click="openRowDialog(row as MatrixRow)">修改</el-button>
+            <el-button v-hasPermi="['member:vipreward:edit']" link type="danger" :disabled="!isLastLevel(row as MatrixRow)" @click="handleDeleteLevel(row as MatrixRow)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -108,8 +108,8 @@
               style="width: 250px"
             />
             <el-input v-else v-model="disburseForm.uid" placeholder="晋级奖金需填会员ID" style="width: 190px" />
-            <el-button v-hasPermi="['member:vip-reward:edit']" type="primary" :loading="saving" @click="handleDisburse">触发发放</el-button>
-            <el-button v-hasPermi="['member:vip-reward:edit']" plain :loading="saving" @click="handleDisbursePending">批量触发待发放</el-button>
+            <el-button v-hasPermi="['member:vipreward:edit']" type="primary" :loading="saving" @click="handleDisburse">触发发放</el-button>
+            <el-button v-hasPermi="['member:vipreward:edit']" plain :loading="saving" @click="handleDisbursePending">批量触发待发放</el-button>
           </div>
         </div>
       </template>
@@ -136,7 +136,7 @@
         </el-table-column>
         <el-table-column label="操作" align="center" width="110" fixed="right">
           <template #default="{ row }">
-            <el-button v-hasPermi="['member:vip-reward:edit']" link type="primary" :disabled="row.status !== 4" @click="handleRetry(row as VipRewardRecordVO)">重试</el-button>
+            <el-button v-hasPermi="['member:vipreward:edit']" link type="primary" :disabled="row.status !== 4" @click="handleRetry(row as VipRewardRecordVO)">重试</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -199,7 +199,7 @@
           </div>
           <div class="toolbar-actions">
             <el-button plain icon="View" :loading="keepLoading" @click="previewKeep">预演</el-button>
-            <el-button v-hasPermi="['member:vip-reward:edit']" type="danger" plain icon="Bottom" :loading="keepLoading" @click="runKeep">执行降级</el-button>
+            <el-button v-hasPermi="['member:vipreward:edit']" type="danger" plain icon="Bottom" :loading="keepLoading" @click="runKeep">执行降级</el-button>
           </div>
         </div>
       </template>

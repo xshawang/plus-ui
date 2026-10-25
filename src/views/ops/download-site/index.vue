@@ -8,13 +8,13 @@
             <p>管理下载资源站、下载链接与可用性监控。</p>
           </div>
           <div class="toolbar-actions">
-            <el-button v-hasPermi="['ops:download-site:check']" type="warning" plain icon="Aim" :loading="checking" @click="handleCheck">
+            <el-button v-hasPermi="['ops:downloadsite:check']" type="warning" plain icon="Aim" :loading="checking" @click="handleCheck">
               健康检查
             </el-button>
-            <el-button v-if="activeTab === 'site'" v-hasPermi="['ops:download-site:add']" type="primary" plain icon="Plus" @click="handleSiteAdd">
+            <el-button v-if="activeTab === 'site'" v-hasPermi="['ops:downloadsite:add']" type="primary" plain icon="Plus" @click="handleSiteAdd">
               新增站点
             </el-button>
-            <el-button v-if="activeTab === 'link'" v-hasPermi="['ops:download-site:add']" type="primary" plain icon="Plus" @click="handleLinkAdd">
+            <el-button v-if="activeTab === 'link'" v-hasPermi="['ops:downloadsite:add']" type="primary" plain icon="Plus" @click="handleLinkAdd">
               新增链接
             </el-button>
           </div>

@@ -6,7 +6,69 @@
 export interface FinanceStatQuery {
   beginTime?: string;
   endTime?: string;
+  merchantId?: number;
+  groupId?: number;
+  routeId?: number;
+  currency?: string;
   limit?: number;
+}
+
+export interface FinanceRechargeReportSummary {
+  totalCount: number;
+  successCount: number;
+  failedCount: number;
+  cancelledCount: number;
+  pendingCount: number;
+  successRate: number;
+  successVndAmount: number;
+  successCreditAmount: number;
+  feeAmount: number;
+  bonusAmount: number;
+  memberCount: number;
+  avgVndAmount: number;
+  avgLatencySeconds?: number;
+  maxLatencySeconds?: number;
+}
+
+export interface FinanceRechargeReportRow extends FinanceRechargeReportSummary {
+  statDate: string;
+  merchantId: number;
+  merchantName: string;
+  channelCode: string;
+  channelName: string;
+  routeCode: string;
+  routeName: string;
+  currency: string;
+}
+
+export interface FinanceRechargeReportGroupOption {
+  groupId: number;
+  groupCode: string;
+  groupName: string;
+}
+
+export interface FinanceRechargeReportRouteOption {
+  routeId: number;
+  groupId: number;
+  routeCode: string;
+  channelName: string;
+  merchantId: number;
+}
+
+export interface FinanceRechargeReportMerchantOption {
+  merchantId: number;
+  merchantCode: string;
+  merchantName: string;
+}
+
+export interface FinanceRechargeReport {
+  beginTime: string;
+  endTime: string;
+  summary: FinanceRechargeReportSummary;
+  rows: FinanceRechargeReportRow[];
+  groups: FinanceRechargeReportGroupOption[];
+  routes: FinanceRechargeReportRouteOption[];
+  merchants: FinanceRechargeReportMerchantOption[];
 }
 
 export interface FinanceStatSummary {

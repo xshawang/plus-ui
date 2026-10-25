@@ -4,7 +4,7 @@ import request from '@/utils/request';
 /**
  * 三方场馆资金管理接口（需求文档 2_财务/12）。
  *
- * 后端：go88-service-infra /infra/finance/vendor/**；权限沿用 finance:manual-adjust:list|edit。
+ * 后端：go88-service-infra /infra/finance/vendor/**；权限沿用 finance:manualadjust:list|edit。
  * 未接入厂商接口的场馆 integrated=false，只能走"人工确认拉回"（需场馆转出流水号与凭证）。
  */
 export interface VendorWalletVO {

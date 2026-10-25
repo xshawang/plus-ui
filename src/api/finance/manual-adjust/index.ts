@@ -12,7 +12,7 @@ import type {
  * 人工拉回修正接口（需求文档 2_财务/12）。
  *
  * 后端：go88-service-infra /infra/finance/manual-adjust/**；
- * 权限：finance:manual-adjust:list | finance:manual-adjust:edit
+ * 权限：finance:manualadjust:list | finance:manualadjust:edit
  * 资金口径：加/扣款经钱包 manualCredit/manualDebit 入账，requestId 为幂等键。
  */
 export const getMemberAsset = (params: { uid?: number; account?: string }): AxiosPromise<FinanceMemberAssetVO> =>

@@ -47,7 +47,7 @@ export const delMemberTag = (tagId: number) => {
 };
 
 /** 查询指定会员已绑定标签ID */
-export const listMemberTagsOfUser = (uids: number[]): AxiosPromise<number[]> => {
+export const listMemberTagsOfUser = (uids: Array<number | string>): AxiosPromise<number[]> => {
   return request({
     url: '/infra/member/tag/member-tags',
     method: 'get',

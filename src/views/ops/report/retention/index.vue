@@ -51,7 +51,7 @@
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
         </el-form-item>
         <el-form-item>
-          <el-button v-hasPermi="['ops:report:retention:export']" type="success" plain icon="Download" @click="handleExport">导出报表</el-button>
+          <el-button v-hasPermi="['ops:reportretention:export']" type="success" plain icon="Download" @click="handleExport">导出报表</el-button>
         </el-form-item>
       </el-form>
     </el-card>

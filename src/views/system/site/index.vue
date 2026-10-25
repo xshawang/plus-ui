@@ -122,7 +122,7 @@
             </el-button>
             <el-button
               v-if="activeTab === 'info'"
-              v-hasPermi="['system:site:withdraw-mode']"
+              v-hasPermi="['system:site:withdrawmode']"
               type="warning"
               plain
               icon="Setting"
@@ -227,7 +227,7 @@
             <template #default="{ row }">
               <el-button v-hasPermi="['system:site:edit']" link type="primary" @click="handleUpdate(row)">修改</el-button>
               <el-button v-hasPermi="['system:site:maintain']" link type="primary" @click="openMaintain(row)">维护</el-button>
-              <el-button v-hasPermi="['system:site:security-code']" link type="primary" @click="openSecurityCode(row)">
+              <el-button v-hasPermi="['system:site:securitycode']" link type="primary" @click="openSecurityCode(row)">
                 修改安全码
               </el-button>
               <el-button v-hasPermi="['system:site:coin']" link type="success" @click="openRecharge(row)">充币</el-button>

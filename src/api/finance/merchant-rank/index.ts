@@ -5,7 +5,7 @@ import request from '@/utils/request';
 /**
  * 三方支付排名接口（需求文档 2_财务/08）。
  *
- * 后端：go88-service-infra /infra/finance/merchant-rank/**；权限：finance:merchant-rank:list
+ * 后端：go88-service-infra /infra/finance/merchant-rank/**；权限：finance:merchantrank:list
  * 页签：PAY=可用三方支付 / PAYOUT=可用三方代付 / RISK=跑路高风险三方。
  */
 export type MerchantRankTab = 'PAY' | 'PAYOUT' | 'RISK';

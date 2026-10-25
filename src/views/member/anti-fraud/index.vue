@@ -8,7 +8,7 @@
             <p>控制注册/登录人机校验、首充前后的绑定与验证拦截、设备指纹注册限制。</p>
           </div>
           <div class="toolbar-actions">
-            <el-button v-hasPermi="['member:anti-fraud:edit']" type="primary" :loading="saving" @click="handleSave">保存配置</el-button>
+            <el-button v-hasPermi="['member:antifraud:edit']" type="primary" :loading="saving" @click="handleSave">保存配置</el-button>
           </div>
         </div>
       </template>

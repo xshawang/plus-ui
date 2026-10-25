@@ -14,6 +14,18 @@
             <el-option label="转账充值" :value="2" />
             <el-option label="客服代充" :value="3" />
             <el-option label="数字货币" :value="4" />
+            <el-option label="礼品卡" :value="5" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="支付方式">
+          <el-select v-model="queryParams.methodType" placeholder="全部" clearable style="width: 150px">
+            <el-option v-for="item in methodOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="方向">
+          <el-select v-model="queryParams.direction" placeholder="全部" clearable style="width: 120px">
+            <el-option label="充值" :value="1" />
+            <el-option label="提现" :value="2" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -64,12 +76,41 @@
           <el-table :data="filterRoutes(group)" border size="small">
             <el-table-column label="通道编号" prop="routeCode" align="center" width="120" />
             <el-table-column label="通道名称" prop="channelName" align="left" min-width="150" show-overflow-tooltip />
+            <el-table-column label="图标" align="center" width="72">
+              <template #default="{ row }">
+                <el-image
+                  v-if="row.channelIcon || row.iconUrl"
+                  :src="row.channelIcon || row.iconUrl"
+                  :preview-src-list="[row.channelIcon || row.iconUrl]"
+                  fit="contain"
+                  class="channel-icon"
+                />
+                <span v-else class="text-gray-400">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="排序" prop="subSort" align="center" width="70" />
             <el-table-column label="所属商户" prop="merchantName" align="left" min-width="170" show-overflow-tooltip />
+            <el-table-column label="平台" prop="platform" align="center" width="80" />
+            <el-table-column label="方向" align="center" width="80">
+              <template #default="{ row }">{{ row.direction === 2 ? '提现' : '充值' }}</template>
+            </el-table-column>
+            <el-table-column label="支付方式" align="center" width="110">
+              <template #default="{ row }">{{ methodLabel(row.methodType) }}</template>
+            </el-table-column>
+            <el-table-column label="客户端标识" align="left" min-width="180" show-overflow-tooltip>
+              <template #default="{ row }">{{ clientIdentity(row as FinanceChannelRouteVO) }}</template>
+            </el-table-column>
+            <el-table-column label="客户端下发值" align="left" min-width="230" show-overflow-tooltip>
+              <template #default="{ row }">{{ clientDetailSummary(row as FinanceChannelRouteVO) }}</template>
+            </el-table-column>
             <el-table-column label="币种" prop="currency" align="center" width="80" />
             <el-table-column label="费率(%)" prop="feeRate" align="right" width="90" />
             <el-table-column label="成功率(%)" prop="successRate" align="right" width="100" />
             <el-table-column label="单笔限额" align="right" width="180">
               <template #default="{ row }">{{ formatMoneyRange(row.amountMin ?? 0, row.amountMax ?? 0) }}</template>
+            </el-table-column>
+            <el-table-column label="开放时段" align="center" width="125">
+              <template #default="{ row }">{{ row.openTimeStart || '00:00' }} - {{ row.openTimeEnd || '23:59' }}</template>
             </el-table-column>
             <el-table-column
               label="推荐金额"
@@ -79,23 +120,13 @@
               show-overflow-tooltip
               :formatter="moneyListColumnFormatter"
             />
-            <el-table-column label="停启用" align="center" width="90">
+            <el-table-column label="维护开关" align="center" width="100">
               <template #default="{ row }">
                 <el-switch
                   :model-value="row.status"
                   :active-value="1"
                   :inactive-value="0"
                   @change="(val: number) => handleSwitch(row as FinanceChannelRouteVO, 'status', val)"
-                />
-              </template>
-            </el-table-column>
-            <el-table-column label="前台账用" align="center" width="100">
-              <template #default="{ row }">
-                <el-switch
-                  :model-value="row.frontEnable"
-                  :active-value="1"
-                  :inactive-value="0"
-                  @change="(val: number) => handleSwitch(row as FinanceChannelRouteVO, 'frontEnable', val)"
                 />
               </template>
             </el-table-column>
@@ -144,6 +175,7 @@
             <el-option label="转账充值" :value="2" />
             <el-option label="客服代充" :value="3" />
             <el-option label="数字货币" :value="4" />
+            <el-option label="礼品卡" :value="5" />
           </el-select>
         </el-form-item>
         <el-form-item label="图标URL">
@@ -168,7 +200,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="routeDialog" :title="routeForm.routeId ? '修改充值通道' : '新增充值通道'" width="720px" append-to-body>
+    <el-dialog v-model="routeDialog" :title="routeForm.routeId ? '修改充值通道' : '新增充值通道'" width="920px" append-to-body>
       <el-form ref="routeFormRef" :model="routeForm" :rules="routeRules" label-width="140px">
         <el-row :gutter="12">
           <el-col :span="12">
@@ -189,10 +221,53 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="平台标识" prop="platform">
+              <el-input v-model="routeForm.platform" placeholder="go88" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="资金方向" prop="direction">
+              <el-select v-model="routeForm.direction" style="width: 100%">
+                <el-option label="充值" :value="1" />
+                <el-option label="提现" :value="2" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="客户端支付方式" prop="methodType">
+              <el-select v-model="routeForm.methodType" style="width: 100%" @change="handleMethodTypeChange">
+                <el-option v-for="item in methodOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="维护码">
+              <el-input v-model="routeForm.maintenanceCode" placeholder="如 dep / despib / withdrib" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
             <el-form-item label="所属商户">
               <el-select v-model="routeForm.merchantId" clearable placeholder="自有(不选)" style="width: 100%">
                 <el-option v-for="merchant in merchants" :key="merchant.merchantId" :label="merchant.merchantName" :value="merchant.merchantId" />
               </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="渠道图标">
+              <div class="qr-config">
+                <image-upload v-model="routeForm.channelIcon" value-mode="url" :limit="1" />
+                <el-input v-model="routeForm.channelIcon" placeholder="客户端渠道图标 URL" />
+              </div>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="开放开始">
+              <el-input v-model="routeForm.openTimeStart" placeholder="08:00" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="开放结束">
+              <el-input v-model="routeForm.openTimeEnd" placeholder="23:59" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -241,11 +316,6 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="前台账用">
-              <el-switch v-model="routeForm.frontEnable" :active-value="1" :inactive-value="0" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
             <el-form-item label="通道合并">
               <el-switch v-model="routeForm.mergeFlag" :active-value="1" :inactive-value="0" />
             </el-form-item>
@@ -255,6 +325,216 @@
               <el-switch v-model="routeForm.blacklistEnable" :active-value="1" :inactive-value="0" />
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="客户端编码">
+              <el-input v-model="routeForm.clientCode" placeholder="银行编码 / 卡品牌 / 币种 / 快捷前缀" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="客户端子编码">
+              <el-input v-model="routeForm.clientSubCode" placeholder="网络（如 BEP20 / TRC20）" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="每日限额">
+              <el-input-number v-model="routeForm.dailyLimit" :min="0" controls-position="right" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="旧地址展示">
+              <div class="switch-pair">
+                <span>V1</span>
+                <el-switch v-model="routeForm.addressV1Enabled" :active-value="1" :inactive-value="0" />
+                <span>V3</span>
+                <el-switch v-model="routeForm.addressV3Enabled" :active-value="1" :inactive-value="0" />
+              </div>
+            </el-form-item>
+          </el-col>
+
+          <el-col v-if="routeForm.methodType === 'BANKS' || routeForm.methodType === 'EWALLET'" :span="24">
+            <el-divider content-position="left">银行 / 电子钱包客户端明细</el-divider>
+          </el-col>
+          <template v-if="routeForm.methodType === 'BANKS' || routeForm.methodType === 'EWALLET'">
+            <el-col :span="12">
+              <el-form-item label="银行/渠道编码">
+                <el-input v-model="routeForm.bankCode" placeholder="如 VCB / MOMO" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="银行/渠道名称">
+                <el-input v-model="routeForm.bankName" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="SmartPay编码">
+                <el-input v-model="routeForm.smartpayCode" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="收款账号">
+                <el-input v-model="routeForm.account" placeholder="客户端 account 字段" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="在线时段">
+                <el-input v-model="routeForm.statementTime" placeholder="如 08:00-22:00" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="超时分钟">
+                <el-input-number v-model="routeForm.timeLimit" :min="0" controls-position="right" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="客户端排序">
+                <el-input-number v-model="routeForm.orderNavigate" :min="0" controls-position="right" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="固定手续费">
+                <el-input-number v-model="routeForm.fee" :min="0" controls-position="right" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="固定赠送">
+                <el-input-number v-model="routeForm.bonusAmount" :min="0" controls-position="right" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <el-form-item label="第三方参数">
+                <el-input v-model="routeForm.thirdPartyParams" type="textarea" :rows="2" placeholder="JSON 扩展参数" />
+              </el-form-item>
+            </el-col>
+          </template>
+
+          <el-col v-if="routeForm.methodType === 'CARD'" :span="24">
+            <el-divider content-position="left">充值卡客户端明细</el-divider>
+          </el-col>
+          <template v-if="routeForm.methodType === 'CARD'">
+            <el-col :span="12">
+              <el-form-item label="卡品牌">
+                <el-input v-model="routeForm.cardBrand" placeholder="VIETTEL / MOBIFONE" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="卡片标签">
+                <el-input v-model="routeForm.cardLabel" placeholder="Thẻ Viettel" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="兑换率">
+                <el-input-number v-model="routeForm.rate" :min="0" :max="1" :step="0.01" :precision="4" controls-position="right" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <el-form-item label="可选面额">
+                <el-input v-model="routeForm.denominations" placeholder="JSON数组，如 [50000,100000,200000]" />
+              </el-form-item>
+            </el-col>
+          </template>
+
+          <el-col v-if="routeForm.methodType === 'CRYPTO'" :span="24">
+            <el-divider content-position="left">数字货币客户端明细</el-divider>
+          </el-col>
+          <template v-if="routeForm.methodType === 'CRYPTO'">
+            <el-col :span="12">
+              <el-form-item label="币种">
+                <el-input v-model="routeForm.coinName" placeholder="USDT" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="网络">
+                <el-input v-model="routeForm.networkName" placeholder="BEP20 / TRC20" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="虚拟币兑平台币">
+                <el-input-number v-model="routeForm.platformRate" :min="0" controls-position="right" style="width: 100%" />
+                <span class="field-hint">如 1 USDT = 1000 平台币</span>
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <el-form-item label="收款地址">
+                <el-input v-model="routeForm.address" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <el-form-item label="二维码图片">
+                <div class="qr-config">
+                  <image-upload v-model="routeForm.qrData" value-mode="url" :limit="1" />
+                  <el-input v-model="routeForm.qrData" placeholder="也可直接填写图片URL，如 http://play.g318.com/imgs/xxx.png" />
+                </div>
+              </el-form-item>
+            </el-col>
+          </template>
+
+          <el-col v-if="routeForm.methodType === 'QUICK_PAY'" :span="24">
+            <el-divider content-position="left">快捷充值档位明细</el-divider>
+          </el-col>
+          <template v-if="routeForm.methodType === 'QUICK_PAY'">
+            <el-col :span="12">
+              <el-form-item label="档位前缀">
+                <el-input v-model="routeForm.prefix" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="充值金额">
+                <el-input-number v-model="routeForm.fee" :min="0" controls-position="right" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="赠送金额">
+                <el-input-number v-model="routeForm.bonusAmount" :min="0" controls-position="right" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="收款标识">
+                <el-input v-model="routeForm.receiveNumber" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="收款账户名">
+                <el-input v-model="routeForm.accountName" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <el-form-item label="档位内容">
+                <el-input v-model="routeForm.content" />
+              </el-form-item>
+            </el-col>
+          </template>
+
+          <template v-if="routeForm.methodType === 'GIFT_CARD'">
+            <el-col :span="24">
+              <el-divider content-position="left">礼品卡客户端明细</el-divider>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="礼品卡编码">
+                <el-input v-model="routeForm.giftCode" placeholder="FACEBOOK" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="礼品卡名称">
+                <el-input v-model="routeForm.giftName" placeholder="Facebook Gift Card" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <el-form-item label="礼品卡图标">
+                <image-upload v-model="routeForm.iconUrl" value-mode="url" :limit="1" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <el-form-item label="跳转地址">
+                <el-input v-model="routeForm.jumpUrl" placeholder="https://..." />
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <el-form-item label="礼品卡账户">
+                <el-input v-model="routeForm.account" />
+              </el-form-item>
+            </el-col>
+          </template>
+
           <el-col :span="24">
             <el-form-item label="通道备注">
               <el-input v-model="routeForm.channelRemark" type="textarea" :rows="2" />
@@ -312,8 +592,19 @@ const routeFormRef = ref<FormInstance>();
 const queryParams = reactive<FinanceChannelQuery>({
   groupKeyword: '',
   routeKeyword: '',
-  groupType: undefined
+  groupType: undefined,
+  methodType: undefined,
+  direction: undefined
 });
+
+const methodOptions = [
+  { label: '银行转账', value: 'BANKS' },
+  { label: '充值卡', value: 'CARD' },
+  { label: '电子钱包', value: 'EWALLET' },
+  { label: '数字货币', value: 'CRYPTO' },
+  { label: '快捷充值', value: 'QUICK_PAY' },
+  { label: '礼品卡', value: 'GIFT_CARD' }
+];
 
 const groupForm = reactive<FinanceChannelGroupForm>({
   groupId: undefined,
@@ -327,7 +618,7 @@ const groupForm = reactive<FinanceChannelGroupForm>({
   remark: ''
 });
 
-const routeForm = reactive<FinanceChannelRouteForm>({
+const emptyRouteForm = (): FinanceChannelRouteForm => ({
   routeId: undefined,
   groupId: undefined,
   routeCode: '',
@@ -345,8 +636,52 @@ const routeForm = reactive<FinanceChannelRouteForm>({
   status: 1,
   mergeFlag: 0,
   frontEnable: 1,
-  blacklistEnable: 0
+  blacklistEnable: 0,
+  platform: 'go88',
+  direction: 1,
+  methodType: 'BANKS',
+  clientCode: '',
+  clientSubCode: '',
+  dailyLimit: 0,
+  maintenanceCode: '',
+  addressV1Enabled: 1,
+  addressV3Enabled: 1,
+  channelIcon: '',
+  openTimeStart: '00:00',
+  openTimeEnd: '23:59',
+  bankCode: '',
+  bankName: '',
+  smartpayCode: '',
+  account: '',
+  receiveNumber: '',
+  statementTime: '',
+  timeLimit: 0,
+  orderNavigate: 0,
+  cardBrand: '',
+  cardLabel: '',
+  denominations: '[]',
+  rate: 0,
+  coinName: '',
+  networkName: '',
+  address: '',
+  qrData: '',
+  price: 0,
+  platformRate: 0,
+  prefix: '',
+  fee: 0,
+  bonusAmount: 0,
+  content: '',
+  accountName: '',
+  minAmount: 0,
+  maxAmount: 0,
+  thirdPartyParams: '',
+  giftCode: '',
+  giftName: '',
+  iconUrl: '',
+  jumpUrl: ''
 });
+
+const routeForm = reactive<FinanceChannelRouteForm>(emptyRouteForm());
 
 const groupRules: FormRules = {
   groupCode: [{ required: true, message: '大类编码不能为空', trigger: 'blur' }],
@@ -356,7 +691,9 @@ const groupRules: FormRules = {
 const routeRules: FormRules = {
   groupId: [{ required: true, message: '所属大类不能为空', trigger: 'change' }],
   routeCode: [{ required: true, message: '通道编号不能为空', trigger: 'blur' }],
-  channelName: [{ required: true, message: '通道名称不能为空', trigger: 'blur' }]
+  channelName: [{ required: true, message: '通道名称不能为空', trigger: 'blur' }],
+  methodType: [{ required: true, message: '客户端支付方式不能为空', trigger: 'change' }],
+  platform: [{ required: true, message: '平台标识不能为空', trigger: 'blur' }]
 };
 
 /** 大类关键字过滤（后端已支持，前端再兜一层以便本地即时反馈） */
@@ -369,14 +706,54 @@ const filterRoutes = (group: FinanceChannelGroupVO): FinanceChannelRouteVO[] => 
   const routes = group.routes ?? [];
   const kw = (queryParams.routeKeyword ?? '').trim().toLowerCase();
   if (!kw) {
-    return routes;
+    return routes.filter(
+      (route) =>
+        (!queryParams.methodType || route.methodType === queryParams.methodType) &&
+        (!queryParams.direction || route.direction === queryParams.direction)
+    );
   }
   return routes.filter(
     (route) =>
-      route.channelName.toLowerCase().includes(kw) ||
-      route.routeCode.toLowerCase().includes(kw) ||
-      (route.merchantName ?? '').toLowerCase().includes(kw)
+      (!queryParams.methodType || route.methodType === queryParams.methodType) &&
+      (!queryParams.direction || route.direction === queryParams.direction) &&
+      (route.channelName.toLowerCase().includes(kw) ||
+        route.routeCode.toLowerCase().includes(kw) ||
+        (route.merchantName ?? '').toLowerCase().includes(kw))
   );
+};
+
+const methodLabel = (method?: string) => methodOptions.find((item) => item.value === method)?.label ?? method ?? '未配置';
+
+const clientIdentity = (route: FinanceChannelRouteVO) => {
+  if (route.methodType === 'BANKS' || route.methodType === 'EWALLET') {
+    return [route.bankCode || route.clientCode, route.smartpayCode].filter(Boolean).join(' / ');
+  }
+  if (route.methodType === 'CARD') return route.cardBrand || route.clientCode || route.routeCode;
+  if (route.methodType === 'CRYPTO') {
+    return [route.coinName || route.clientCode, route.networkName || route.clientSubCode].filter(Boolean).join(' / ');
+  }
+  if (route.methodType === 'GIFT_CARD') return route.giftCode || route.routeCode;
+  return [route.prefix || route.clientCode, route.clientSubCode].filter(Boolean).join(' / ');
+};
+
+const clientDetailSummary = (route: FinanceChannelRouteVO) => {
+  if (route.methodType === 'BANKS' || route.methodType === 'EWALLET') {
+    return [
+      route.account ? `账号 ${route.account}` : '',
+      route.statementTime ? `时段 ${route.statementTime}` : '',
+      route.timeLimit ? `超时 ${route.timeLimit} 分钟` : ''
+    ].filter(Boolean).join('；');
+  }
+  if (route.methodType === 'CARD') {
+    return [route.cardLabel, route.rate != null ? `兑换率 ${route.rate}` : '', route.denominations].filter(Boolean).join('；');
+  }
+  if (route.methodType === 'CRYPTO') {
+    return [route.address, route.platformRate ? `1:${route.platformRate}` : '', route.qrData ? '已配置二维码' : '未配置二维码'].filter(Boolean).join('；');
+  }
+  if (route.methodType === 'GIFT_CARD') return [route.giftName, route.jumpUrl, route.account].filter(Boolean).join('；');
+  return [route.fee != null ? `充值 ${route.fee}` : '', route.bonusAmount ? `赠送 ${route.bonusAmount}` : '', route.receiveNumber]
+    .filter(Boolean)
+    .join('；');
 };
 
 const getGroups = async () => {
@@ -401,6 +778,8 @@ const resetQuery = () => {
   queryParams.groupKeyword = '';
   queryParams.routeKeyword = '';
   queryParams.groupType = undefined;
+  queryParams.methodType = undefined;
+  queryParams.direction = undefined;
   getGroups();
 };
 
@@ -451,27 +830,23 @@ const submitGroup = async () => {
 };
 
 const handleAddRoute = (group: FinanceChannelGroupVO) => {
+  const methodType = methodTypeForGroup(group);
   Object.assign(routeForm, {
-    routeId: undefined,
+    ...emptyRouteForm(),
     groupId: group.groupId,
-    routeCode: '',
-    channelName: '',
-    subSort: 0,
-    merchantId: undefined,
     currency: group.groupType === 4 ? 'USDT' : 'VND',
     currencyRate: group.groupType === 4 ? '' : 'VND1000:1',
-    amountMin: 0,
-    amountMax: 0,
-    recommendAmounts: '',
-    feeRate: 0,
-    successRate: 0,
-    channelRemark: '',
-    status: 1,
-    mergeFlag: 0,
-    frontEnable: 1,
-    blacklistEnable: 0
+    methodType,
+    clientCode: '',
+    clientSubCode: ''
   });
   routeDialog.value = true;
+};
+
+const methodTypeForGroup = (group: FinanceChannelGroupVO) => {
+  const code = (group.groupCode ?? '').toUpperCase();
+  if (methodOptions.some((item) => item.value === code)) return code;
+  return group.groupType === 4 ? 'CRYPTO' : 'BANKS';
 };
 
 const handleEditRoute = (route: FinanceChannelRouteVO) => {
@@ -493,9 +868,67 @@ const handleEditRoute = (route: FinanceChannelRouteVO) => {
     status: route.status ?? 1,
     mergeFlag: route.mergeFlag ?? 0,
     frontEnable: route.frontEnable ?? 1,
-    blacklistEnable: route.blacklistEnable ?? 0
+    blacklistEnable: route.blacklistEnable ?? 0,
+    platform: route.platform ?? 'go88',
+    direction: route.direction ?? 1,
+    methodType: route.methodType || inferMethodType(route),
+    clientCode: route.clientCode ?? '',
+    clientSubCode: route.clientSubCode ?? '',
+    dailyLimit: route.dailyLimit ?? 0,
+    maintenanceCode: route.maintenanceCode ?? '',
+    addressV1Enabled: route.addressV1Enabled ?? 1,
+    addressV3Enabled: route.addressV3Enabled ?? 1,
+    channelIcon: route.channelIcon ?? '',
+    openTimeStart: route.openTimeStart ?? '00:00',
+    openTimeEnd: route.openTimeEnd ?? '23:59',
+    bankCode: route.bankCode ?? route.clientCode ?? route.routeCode,
+    bankName: route.bankName ?? route.channelName,
+    smartpayCode: route.smartpayCode ?? '',
+    account: route.account ?? route.receiveNumber ?? '',
+    receiveNumber: route.receiveNumber ?? route.account ?? '',
+    accountName: route.accountName ?? '',
+    statementTime: route.statementTime ?? '',
+    timeLimit: route.timeLimit ?? 0,
+    orderNavigate: route.orderNavigate ?? route.subSort ?? 0,
+    cardBrand: route.cardBrand ?? route.clientCode ?? route.routeCode,
+    cardLabel: route.cardLabel ?? route.channelName,
+    denominations: route.denominations ?? '[]',
+    rate: route.rate ?? 0,
+    coinName: route.coinName ?? route.clientCode ?? '',
+    networkName: route.networkName ?? route.clientSubCode ?? '',
+    address: route.address ?? '',
+    qrData: route.qrData ?? '',
+    price: route.price ?? 0,
+    platformRate: route.platformRate ?? route.price ?? 0,
+    prefix: route.prefix ?? route.clientCode ?? route.routeCode,
+    fee: route.fee ?? 0,
+    bonusAmount: route.bonusAmount ?? 0,
+    content: route.content ?? '',
+    minAmount: route.minAmount ?? route.amountMin ?? 0,
+    maxAmount: route.maxAmount ?? route.amountMax ?? 0,
+    thirdPartyParams: route.thirdPartyParams ?? '',
+    giftCode: route.giftCode ?? '',
+    giftName: route.giftName ?? '',
+    iconUrl: route.iconUrl ?? '',
+    jumpUrl: route.jumpUrl ?? ''
   });
   routeDialog.value = true;
+};
+
+const inferMethodType = (route: FinanceChannelRouteVO) => {
+  if (route.methodType) return route.methodType;
+  if (route.qrData || route.coinName) return 'CRYPTO';
+  if (route.cardBrand) return 'CARD';
+  if (route.giftCode) return 'GIFT_CARD';
+  if (route.prefix) return 'QUICK_PAY';
+  return 'BANKS';
+};
+
+const handleMethodTypeChange = () => {
+  routeForm.configRefId = undefined;
+  if (routeForm.methodType === 'CRYPTO') {
+    routeForm.currency = routeForm.currency || 'USDT';
+  }
 };
 
 const submitRoute = async () => {
@@ -551,5 +984,30 @@ loadMerchants();
 
 .group-actions {
   margin-bottom: 8px;
+}
+
+.switch-pair {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--el-text-color-regular);
+}
+
+.qr-config {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.channel-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.field-hint {
+  display: block;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 </style>

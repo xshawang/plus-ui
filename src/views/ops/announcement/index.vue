@@ -1,118 +1,131 @@
 <template>
   <div class="p-2 app-container ops-announcement-page">
-    <el-card shadow="hover" class="search-panel">
-      <el-form :inline="true" class="query-form">
-        <el-form-item label="类型">
-          <el-select v-model="queryParams.announceType" placeholder="公告类型" clearable style="width: 140px">
-            <el-option label="大厅公告栏" :value="1" />
-            <el-option label="大厅弹窗" :value="2" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="queryParams.status" placeholder="状态" clearable style="width: 120px">
-            <el-option label="草稿" :value="0" />
-            <el-option label="启用" :value="1" />
-            <el-option label="禁用" :value="2" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="标题">
-          <el-input v-model="queryParams.title" placeholder="请输入标题" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <el-tabs v-model="activeTab" type="border-card">
+      <el-tab-pane label="公告列表" name="notices">
+        <el-card shadow="hover" class="search-panel">
+          <el-form :inline="true" class="query-form">
+            <el-form-item label="类型">
+              <el-select v-model="queryParams.announceType" placeholder="公告类型" clearable style="width: 140px">
+                <el-option label="大厅公告栏" :value="1" />
+                <el-option label="大厅弹窗" :value="2" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="状态">
+              <el-select v-model="queryParams.status" placeholder="状态" clearable style="width: 120px">
+                <el-option label="草稿" :value="0" />
+                <el-option label="启用" :value="1" />
+                <el-option label="禁用" :value="2" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="标题">
+              <el-input v-model="queryParams.title" placeholder="请输入标题" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
 
-    <el-card shadow="hover" class="table-panel">
-      <template #header>
-        <div class="toolbar-shell">
-          <div class="table-heading">
-            <h3>大厅公告</h3>
-            <p>共 {{ total }} 条记录，支持发布、置顶与启用/禁用。</p>
-          </div>
-          <div class="toolbar-actions">
-            <el-button v-hasPermi="['ops:announcement:add']" type="primary" plain icon="Plus" @click="handleAdd">新增</el-button>
-            <el-button
-              v-hasPermi="['ops:announcement:edit']"
-              type="primary"
-              plain
-              icon="Edit"
-              :disabled="single"
-              @click="handleUpdate()"
-            >修改</el-button>
-            <el-button
-              v-hasPermi="['ops:announcement:remove']"
-              type="danger"
-              plain
-              icon="Delete"
-              :disabled="multiple"
-              @click="handleDelete()"
-            >删除</el-button>
-          </div>
-        </div>
-      </template>
-      <el-table v-loading="loading" border :data="rows" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="50" align="center" />
-        <el-table-column label="标题" prop="title" min-width="180" :show-overflow-tooltip="true" />
-        <el-table-column label="类型" align="center" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.announceType === 1 ? 'primary' : 'warning'">
-              {{ row.announceType === 1 ? '公告栏' : '弹窗' }}
-            </el-tag>
+        <el-card shadow="hover" class="table-panel">
+          <template #header>
+            <div class="toolbar-shell">
+              <div class="table-heading">
+                <h3>大厅公告</h3>
+                <p>共 {{ total }} 条记录，支持发布、置顶与启用/禁用。</p>
+              </div>
+              <div class="toolbar-actions">
+                <el-button v-hasPermi="['ops:announcement:add']" type="primary" plain icon="Plus" @click="handleAdd">
+                  新增
+                </el-button>
+                <el-button
+                  v-hasPermi="['ops:announcement:edit']"
+                  type="primary"
+                  plain
+                  icon="Edit"
+                  :disabled="single"
+                  @click="handleUpdate()"
+                >
+                  修改
+                </el-button>
+                <el-button
+                  v-hasPermi="['ops:announcement:remove']"
+                  type="danger"
+                  plain
+                  icon="Delete"
+                  :disabled="multiple"
+                  @click="handleDelete()"
+                >
+                  删除
+                </el-button>
+              </div>
+            </div>
           </template>
-        </el-table-column>
-        <el-table-column label="置顶" align="center" width="80">
-          <template #default="{ row }">
-            <el-tag v-if="row.topFlag === 1" type="danger">置顶</el-tag>
-            <span v-else class="text-gray-400">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" align="center" width="90">
-          <template #default="{ row }">
-            <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="语言" prop="languageCode" align="center" width="70" />
-        <el-table-column label="生效时间" align="center" min-width="170">
-          <template #default="{ row }">
-            <span class="text-xs">{{ fmt(row.startAt) }} ~ {{ fmt(row.endAt) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="发布时间" prop="publishedAt" align="center" width="170">
-          <template #default="{ row }">{{ fmt(row.publishedAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" align="center" width="250" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleUpdate(row)">编辑</el-button>
-            <el-button
-              v-hasPermi="['ops:announcement:top']"
-              link
-              type="warning"
-              @click="handleTop(row)"
-            >{{ row.topFlag === 1 ? '取消置顶' : '置顶' }}</el-button>
-            <el-button v-if="row.status !== 1" link type="success" @click="handlePublish(row)">发布</el-button>
-            <el-button
-              v-if="row.status === 1"
-              v-hasPermi="['ops:announcement:status']"
-              link
-              type="info"
-              @click="handleStatus(row, 2)"
-            >禁用</el-button>
-            <el-button v-if="row.status === 2" link type="success" @click="handleStatus(row, 1)">启用</el-button>
-            <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <pagination
-        v-show="total > 0"
-        v-model:page="queryParams.pageNum"
-        v-model:limit="queryParams.pageSize"
-        :total="total"
-        @pagination="getList"
-      />
-    </el-card>
+          <el-table v-loading="loading" border :data="rows" @selection-change="handleSelectionChange">
+            <el-table-column type="selection" width="50" align="center" />
+            <el-table-column label="标题" prop="title" min-width="180" :show-overflow-tooltip="true" />
+            <el-table-column label="类型" align="center" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.announceType === 1 ? 'primary' : 'warning'">
+                  {{ row.announceType === 1 ? '公告栏' : '弹窗' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="置顶" align="center" width="80">
+              <template #default="{ row }">
+                <el-tag v-if="row.topFlag === 1" type="danger">置顶</el-tag>
+                <span v-else class="text-gray-400">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" align="center" width="90">
+              <template #default="{ row }">
+                <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="语言" prop="languageCode" align="center" width="70" />
+            <el-table-column label="生效时间" align="center" min-width="170">
+              <template #default="{ row }">
+                <span class="text-xs">{{ fmt(row.startAt) }} ~ {{ fmt(row.endAt) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="发布时间" prop="publishedAt" align="center" width="170">
+              <template #default="{ row }">{{ fmt(row.publishedAt) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" align="center" width="250" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="handleUpdate(row)">编辑</el-button>
+                <el-button v-hasPermi="['ops:announcement:top']" link type="warning" @click="handleTop(row)">
+                  {{ row.topFlag === 1 ? '取消置顶' : '置顶' }}
+                </el-button>
+                <el-button v-if="row.status !== 1" link type="success" @click="handlePublish(row)">发布</el-button>
+                <el-button
+                  v-if="row.status === 1"
+                  v-hasPermi="['ops:announcement:status']"
+                  link
+                  type="info"
+                  @click="handleStatus(row, 2)"
+                >
+                  禁用
+                </el-button>
+                <el-button v-if="row.status === 2" link type="success" @click="handleStatus(row, 1)">启用</el-button>
+                <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <pagination
+            v-show="total > 0"
+            v-model:page="queryParams.pageNum"
+            v-model:limit="queryParams.pageSize"
+            :total="total"
+            @pagination="getList"
+          />
+        </el-card>
+      </el-tab-pane>
+
+      <el-tab-pane label="顶部广播" name="broadcast">
+        <LobbyBroadcastPanel />
+      </el-tab-pane>
+    </el-tabs>
 
     <el-dialog v-model="dialog.visible" :title="dialog.title" width="720px" append-to-body destroy-on-close>
       <el-form ref="formRef" :model="form" label-width="90px">
@@ -181,8 +194,7 @@
 
 <script setup name="OpsAnnouncement" lang="ts">
 import { onMounted, reactive, ref, toRefs } from 'vue';
-import { useLoading } from '@/hooks/async/useLoading';
-import modal from '@/plugins/modal';
+import type { AnnouncementForm, AnnouncementQuery, AnnouncementVO } from '@/api/ops/announcement/types';
 import {
   addAnnouncement,
   delAnnouncement,
@@ -192,9 +204,12 @@ import {
   updateAnnouncementStatus,
   updateAnnouncementTop
 } from '@/api/ops/announcement';
-import type { AnnouncementForm, AnnouncementQuery, AnnouncementVO } from '@/api/ops/announcement/types';
+import { useLoading } from '@/hooks/async/useLoading';
+import modal from '@/plugins/modal';
+import LobbyBroadcastPanel from './components/LobbyBroadcastPanel.vue';
 
 const { loading, withLoading } = useLoading(true);
+const activeTab = ref('notices');
 const rows = ref<AnnouncementVO[]>([]);
 const total = ref(0);
 const ids = ref<number[]>([]);
@@ -246,7 +261,7 @@ const handleAdd = () => {
   dialog.visible = true;
 };
 
-const handleUpdate = (row?: AnnouncementVO) => {
+const handleUpdate = (row?: Partial<AnnouncementVO>) => {
   if (row) {
     form.value = {
       announcementId: row.announcementId,
@@ -280,26 +295,29 @@ const submitForm = async () => {
   getList();
 };
 
-const handlePublish = async (row: AnnouncementVO) => {
+const handlePublish = async (row: Partial<AnnouncementVO>) => {
+  if (!row.announcementId) return;
   await publishAnnouncement(row.announcementId);
   modal.msgSuccess('已发布');
   getList();
 };
 
-const handleTop = async (row: AnnouncementVO) => {
+const handleTop = async (row: Partial<AnnouncementVO>) => {
+  if (!row.announcementId) return;
   await updateAnnouncementTop({ id: row.announcementId, value: row.topFlag === 1 ? 0 : 1 });
   modal.msgSuccess('操作成功');
   getList();
 };
 
-const handleStatus = async (row: AnnouncementVO, value: number) => {
+const handleStatus = async (row: Partial<AnnouncementVO>, value: number) => {
+  if (!row.announcementId) return;
   await updateAnnouncementStatus({ id: row.announcementId, value });
   modal.msgSuccess('操作成功');
   getList();
 };
 
-const handleDelete = async (row?: AnnouncementVO) => {
-  const delIds = row ? [row.announcementId] : ids.value;
+const handleDelete = async (row?: Partial<AnnouncementVO>) => {
+  const delIds = row?.announcementId ? [row.announcementId] : ids.value;
   if (!delIds.length) return;
   await modal.confirm('确认删除选中的公告吗？');
   await delAnnouncement(delIds.join(','));

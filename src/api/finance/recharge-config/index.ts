@@ -7,7 +7,7 @@ import type { ConfigBatchForm, ConfigItemVO } from '@/api/member/config/types';
  *
  * 十组设置共用 member_module_config 通用 KV 表与同一套读写端点，只有分组名不同：
  * 后端实现在 go88-service-infra：GET/PUT /infra/finance/recharge-config/{groupKey}(/list)
- * 权限标识：finance:recharge-config:list | finance:recharge-config:edit
+ * 权限标识：finance:rechargeconfig:list | finance:rechargeconfig:edit
  */
 const listOf = (group: string): AxiosPromise<ConfigItemVO[]> =>
   request({ url: `/infra/finance/recharge-config/${group}/list`, method: 'get' });

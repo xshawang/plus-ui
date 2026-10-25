@@ -26,7 +26,7 @@
             <p>共 {{ total }} 个等级，配置升级阈值与权益。</p>
           </div>
           <div class="toolbar-actions">
-            <el-button v-hasPermi="['ops:vip-level:add']" type="primary" plain icon="Plus" @click="handleAdd">新增等级</el-button>
+            <el-button v-hasPermi="['ops:viplevel:add']" type="primary" plain icon="Plus" @click="handleAdd">新增等级</el-button>
           </div>
         </div>
       </template>

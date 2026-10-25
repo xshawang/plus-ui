@@ -45,8 +45,8 @@
 
 <script setup lang="ts">
 import { compressAccurately } from 'image-conversion';
-import { listByIds, delOss } from '@/api/system/oss';
 import type { OssVO, SysOssExt } from '@/api/system/oss/types';
+import { listByIds, delOss } from '@/api/system/oss';
 import modal from '@/plugins/modal';
 import { propTypes } from '@/utils/propTypes';
 import { globalHeaders } from '@/utils/request';
@@ -78,6 +78,16 @@ const props = defineProps({
   ossExt: {
     type: Object as PropType<SysOssExt>,
     default: undefined
+  },
+  // 绑定值模式：id=OSS ID 串（默认），url=图片 URL 串
+  valueMode: {
+    type: String as PropType<'id' | 'url'>,
+    default: 'id'
+  },
+  // 自定义上传地址；为空时沿用资源服务的 /resource/oss/upload
+  uploadUrl: {
+    type: String,
+    default: ''
   }
 });
 
@@ -88,7 +98,7 @@ const dialogImageUrl = ref('');
 const dialogVisible = ref(false);
 
 const baseUrl = import.meta.env.VITE_APP_BASE_API;
-const uploadImgUrl = ref(baseUrl + '/resource/oss/upload'); // 上传的图片服务器地址
+const uploadImgUrl = computed(() => props.uploadUrl || baseUrl + '/resource/oss/upload');
 const headers = computed(() => globalHeaders());
 
 const fileList = ref<any[]>([]);
@@ -101,7 +111,7 @@ const uploadData = computed(() => {
   if (!props.ossExt) return {};
   return {
     ossExt: JSON.stringify(props.ossExt)
-  }
+  };
 });
 
 // 监听 fileType 变化，更新 fileAccept
@@ -115,6 +125,12 @@ watch(
       let list: OssVO[] = [];
       if (Array.isArray(val)) {
         list = val as OssVO[];
+      } else if (props.valueMode === 'url') {
+        list = String(val)
+          .split(',')
+          .map(url => url.trim())
+          .filter(Boolean)
+          .map(url => ({ name: url, url }) as unknown as OssVO);
       } else {
         const res = await listByIds(val);
         list = res.data;
@@ -210,7 +226,9 @@ const handleDelete = (file: UploadFile): boolean => {
   const findex = fileList.value.map(f => f.name).indexOf(file.name);
   if (findex > -1 && uploadList.value.length === number.value) {
     const ossId = fileList.value[findex].ossId;
-    delOss(ossId);
+    if (ossId) {
+      delOss(ossId);
+    }
     fileList.value.splice(findex, 1);
     emit('update:modelValue', listToString(fileList.value));
     return false;
@@ -243,6 +261,12 @@ const handlePictureCardPreview = (file: any) => {
 
 // 对象转成指定字符串分隔
 const listToString = (list: any[], separator?: string) => {
+  if (props.valueMode === 'url') {
+    return list
+      .map(item => item.url)
+      .filter(url => url && url.indexOf('blob:') !== 0)
+      .join(separator || ',');
+  }
   let strs = '';
   separator = separator || ',';
   for (const i in list) {

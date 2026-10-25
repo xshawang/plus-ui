@@ -7,7 +7,8 @@
           <h3>大厅Banner</h3>
           <p class="muted">
             客户端只认加密配置 8go88.bin 里的
-            <code>bannerInfo.configBanner</code>；本页维护结构化条目，点「发布」后由后端组装回该配置并加密回写（自动备份原文件）。
+            <code>bannerInfo.configBanner</code>
+            ；本页维护结构化条目，点「发布」后由后端组装回该配置并加密回写（自动备份原文件）。
           </p>
         </div>
         <div class="toolbar-actions">
@@ -86,9 +87,10 @@
         <el-table-column label="预览" align="center" width="140">
           <template #default="{ row }">
             <el-image
-              v-if="row.imageUrl"
-              :src="row.imageUrl.startsWith('http') ? row.imageUrl : ''"
-              :preview-src-list="row.imageUrl.startsWith('http') ? [row.imageUrl] : []"
+              v-if="bannerPreviewSrc(row.imageUrl)"
+              :src="bannerPreviewSrc(row.imageUrl)"
+              :preview-src-list="[bannerPreviewSrc(row.imageUrl)]"
+              :preview-teleported="true"
               fit="contain"
               style="width: 110px; height: 40px"
             >
@@ -132,12 +134,8 @@
         </el-table-column>
         <el-table-column label="操作" align="center" width="140" fixed="right">
           <template #default="{ row }">
-            <el-button v-hasPermi="['ops:banner:edit']" link type="primary" @click="handleUpdate(row)">
-              修改
-            </el-button>
-            <el-button v-hasPermi="['ops:banner:edit']" link type="danger" @click="handleDelete(row)">
-              删除
-            </el-button>
+            <el-button v-hasPermi="['ops:banner:edit']" link type="primary" @click="handleUpdate(row)">修改</el-button>
+            <el-button v-hasPermi="['ops:banner:edit']" link type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -146,14 +144,21 @@
     <el-dialog v-model="dialog.visible" :title="dialog.title" width="700px" append-to-body destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
         <el-form-item label="Banner标识" prop="namebanner">
-          <el-input v-model="form.namebanner" :disabled="!!form.id" placeholder="如 banner_eventAseanCup（仅字母数字下划线）" />
+          <el-input
+            v-model="form.namebanner"
+            :disabled="!!form.id"
+            placeholder="如 banner_eventAseanCup（仅字母数字下划线）"
+          />
         </el-form-item>
         <el-form-item label="图片" prop="imageUrl">
           <div style="width: 100%">
-            <image-upload v-model="form.imageUrl" :limit="1" />
-            <div class="muted small">
-              新图走 OSS 上传得到 https 绝对地址（老图保留 /banner/ 相对路径，不必迁移）。
-            </div>
+            <image-upload
+              v-model="form.imageUrl"
+              value-mode="url"
+              :upload-url="bannerUploadUrl"
+              :limit="1"
+            />
+            <div class="muted small">上传后保存为 /banner/ 相对地址；已有外链或历史相对地址会原样保留。</div>
           </div>
         </el-form-item>
         <el-form-item label="跳转类型" prop="actionType">
@@ -207,7 +212,9 @@
             style="width: 45%"
           />
           <div class="muted small">
-            由服务端在下发时刻过滤：<b>改生效时间无需发布</b>，客户端下次拉取即按新时间窗生效（静态兜底文件仍为全量条目）。
+            由服务端在下发时刻过滤：
+            <b>改生效时间无需发布</b>
+            ，客户端下次拉取即按新时间窗生效（静态兜底文件仍为全量条目）。
           </div>
         </el-form-item>
         <el-form-item label="备注">
@@ -225,9 +232,9 @@
 </template>
 
 <script setup name="OpsBanner" lang="ts">
-import ImageUpload from '@/components/ImageUpload/index.vue';
-import { addBanner, delBanner, listBanner, publishBanner, sortBanner, updateBanner } from '@/api/ops/banner';
 import type { BannerForm, BannerVO } from '@/api/ops/banner/types';
+import { addBanner, delBanner, listBanner, publishBanner, sortBanner, updateBanner } from '@/api/ops/banner';
+import ImageUpload from '@/components/ImageUpload/index.vue';
 import { useLoading } from '@/hooks/async/useLoading';
 import { useDialogState } from '@/hooks/dialog/useDialogState';
 import modal from '@/plugins/modal';
@@ -247,6 +254,7 @@ const { loading: buttonLoading, withLoading: withButtonLoading } = useLoading();
 const publishing = ref(false);
 const formRef = ref<ElFormInstance>();
 const { dialog, openDialog } = useDialogState('大厅Banner');
+const bannerUploadUrl = `${import.meta.env.VITE_APP_BASE_API}/infra/ops/banner/upload-image`;
 
 const initForm: BannerForm = {
   id: undefined,
@@ -289,7 +297,11 @@ const webEnable = computed({
 const pendingTagText = (type: string) =>
   ({ ADDED: '未发布', REMOVED: '待移除', CHANGED: '已改动', ORDER_CHANGED: '顺序变更' })[type] || type;
 const pendingTagType = (type: string) =>
-  ({ ADDED: 'success', REMOVED: 'danger', CHANGED: 'warning', ORDER_CHANGED: 'info' })[type] || 'info';
+  (({ ADDED: 'success', REMOVED: 'danger', CHANGED: 'warning', ORDER_CHANGED: 'info' })[type] || 'info') as
+    | 'success'
+    | 'danger'
+    | 'warning'
+    | 'info';
 
 /**
  * 生效时间窗状态（仅页面提示）。
@@ -297,16 +309,16 @@ const pendingTagType = (type: string) =>
  * 真正的过滤发生在服务端渲染时并以**服务端时间**为准，避免客户端时间被修改后绕过上下线控制；
  * 因此这里的时间显示可能与实际生效存在秒级差异，属可接受范围。
  */
-const windowState = (row: BannerVO) => {
+const windowState = (row: Partial<BannerVO>) => {
   if (row.status !== 1) return 'OFF';
   const now = Date.now();
   if (row.effectiveStart && new Date(row.effectiveStart).getTime() > now) return 'PENDING';
   if (row.effectiveEnd && new Date(row.effectiveEnd).getTime() < now) return 'EXPIRED';
   return 'ACTIVE';
 };
-const windowTagText = (row: BannerVO) =>
+const windowTagText = (row: Partial<BannerVO>) =>
   ({ OFF: '停用', PENDING: '未开始', EXPIRED: '已过期', ACTIVE: '生效中' })[windowState(row)] || '';
-const windowTagType = (row: BannerVO) =>
+const windowTagType = (row: Partial<BannerVO>) =>
   (windowState(row) === 'ACTIVE'
     ? 'success'
     : windowState(row) === 'PENDING'
@@ -317,7 +329,9 @@ const windowTagType = (row: BannerVO) =>
 
 const fmt = (value?: string | null) => (value ? String(value).replace('T', ' ').slice(0, 19) : '—');
 const formatMoney = (value?: number) => Number(value ?? 0).toLocaleString('en-US');
-const actionLabel = (row: BannerVO) => {
+const bannerPreviewSrc = (url?: string) =>
+  url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/banner/')) ? url : '';
+const actionLabel = (row: Partial<BannerVO>) => {
   if (row.actionType === 'events') return '活动页';
   if (row.actionType === 'url') return `外链 ${row.actionUrl || ''}`;
   if (row.actionType === 'game') return `游戏 ${row.actionGameid || ''}`;
@@ -344,7 +358,7 @@ const handleAdd = () => {
   openDialog('新增大厅Banner');
 };
 
-const handleUpdate = (row: BannerVO) => {
+const handleUpdate = (row: Partial<BannerVO>) => {
   form.value = { ...row };
   openDialog('修改大厅Banner');
 };
@@ -376,7 +390,8 @@ const move = async (index: number, delta: number) => {
   await getList();
 };
 
-const handleDelete = async (row: BannerVO) => {
+const handleDelete = async (row: Partial<BannerVO>) => {
+  if (!row.id) return;
   await modal.confirm(`确认删除 Banner「${row.namebanner}」？删除后需重新发布才会同步到客户端。`);
   await delBanner([row.id]);
   modal.msgSuccess('已删除');

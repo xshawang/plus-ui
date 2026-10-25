@@ -10,7 +10,12 @@
                 <el-input v-model="queryParams.gameName" placeholder="游戏名称" clearable @keyup.enter="handleQuery" />
               </el-form-item>
               <el-form-item label="游戏编码" prop="gameCode">
-                <el-input v-model="queryParams.gameCode" placeholder="如 kts_9848" clearable @keyup.enter="handleQuery" />
+                <el-input
+                  v-model="queryParams.gameCode"
+                  placeholder="如 kts_9848"
+                  clearable
+                  @keyup.enter="handleQuery"
+                />
               </el-form-item>
               <el-form-item label="类型" prop="gameType">
                 <el-select v-model="queryParams.gameType" placeholder="全部" clearable style="width: 140px">
@@ -38,11 +43,27 @@
                 <h3>游戏目录列表</h3>
               </div>
               <div class="toolbar-actions">
-                <el-button v-hasPermi="['catalog:game:add']" type="primary" plain icon="Plus" @click="handleAdd">新增</el-button>
-                <el-button v-hasPermi="['catalog:game:edit']" type="success" plain icon="Edit" :disabled="single" @click="handleUpdate()">
+                <el-button v-hasPermi="['catalog:game:add']" type="primary" plain icon="Plus" @click="handleAdd">
+                  新增
+                </el-button>
+                <el-button
+                  v-hasPermi="['catalog:game:edit']"
+                  type="success"
+                  plain
+                  icon="Edit"
+                  :disabled="single"
+                  @click="handleUpdate()"
+                >
                   修改
                 </el-button>
-                <el-button v-hasPermi="['catalog:game:remove']" type="danger" plain icon="Delete" :disabled="multiple" @click="handleDelete()">
+                <el-button
+                  v-hasPermi="['catalog:game:remove']"
+                  type="danger"
+                  plain
+                  icon="Delete"
+                  :disabled="multiple"
+                  @click="handleDelete()"
+                >
                   删除
                 </el-button>
                 <right-toolbar v-model:show-search="showSearch" :search="false" @query-table="getList" />
@@ -50,7 +71,13 @@
             </div>
           </template>
 
-          <el-table v-loading="loading" border class="data-table" :data="gameList" @selection-change="handleSelectionChange">
+          <el-table
+            v-loading="loading"
+            border
+            class="data-table"
+            :data="gameList"
+            @selection-change="handleSelectionChange"
+          >
             <el-table-column type="selection" width="55" align="center" />
             <el-table-column label="ID" align="center" prop="id" width="80" />
             <el-table-column label="业务ID" align="center" prop="gameId" width="90" />
@@ -70,10 +97,22 @@
             <el-table-column label="操作" align="center" width="130" fixed="right">
               <template #default="{ row }">
                 <el-tooltip content="修改" placement="top">
-                  <el-button v-hasPermi="['catalog:game:edit']" link type="primary" icon="Edit" @click="handleUpdate(row)" />
+                  <el-button
+                    v-hasPermi="['catalog:game:edit']"
+                    link
+                    type="primary"
+                    icon="Edit"
+                    @click="handleUpdate(row)"
+                  />
                 </el-tooltip>
                 <el-tooltip content="删除" placement="top">
-                  <el-button v-hasPermi="['catalog:game:remove']" link type="primary" icon="Delete" @click="handleDelete(row)" />
+                  <el-button
+                    v-hasPermi="['catalog:game:remove']"
+                    link
+                    type="primary"
+                    icon="Delete"
+                    @click="handleDelete(row)"
+                  />
                 </el-tooltip>
               </template>
             </el-table-column>
@@ -114,7 +153,12 @@
               <el-col :span="12">
                 <el-form-item label="游戏类型" prop="gameType">
                   <el-select v-model="form.gameType" style="width: 100%">
-                    <el-option v-for="(label, value) in gameTypeMap" :key="value" :label="label" :value="Number(value)" />
+                    <el-option
+                      v-for="(label, value) in gameTypeMap"
+                      :key="value"
+                      :label="label"
+                      :value="Number(value)"
+                    />
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -139,7 +183,12 @@
               </el-col>
               <el-col :span="12">
                 <el-form-item label="客户端掩码" prop="clientTypeMask">
-                  <el-input-number v-model="form.clientTypeMask" :min="0" controls-position="right" style="width: 100%" />
+                  <el-input-number
+                    v-model="form.clientTypeMask"
+                    :min="0"
+                    controls-position="right"
+                    style="width: 100%"
+                  />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
@@ -174,26 +223,31 @@
               </div>
               <div class="toolbar-actions">
                 <el-button type="warning" plain icon="Refresh" :loading="syncing" @click="handleSync">同步</el-button>
-                <el-button v-hasPermi="['catalog:client-config:save']" type="primary" icon="Check" :loading="savingFile" @click="handleSaveFile">
+                <el-button
+                  v-hasPermi="['catalog:clientconfig:save']"
+                  type="primary"
+                  icon="Check"
+                  :loading="savingFile"
+                  @click="handleSaveFile"
+                >
                   保存
                 </el-button>
               </div>
             </div>
           </template>
 
-         <!-- <div class="mb-3 flex flex-wrap items-center gap-4 text-sm">
+          <!-- <div class="mb-3 flex flex-wrap items-center gap-4 text-sm">
             <el-tag :type="info.exists ? 'success' : 'danger'">{{ info.exists ? '文件存在' : '文件不存在' }}</el-tag>
             <span>大小：{{ info.size ?? '-' }}</span>
             <span>库内配置项：{{ items.length }}</span>
           </div> -->
 
           <el-table v-loading="configLoading" border class="data-table" :data="items" max-height="600">
-            <!-- 方案A：bannerInfo 由「运营管理 → 大厅Banner」维护，此处只读，避免两侧双写分叉 -->
             <el-table-column label="键" align="left" prop="configKey" min-width="220" show-overflow-tooltip>
               <template #default="{ row }">
                 <span class="font-mono">{{ row.configKey }}</span>
                 <el-tag v-if="isManagedElsewhere(row.configKey)" size="small" type="warning" class="ml-2">
-                  由大厅Banner维护
+                  由{{ managedSource(row.configKey) }}维护
                 </el-tag>
               </template>
             </el-table-column>
@@ -210,14 +264,7 @@
             </el-table-column>
             <el-table-column label="操作" align="center" width="120" fixed="right">
               <template #default="{ row }">
-                <el-tooltip v-if="isManagedElsewhere(row.configKey)" placement="top">
-                  <template #content>
-                    该配置由「运营管理 → 大厅Banner」结构化维护：<br />
-                    在此手改会在下次发布时被覆盖，请到该页面修改并点「发布到客户端」。
-                  </template>
-                  <el-button link type="info" icon="Lock" disabled />
-                </el-tooltip>
-                <el-tooltip v-else content="编辑值/说明" placement="top">
+                <el-tooltip content="编辑值/说明" placement="top">
                   <el-button link type="primary" icon="Edit" @click="openConfigDialog(row as ClientConfigItem)" />
                 </el-tooltip>
               </template>
@@ -225,13 +272,24 @@
           </el-table>
         </el-card>
 
-        <el-dialog v-model="configDialog.visible" :title="'配置项 - ' + configDialog.row?.configKey" width="720px" append-to-body top="6vh">
+        <el-dialog
+          v-model="configDialog.visible"
+          :title="'配置项 - ' + configDialog.row?.configKey"
+          width="720px"
+          append-to-body
+          top="6vh"
+        >
           <el-form label-width="80px">
             <el-form-item label="类型">
               <el-tag>{{ configDialog.row?.valueType }}</el-tag>
             </el-form-item>
             <el-form-item label="属性说明">
-              <el-input v-model="configText.description" type="textarea" :rows="2" placeholder="该配置的作用说明（结合客户端代码确认后维护）" />
+              <el-input
+                v-model="configText.description"
+                type="textarea"
+                :rows="2"
+                placeholder="该配置的作用说明（结合客户端代码确认后维护）"
+              />
             </el-form-item>
             <el-form-item label="配置值">
               <el-input v-model="configText.value" type="textarea" :rows="16" class="font-mono" />
@@ -251,6 +309,15 @@
 </template>
 
 <script setup name="CatalogMng" lang="ts">
+import { reactive, ref } from 'vue';
+import type { ClientConfigInfo, ClientConfigItem } from '@/api/catalog/client-config/types';
+import type { GameCatalogForm, GameCatalogQuery, GameCatalogVO } from '@/api/catalog/game/types';
+import {
+  getClientConfigInfo,
+  listClientConfigItems,
+  saveClientConfig,
+  syncClientConfig
+} from '@/api/catalog/client-config';
 import {
   addGameCatalog,
   changeGameCatalogStatus,
@@ -259,20 +326,11 @@ import {
   listGameCatalog,
   updateGameCatalog
 } from '@/api/catalog/game';
-import type { GameCatalogForm, GameCatalogQuery, GameCatalogVO } from '@/api/catalog/game/types';
-import {
-  getClientConfigInfo,
-  listClientConfigItems,
-  saveClientConfig,
-  syncClientConfig
-} from '@/api/catalog/client-config';
-import type { ClientConfigInfo, ClientConfigItem } from '@/api/catalog/client-config/types';
 import { useLoading } from '@/hooks/async/useLoading';
 import { useFormDialog } from '@/hooks/dialog/useFormDialog';
 import { useSearchReset } from '@/hooks/form/useSearchReset';
 import { useTableSelection } from '@/hooks/table/useTableSelection';
 import modal from '@/plugins/modal';
-import { reactive, ref } from 'vue';
 
 const gameTypeMap: Record<string, string> = {
   1: '棋牌',
@@ -456,22 +514,16 @@ const preview = (value?: string) => {
   return value.length > 160 ? value.slice(0, 160) + '...' : value;
 };
 
-/**
- * 由其它模块结构化维护、本页只读的配置键（方案A）。
- *
- * 为什么必须挡住：bannerInfo 的事实源是「运营管理 → 大厅Banner」的 ops_banner_config，
- * 在此手改的内容会在下一次「发布到客户端」时被整体覆盖（发布是"用结构化条目重建 configBanner"）。
- * 运营很难理解"改完又变回去"，因此在入口处直接禁止，并给出跳转指引。
- */
-const MANAGED_ELSEWHERE_KEYS = ['bannerInfo'];
+/** 标记同时存在结构化维护入口的配置键；仅作提示，不限制本页编辑。 */
+const MANAGED_ELSEWHERE: Record<string, string> = {
+  bannerInfo: '大厅Banner',
+  broadCastConfig: '大厅公告 → 顶部广播'
+};
+const managedSource = (configKey?: string) => (configKey ? MANAGED_ELSEWHERE[configKey] : undefined);
 const isManagedElsewhere = (configKey?: string) =>
-  !!configKey && MANAGED_ELSEWHERE_KEYS.includes(configKey);
+  !!configKey && Object.prototype.hasOwnProperty.call(MANAGED_ELSEWHERE, configKey);
 
 const openConfigDialog = (row: ClientConfigItem) => {
-  if (isManagedElsewhere(row.configKey)) {
-    modal.msgWarning('该配置由「运营管理 → 大厅Banner」维护，请到该页面修改并点「发布到客户端」');
-    return;
-  }
   configDialog.row = row;
   configText.description = row.description || '';
   configText.value = row.configValue || '';

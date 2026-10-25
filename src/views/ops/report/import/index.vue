@@ -36,7 +36,7 @@
         </el-form-item>
         <el-form-item>
           <el-upload
-            v-hasPermi="['ops:report:import:add']"
+            v-hasPermi="['ops:reportimport:add']"
             :show-file-list="false"
             :http-request="handleUpload"
             accept=".csv,.xlsx,.xls"
@@ -71,9 +71,9 @@
         </el-table-column>
         <el-table-column label="操作" align="center" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button v-hasPermi="['ops:report:import:execute']" :disabled="row.status !== 0" link type="primary" @click="handleExecute(row)">执行</el-button>
-            <el-button v-hasPermi="['ops:report:import:download']" :disabled="!row.failCount" link type="success" @click="handleFailFile(row)">下载失败明细</el-button>
-            <el-button v-hasPermi="['ops:report:import:remove']" link type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button v-hasPermi="['ops:reportimport:execute']" :disabled="row.status !== 0" link type="primary" @click="handleExecute(row)">执行</el-button>
+            <el-button v-hasPermi="['ops:reportimport:download']" :disabled="!row.failCount" link type="success" @click="handleFailFile(row)">下载失败明细</el-button>
+            <el-button v-hasPermi="['ops:reportimport:remove']" link type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
         <el-table-column label="操作人" prop="operatorName" align="center" width="110" />

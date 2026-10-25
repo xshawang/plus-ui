@@ -63,9 +63,9 @@
         <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
         <el-table-column label="操作" align="center" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button v-hasPermi="['ops:report:export:download']" :disabled="row.status !== 2" link type="primary" @click="handleDownload(row)">下载</el-button>
-            <el-button v-hasPermi="['ops:report:export:retry']" :disabled="row.status !== 3" link type="warning" @click="handleRetry(row)">重新生成</el-button>
-            <el-button v-hasPermi="['ops:report:export:remove']" link type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button v-hasPermi="['ops:reportexport:download']" :disabled="row.status !== 2" link type="primary" @click="handleDownload(row)">下载</el-button>
+            <el-button v-hasPermi="['ops:reportexport:retry']" :disabled="row.status !== 3" link type="warning" @click="handleRetry(row)">重新生成</el-button>
+            <el-button v-hasPermi="['ops:reportexport:remove']" link type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
         <el-table-column label="操作人" prop="operatorName" align="center" width="110" />

@@ -292,8 +292,8 @@ import type { CsChannelForm, CsChannelOptionsVO, CsChannelQuery, CsChannelVO } f
  * 关闭时弹窗内气泡配置置灰并提供「前往开启」，与参照页交互保持一致。
  */
 const props = withDefaults(defineProps<{ listPerm?: string; editPerm?: string }>(), {
-  listPerm: 'finance:cs-config:list',
-  editPerm: 'finance:cs-config:edit'
+  listPerm: 'finance:csconfig:list',
+  editPerm: 'finance:csconfig:edit'
 });
 
 const COLOR_HEX: Record<string, string> = { RED: '#f56c6c', GREEN: '#67c23a', BLUE: '#409eff', ORANGE: '#e6a23c' };

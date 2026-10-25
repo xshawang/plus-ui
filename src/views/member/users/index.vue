@@ -855,12 +855,12 @@ const handleGoLedger = (row: MemberUserVO) => {
 
 /** 点击累计充值：进入充值列表并按 uid 查询 */
 const handleGoRecharge = (row: MemberUserVO) => {
-  router.push({ path: '/member/recharge', query: { uid: String(row.uid) } });
+  router.push({ path: '/finance/transaction/recharge', query: { uid: String(row.uid) } });
 };
 
 /** 点击累计提现：进入提现列表并按 uid 查询 */
 const handleGoWithdraw = (row: MemberUserVO) => {
-  router.push({ path: '/member/withdraw', query: { uid: String(row.uid) } });
+  router.push({ path: '/finance/transaction/withdraw', query: { uid: String(row.uid) } });
 };
 
 /* ==================== 01 文档：批量操作 / 新增会员 / 详情跳转 ==================== */

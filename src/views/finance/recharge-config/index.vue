@@ -8,7 +8,7 @@
             <p>充值页优惠展示 / 页面展示 / 通知 / 填写信息 / 提示弹窗 / 数字货币充值 / 在线充值 / 转账充值 / 提现设置</p>
           </div>
           <div class="toolbar-actions">
-            <el-button v-hasPermi="['finance:recharge-config:edit']" type="primary" :loading="saving" @click="handleSave">
+            <el-button v-hasPermi="['finance:rechargeconfig:edit']" type="primary" :loading="saving" @click="handleSave">
               保存当前分组
             </el-button>
           </div>

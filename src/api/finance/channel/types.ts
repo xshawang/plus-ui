@@ -6,7 +6,7 @@ export interface FinanceChannelGroupVO {
   groupCode: string;
   groupName: string;
   groupIcon?: string;
-  /** 1在线充值 2转账充值 3客服代充 4数字货币 */
+  /** 1在线充值 2转账充值 3客服代充 4数字货币 5礼品卡 */
   groupType?: number;
   linkGroupCode?: string;
   sortNo?: number;
@@ -41,6 +41,49 @@ export interface FinanceChannelRouteVO {
   operatorId?: string;
   createdAt?: string;
   updatedAt?: string;
+  platform?: string;
+  direction?: number;
+  methodType?: string;
+  configRefId?: number;
+  clientCode?: string;
+  clientSubCode?: string;
+  dailyLimit?: number;
+  maintenanceCode?: string;
+  addressV1Enabled?: number;
+  addressV3Enabled?: number;
+  channelIcon?: string;
+  openTimeStart?: string;
+  openTimeEnd?: string;
+  bankCode?: string;
+  bankName?: string;
+  smartpayCode?: string;
+  account?: string;
+  receiveNumber?: string;
+  statementTime?: string;
+  timeLimit?: number;
+  orderNavigate?: number;
+  cardBrand?: string;
+  cardLabel?: string;
+  denominations?: string;
+  rate?: number;
+  coinName?: string;
+  networkName?: string;
+  address?: string;
+  qrData?: string;
+  price?: number;
+  platformRate?: number;
+  prefix?: string;
+  fee?: number;
+  bonusAmount?: number;
+  content?: string;
+  accountName?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  thirdPartyParams?: string;
+  giftCode?: string;
+  giftName?: string;
+  iconUrl?: string;
+  jumpUrl?: string;
 }
 
 export interface FinanceChannelGroupForm {
@@ -74,6 +117,49 @@ export interface FinanceChannelRouteForm {
   mergeFlag?: number;
   frontEnable?: number;
   blacklistEnable?: number;
+  platform?: string;
+  direction?: number;
+  methodType?: string;
+  configRefId?: number;
+  clientCode?: string;
+  clientSubCode?: string;
+  dailyLimit?: number;
+  maintenanceCode?: string;
+  addressV1Enabled?: number;
+  addressV3Enabled?: number;
+  channelIcon?: string;
+  openTimeStart?: string;
+  openTimeEnd?: string;
+  bankCode?: string;
+  bankName?: string;
+  smartpayCode?: string;
+  account?: string;
+  receiveNumber?: string;
+  statementTime?: string;
+  timeLimit?: number;
+  orderNavigate?: number;
+  cardBrand?: string;
+  cardLabel?: string;
+  denominations?: string;
+  rate?: number;
+  coinName?: string;
+  networkName?: string;
+  address?: string;
+  qrData?: string;
+  price?: number;
+  platformRate?: number;
+  prefix?: string;
+  fee?: number;
+  bonusAmount?: number;
+  content?: string;
+  accountName?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  thirdPartyParams?: string;
+  giftCode?: string;
+  giftName?: string;
+  iconUrl?: string;
+  jumpUrl?: string;
 }
 
 export interface FinanceChannelQuery {
@@ -84,4 +170,7 @@ export interface FinanceChannelQuery {
   groupType?: number;
   status?: number;
   frontEnable?: number;
+  platform?: string;
+  direction?: number;
+  methodType?: string;
 }

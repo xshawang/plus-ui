@@ -51,10 +51,10 @@
                 <p>共 {{ total }} 条</p>
               </div>
               <div class="toolbar-actions">
-                <el-button v-hasPermi="['member:pending-delete:edit']" type="primary" plain icon="Plus" @click="openEnqueue">人工入队</el-button>
-                <el-button v-hasPermi="['member:pending-delete:edit']" type="warning" plain icon="MagicStick" @click="openAuto">自动删除无效会员</el-button>
-                <el-button v-hasPermi="['member:pending-delete:edit']" type="danger" plain icon="Delete" :disabled="!selection.length" @click="batchExecute">批量执行删除</el-button>
-                <el-button v-hasPermi="['member:pending-delete:clear']" type="danger" icon="WarningFilled" @click="openClear">清空站点全部数据</el-button>
+                <el-button v-hasPermi="['member:pendingdelete:edit']" type="primary" plain icon="Plus" @click="openEnqueue">人工入队</el-button>
+                <el-button v-hasPermi="['member:pendingdelete:edit']" type="warning" plain icon="MagicStick" @click="openAuto">自动删除无效会员</el-button>
+                <el-button v-hasPermi="['member:pendingdelete:edit']" type="danger" plain icon="Delete" :disabled="!selection.length" @click="batchExecute">批量执行删除</el-button>
+                <el-button v-hasPermi="['member:pendingdelete:clear']" type="danger" icon="WarningFilled" @click="openClear">清空站点全部数据</el-button>
                 <el-button icon="Download" @click="exportReport">导出报表</el-button>
                 <el-button icon="QuestionFilled" @click="tutorial.visible = true">操作教程</el-button>
               </div>
@@ -112,8 +112,8 @@
             <el-table-column label="操作人" prop="operatorId" align="center" width="120" show-overflow-tooltip />
             <el-table-column label="操作" align="center" width="170" fixed="right">
               <template #default="{ row }">
-                <el-button v-hasPermi="['member:pending-delete:edit']" link type="danger" :disabled="row.status !== 1" @click="executeOne(row as PendingDeleteVO)">执行删除</el-button>
-                <el-button v-hasPermi="['member:pending-delete:edit']" link type="primary" :disabled="row.status !== 1" @click="cancelOne(row as PendingDeleteVO)">取消</el-button>
+                <el-button v-hasPermi="['member:pendingdelete:edit']" link type="danger" :disabled="row.status !== 1" @click="executeOne(row as PendingDeleteVO)">执行删除</el-button>
+                <el-button v-hasPermi="['member:pendingdelete:edit']" link type="primary" :disabled="row.status !== 1" @click="cancelOne(row as PendingDeleteVO)">取消</el-button>
               </template>
             </el-table-column>
           </el-table>

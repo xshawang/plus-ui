@@ -6,7 +6,7 @@ import request from '@/utils/request';
  * 客服代充渠道配置接口（财务管理 → 客服代充 → 代充配置；需求文档 2_财务/07）。
  *
  * 后端：go88-service-infra /infra/finance/cs-channel/**；
- * 权限：finance:cs-config:list（查询）/ finance:cs-config:edit（新增/修改/启停/删除）。
+ * 权限：finance:csconfig:list（查询）/ finance:csconfig:edit（新增/修改/启停/删除）。
  * 口径（2026-10-09 用户确认）：赠送气泡总开关独立 KV（cs_bubble_enabled）；
  * 客服类型/充值类型取字典；支持币种多选；同渠道层级唯一、未命中回落默认层级；
  * 建代充单时按「客服渠道 + 会员层级」自动带出赠送金额。

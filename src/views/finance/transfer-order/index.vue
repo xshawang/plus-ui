@@ -3,8 +3,8 @@
     <CreditOrderPanel
       order-type="TRANSFER"
       title="转账充值单"
-      list-perm="finance:transfer-order:list"
-      edit-perm="finance:transfer-order:edit"
+      list-perm="finance:transferorder:list"
+      edit-perm="finance:transferorder:edit"
     />
   </div>
 </template>

@@ -8,7 +8,7 @@
             <p>按当日累计充值分档（单位 VND）；门槛必须依次递增，未配置时报表拒绝出数。</p>
           </div>
           <div class="toolbar-actions">
-            <el-button v-hasPermi="['member:big-player:edit']" type="primary" :loading="saving" @click="handleSaveConfig">保存档位</el-button>
+            <el-button v-hasPermi="['member:bigplayer:edit']" type="primary" :loading="saving" @click="handleSaveConfig">保存档位</el-button>
           </div>
         </div>
       </template>

@@ -6,7 +6,7 @@ import request from '@/utils/request';
  * 转账充值单 / 客服代充单接口（需求文档 2_财务/06、07）。
  *
  * 两类单据共用同一套状态机与后端服务（orderType=TRANSFER/CS），仅路径与权限点不同：
- * finance:transfer-order:*、finance:cs-recharge:*
+ * finance:transferorder:*、finance:csrecharge:*
  */
 export interface CreditOrderQuery {
   uid?: number;

@@ -6,7 +6,7 @@
         <span class="collapse-title">按汇率转为数字货币充值</span>
         <el-button
           v-if="!editing"
-          v-hasPermi="['finance:recharge-config:edit']"
+          v-hasPermi="['finance:rechargeconfig:edit']"
           type="primary"
           @click="startEdit"
         >

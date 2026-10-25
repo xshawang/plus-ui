@@ -16,10 +16,10 @@
               @keyup.enter="handleQuery"
             />
             <el-button plain icon="Search" @click="handleQuery">搜索</el-button>
-            <el-button v-hasPermi="['ops:app-pack:edit']" plain icon="Setting" @click="openPublicConfig">公共配置</el-button>
-            <el-button v-hasPermi="['ops:app-pack:publish']" plain @click="handleBuild(2)">生成IOS包</el-button>
-            <el-button v-hasPermi="['ops:app-pack:publish']" type="primary" @click="handleBuild(1)">生成Android包</el-button>
-            <el-button v-hasPermi="['ops:app-pack:add']" plain icon="Plus" @click="openAppDialog()">新增APP</el-button>
+            <el-button v-hasPermi="['ops:apppack:edit']" plain icon="Setting" @click="openPublicConfig">公共配置</el-button>
+            <el-button v-hasPermi="['ops:apppack:publish']" plain @click="handleBuild(2)">生成IOS包</el-button>
+            <el-button v-hasPermi="['ops:apppack:publish']" type="primary" @click="handleBuild(1)">生成Android包</el-button>
+            <el-button v-hasPermi="['ops:apppack:add']" plain icon="Plus" @click="openAppDialog()">新增APP</el-button>
           </div>
         </div>
       </template>
@@ -82,17 +82,17 @@
           <template #default="{ row }">
             <div v-for="res in row.resources" :key="res.resourceId" class="resource-ops">
               <a v-if="res.resourceUrl" :href="res.resourceUrl" target="_blank" class="op-link">下载</a>
-              <el-button v-hasPermi="['ops:app-pack:edit']" link type="primary" @click="openReplace(row, res)">替换</el-button>
+              <el-button v-hasPermi="['ops:apppack:edit']" link type="primary" @click="openReplace(row, res)">替换</el-button>
               <el-button
                 v-if="res.googleLoginFingerprint"
-                v-hasPermi="['ops:app-pack:edit']"
+                v-hasPermi="['ops:apppack:edit']"
                 link
                 type="primary"
                 @click="openSecretDialog(res, 'fingerprint')"
               >google登录指纹</el-button>
               <el-button
                 v-if="res.facebookLoginSecret"
-                v-hasPermi="['ops:app-pack:edit']"
+                v-hasPermi="['ops:apppack:edit']"
                 link
                 type="primary"
                 @click="openSecretDialog(res, 'secret')"
@@ -108,7 +108,7 @@
         </el-table-column>
         <el-table-column label="" align="center" width="60" fixed="right">
           <template #default="{ row }">
-            <el-button v-hasPermi="['ops:app-pack:edit']" link type="primary" @click="openAppDialog(row)">编辑</el-button>
+            <el-button v-hasPermi="['ops:apppack:edit']" link type="primary" @click="openAppDialog(row)">编辑</el-button>
           </template>
         </el-table-column>
       </el-table>

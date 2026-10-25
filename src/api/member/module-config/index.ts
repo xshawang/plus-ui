@@ -6,7 +6,7 @@ import type { ConfigBatchForm, ConfigItemVO } from '@/api/member/config/types';
  * 会员模块通用配置接口（批次 8）：短信 / 邮箱 / 注册与登录 / 会员基本信息。
  *
  * 四组配置共用 member_module_config 表，只有路径与权限点不同：
- * member:sms:*、member:email:*、member:register:*、member:info-config:*
+ * member:sms:*、member:email:*、member:register:*、member:infoconfig:*
  */
 const listOf = (group: string): AxiosPromise<ConfigItemVO[]> =>
   request({ url: `/infra/member/${group}/config/list`, method: 'get' });
