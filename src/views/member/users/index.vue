@@ -15,6 +15,12 @@
           <el-form-item label="手机号" prop="phone">
             <el-input v-model="queryParams.phone" placeholder="手机号" clearable @keyup.enter="handleQuery" />
           </el-form-item>
+          <el-form-item label="同 IP" prop="loginIp">
+            <el-input v-model="queryParams.loginIp" placeholder="关联登录/注册/提现 IP" clearable @keyup.enter="handleQuery" />
+          </el-form-item>
+          <el-form-item label="设备指纹" prop="deviceFingerprint">
+            <el-input v-model="queryParams.deviceFingerprint" placeholder="设备指纹或设备号" clearable @keyup.enter="handleQuery" />
+          </el-form-item>
           <el-form-item label="状态" prop="status">
             <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 110px">
               <el-option v-for="(label, value) in userStatusMap" :key="value" :label="label" :value="Number(value)" />
@@ -564,9 +570,14 @@ import { useDateRangeQuery } from '@/hooks/form/useDateRangeQuery';
 import { useSearchReset } from '@/hooks/form/useSearchReset';
 import modal from '@/plugins/modal';
 import { nextTick, reactive, ref, toRefs } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 const router = useRouter();
+const route = useRoute();
+const queryText = (value: unknown) => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw === null || raw === undefined ? undefined : String(raw);
+};
 
 /** 账号状态：1正常 2锁定 3注销（player_account.status） */
 const userStatusMap: Record<number, string> = {
@@ -625,6 +636,8 @@ const data = reactive<{ queryParams: MemberUserQuery; form: MemberUserForm; rule
     loginName: undefined,
     nickName: undefined,
     phone: undefined,
+    loginIp: queryText(route.query.loginIp),
+    deviceFingerprint: queryText(route.query.deviceFingerprint),
     status: undefined,
     registerChannel: undefined,
     currency: 'VND',
@@ -696,6 +709,11 @@ const { resetQuery } = useSearchReset({
   resetExtras: () => {
     resetDateRange();
     queryParams.value.currency = 'VND';
+    queryParams.value.loginIp = undefined;
+    queryParams.value.deviceFingerprint = undefined;
+    if (route.query.loginIp || route.query.deviceFingerprint) {
+      router.replace({ path: route.path });
+    }
   },
   afterReset: () => handleQuery()
 });

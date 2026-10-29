@@ -1,6 +1,8 @@
 import type { AxiosPromise } from '@/utils/api-types';
 import request from '@/utils/request';
 import type {
+  DashboardMeta,
+  DashboardSnapshotResult,
   KpiResult,
   OverviewPeriod,
   OverviewResult,
@@ -9,6 +11,11 @@ import type {
   RealtimeResult,
   TrendResult
 } from './types';
+
+/** 首屏统一快照：一次返回口径、KPI、实时资金、风控和健康度。 */
+export const getDashboardSnapshot = (site?: string): AxiosPromise<DashboardSnapshotResult> => {
+  return request({ url: '/infra/report/dashboard/snapshot', method: 'get', params: { site } });
+};
 
 /**
  * 核心经营指标（6 KPI）
@@ -63,7 +70,7 @@ export const getDashboardOverview = (
 };
 
 /** 看板口径元信息（站点 / 币种 / 统计时区） */
-export const getDashboardMeta = (site?: string): AxiosPromise<{ site: string; currency: string; timezone: string }> => {
+export const getDashboardMeta = (site?: string): AxiosPromise<DashboardMeta> => {
   return request({ url: '/infra/report/dashboard/meta', method: 'get', params: { site } });
 };
 

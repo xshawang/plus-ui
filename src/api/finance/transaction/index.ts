@@ -45,6 +45,11 @@ export interface FinanceTransactionVO {
   account?: string;
   nickName?: string;
   vipLevel?: number;
+  memberLevelName?: string;
+  memberTagNames?: string;
+  memberTagColor?: string;
+  sameIpAccountCount?: number;
+  sameDeviceAccountCount?: number;
   direction: TransactionDirection;
   amount?: number;
   vndAmount?: number;
@@ -78,6 +83,18 @@ export interface FinanceTransactionVO {
   /** 有权限时返回完整收款账号/链上地址。 */
   beneficiaryNo?: string;
   beneficiaryAddress?: string;
+  /** 收款侧类型：BANK/CARD/EWALLET/CRYPTO/QUICK_PAY/P2P/GIFT_CARD。 */
+  targetType?: string;
+  /** 平台银行名或虚拟币/卡平台名。 */
+  targetPlatform?: string;
+  /** 银行/卡编码，或虚拟币“币种/网络”。 */
+  targetCode?: string;
+  /** 平台收款账号或会员提现账号。 */
+  targetAccountNo?: string;
+  /** 平台收款户名或会员提现户名。 */
+  targetAccountName?: string;
+  /** 虚拟币收款地址。 */
+  targetAddress?: string;
   cumulativeWithdrawAmount?: number;
   cumulativeWithdrawCount?: number;
   lastWithdrawAt?: string;

@@ -2,9 +2,22 @@
 
 /** KPI 单项 */
 export interface KpiItem {
-  key: 'newMembers' | 'betAmount' | 'activeUsers' | 'totalMembers' | 'pnl' | 'depositWithdrawDiff';
+  key:
+    | 'newMembers'
+    | 'betAmount'
+    | 'activeUsers'
+    | 'totalMembers'
+    | 'pnl'
+    | 'depositWithdrawDiff'
+    | 'rechargeAmount'
+    | 'withdrawApplyAmount'
+    | 'withdrawPendingAmount'
+    | 'validBet'
+    | 'ggr'
+    | 'ngr'
+    | string;
   label: string;
-  value: number;
+  value: number | null;
   kind: 'count' | 'money' | 'signed';
   tooltip?: string;
   yesterdaySamePeriod?: number | null;
@@ -17,6 +30,8 @@ export interface KpiResult {
   date: string;
   currency: string;
   items: KpiItem[];
+  metrics?: Record<string, number>;
+  yesterdayMetrics?: Record<string, number>;
 }
 
 /** 在线分钟点 */
@@ -29,6 +44,17 @@ export interface RealtimeFinance {
   rechargeAmount: number;
   rechargeUsers: number;
   rechargeCount: number;
+  withdrawApplyAmount?: number;
+  withdrawApplyUsers?: number;
+  withdrawApplyCount?: number;
+  withdrawPendingAmount?: number;
+  withdrawPendingUsers?: number;
+  withdrawPendingCount?: number;
+  withdrawPendingOldestAt?: string | null;
+  withdrawPendingOldestMinutes?: number | null;
+  withdrawPaidAmount?: number;
+  withdrawPaidUsers?: number;
+  withdrawPaidCount?: number;
   withdrawAmount: number;
   withdrawUsers: number;
   withdrawCount: number;
@@ -100,14 +126,7 @@ export interface TrendResult {
   };
 }
 
-export type OverviewPeriod =
-  | 'today'
-  | 'yesterday'
-  | 'thisWeek'
-  | 'thisMonth'
-  | 'last7'
-  | 'last30'
-  | 'custom';
+export type OverviewPeriod = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'last7' | 'last30' | 'custom';
 
 export interface OverviewResult {
   snapshotAt: string;
@@ -134,4 +153,53 @@ export interface OverviewResult {
     withdraw: TrendPoint[];
     game: TrendPoint[];
   };
+}
+
+export interface DashboardMeta {
+  site: string;
+  currency: string;
+  rawCurrency?: string;
+  amountScale?: number;
+  timezone: string;
+  globalTimezone?: string;
+  timezoneAligned?: boolean;
+  snapshotAt?: string;
+}
+
+export interface DashboardHealthSource {
+  key: string;
+  table: string;
+  description?: string;
+  lastAt?: string | null;
+  lagSeconds?: number | null;
+  thresholdSeconds?: number;
+  status: 'OK' | 'BROKEN';
+  message?: string;
+}
+
+export interface DashboardHealth {
+  snapshotAt: string;
+  site: string;
+  timezone: string;
+  currency: string;
+  healthy: boolean;
+  broken: string[];
+  sources: DashboardHealthSource[];
+}
+
+export interface DashboardAlert {
+  key: string;
+  label: string;
+  level: 'warning' | 'danger';
+  count: number;
+  amount?: number | null;
+}
+
+export interface DashboardSnapshotResult {
+  meta: DashboardMeta;
+  kpi: KpiResult;
+  realtime: RealtimeResult;
+  risk: import('./risk-types').RiskTodayResult;
+  health: DashboardHealth;
+  alerts: DashboardAlert[];
 }

@@ -187,26 +187,48 @@
             <div class="text-gray-400 text-sm">{{ row.uid }}</div>
           </template>
         </el-table-column>
-        <el-table-column v-if="activeTab === 'withdraw'" label="收款地址 / 收款人" min-width="270">
+        <el-table-column v-if="activeTab === 'withdraw'" label="会员标签 / 等级" min-width="210">
           <template #default="{ row }">
-            <div v-if="row.beneficiaryNo" class="withdraw-beneficiary-cell">
-              <div class="withdraw-beneficiary-account">
-                <code>{{ row.beneficiaryNo }}</code>
+            <div class="member-level-line">
+              <el-tag size="small" type="info" effect="plain">{{ row.memberLevelName || '默认层级' }}</el-tag>
+              <span class="text-gray-400 text-sm">VIP {{ row.vipLevel ?? 0 }}</span>
+            </div>
+            <div v-if="memberTagItems(row as FinanceTransactionVO).length" class="member-tag-line">
+              <el-tag
+                v-for="tag in memberTagItems(row as FinanceTransactionVO)"
+                :key="tag.name"
+                size="small"
+                effect="dark"
+                :style="{ backgroundColor: tag.color, borderColor: tag.color }"
+              >
+                {{ tag.name }}
+              </el-tag>
+            </div>
+            <span v-else class="text-gray-400">无标签</span>
+          </template>
+        </el-table-column>
+        <el-table-column :label="targetColumnLabel" min-width="300">
+          <template #default="{ row }">
+            <div v-if="hasTargetInfo(row as FinanceTransactionVO)" class="withdraw-beneficiary-cell">
+              <div class="target-platform-line">
+                <el-tag size="small" effect="plain">{{ targetTypeLabel(row.targetType) }}</el-tag>
+                <strong>{{ targetPlatformText(row as FinanceTransactionVO) }}</strong>
+              </div>
+              <div v-if="row.targetCode" class="target-code">{{ row.targetCode }}</div>
+              <div v-if="row.targetAccountName" class="withdraw-beneficiary-user">
+                户名：{{ row.targetAccountName }}
+              </div>
+              <div v-if="targetValue(row as FinanceTransactionVO)" class="withdraw-beneficiary-account">
+                <code>{{ targetValue(row as FinanceTransactionVO) }}</code>
                 <el-button
                   link
                   type="primary"
                   icon="CopyDocument"
-                  @click.stop="copyTransactionText(row.beneficiaryNo, '收款账号')"
+                  @click.stop="copyTransactionText(targetValue(row as FinanceTransactionVO), '收款账号')"
                 />
               </div>
-              <div class="withdraw-beneficiary-user">{{ row.beneficiaryName || '未填写收款人' }}</div>
-              <div v-if="row.beneficiaryAddress" class="text-gray-400 text-sm">{{ row.beneficiaryAddress }}</div>
             </div>
-            <div v-else class="withdraw-beneficiary-masked">
-              <code>{{ row.beneficiaryMask || '—' }}</code>
-              <el-tag size="small" type="warning" effect="plain">仅掩码</el-tag>
-              <div class="withdraw-beneficiary-user">{{ row.beneficiaryName || '未填写收款人' }}</div>
-            </div>
+            <span v-else class="text-gray-400">—</span>
           </template>
         </el-table-column>
         <template v-if="activeTab === 'withdraw'">
@@ -316,9 +338,8 @@
         <el-table-column label="完成时间" width="170">
           <template #default="{ row }">{{ fmtTransactionTime(row.finishedAt) }}</template>
         </el-table-column>
-        <el-table-column v-if="activeTab === 'withdraw'" label="客户端 / IP" min-width="210">
+        <el-table-column v-if="activeTab === 'withdraw'" label="客户端" min-width="190">
           <template #default="{ row }">
-            <div>{{ row.clientIp || '-' }}</div>
             <div
               v-if="row.clientOs || row.clientOsVersion || row.clientBrowser || row.clientBrowserVersion"
               class="text-gray-400 text-sm"
@@ -326,6 +347,54 @@
               {{ clientSystemLabel(row as FinanceTransactionVO) }}
             </div>
             <div v-if="row.appVersion" class="text-gray-400 text-sm">APP {{ row.appVersion }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column v-if="activeTab === 'withdraw'" label="提现 IP / 关联账号" min-width="210">
+          <template #default="{ row }">
+            <template v-if="row.clientIp">
+              <a
+                class="relation-link"
+                :href="memberUsersByIpHref(row.clientIp)"
+                @click.prevent.stop="navigateTo(memberUsersByIpHref(row.clientIp))"
+              >
+                {{ row.clientIp }}
+              </a>
+              <div class="link-count">
+                同 IP 账号：
+                <a
+                  class="relation-link"
+                  :href="memberUsersByIpHref(row.clientIp)"
+                  @click.prevent.stop="navigateTo(memberUsersByIpHref(row.clientIp))"
+                >
+                  {{ row.sameIpAccountCount ?? 0 }}
+                </a>
+              </div>
+            </template>
+            <span v-else class="text-gray-400">未采集</span>
+          </template>
+        </el-table-column>
+        <el-table-column v-if="activeTab === 'withdraw'" label="设备 / 关联账号" min-width="245">
+          <template #default="{ row }">
+            <template v-if="row.deviceFingerprint">
+              <a
+                class="device-link"
+                :href="memberUsersByDeviceHref(row.deviceFingerprint)"
+                @click.prevent.stop="navigateTo(memberUsersByDeviceHref(row.deviceFingerprint))"
+              >
+                {{ row.deviceFingerprint }}
+              </a>
+              <div class="link-count">
+                同设备账号：
+                <a
+                  class="relation-link"
+                  :href="memberUsersByDeviceHref(row.deviceFingerprint)"
+                  @click.prevent.stop="navigateTo(memberUsersByDeviceHref(row.deviceFingerprint))"
+                >
+                  {{ row.sameDeviceAccountCount ?? 0 }}
+                </a>
+              </div>
+            </template>
+            <span v-else class="text-gray-400">未采集</span>
           </template>
         </el-table-column>
         <el-table-column v-if="activeTab === 'recharge'" label="客户端 / IP / 设备" min-width="240">
@@ -697,25 +766,33 @@
                 <strong>VIP{{ detail.transaction.vipLevel ?? 0 }}</strong>
               </div>
               <div class="tx-field">
-                <span>收款账户</span>
+                <span>收款类型</span>
+                <strong>{{ targetTypeLabel(detail.transaction.targetType) }}</strong>
+              </div>
+              <div class="tx-field">
+                <span>收款平台</span>
+                <strong>{{ targetPlatformText(detail.transaction) }}</strong>
+              </div>
+              <div v-if="detail.transaction.targetCode" class="tx-field">
+                <span>收款编码</span>
+                <strong>{{ detail.transaction.targetCode }}</strong>
+              </div>
+              <div class="tx-field">
+                <span>收款账号/地址</span>
                 <div class="tx-inline-value">
-                  <code>{{ detail.transaction.beneficiaryNo || detail.transaction.beneficiaryMask || detail.transaction.payerMask || '-' }}</code>
+                  <code>{{ targetValue(detail.transaction) || detail.transaction.beneficiaryMask || detail.transaction.payerMask || '-' }}</code>
                   <el-button
-                    v-if="detail.transaction.beneficiaryNo"
+                    v-if="targetValue(detail.transaction) || detail.transaction.beneficiaryNo"
                     link
                     type="primary"
                     icon="CopyDocument"
-                    @click="copyTransactionText(detail.transaction.beneficiaryNo, '收款账号')"
+                    @click="copyTransactionText(targetValue(detail.transaction) || detail.transaction.beneficiaryNo, '收款账号')"
                   />
                 </div>
               </div>
               <div class="tx-field">
-                <span>收款人</span>
-                <strong>{{ detail.transaction.beneficiaryName || '-' }}</strong>
-              </div>
-              <div v-if="detail.transaction.beneficiaryAddress" class="tx-field">
-                <span>渠道收款地址</span>
-                <strong>{{ detail.transaction.beneficiaryAddress }}</strong>
+                <span>收款户名</span>
+                <strong>{{ detail.transaction.targetAccountName || detail.transaction.beneficiaryName || '-' }}</strong>
               </div>
               <div v-if="detail.transaction.voucherUrl" class="tx-field">
                 <span>支付凭证</span>
@@ -971,6 +1048,19 @@ const resolveTab = (value?: string): FinanceTransactionTab => {
 
 const route = useRoute();
 const router = useRouter();
+
+const memberTagItems = (row: FinanceTransactionVO) => {
+  const names = String(row.memberTagNames || '').split(',').filter(Boolean);
+  const colors = String(row.memberTagColor || '').split(',');
+  return names.map((name, index) => ({ name, color: colors[index] || '#909399' }));
+};
+
+const memberUsersByIpHref = (ip?: string) =>
+  router.resolve({ path: '/member/users', query: { loginIp: ip } }).href;
+const memberUsersByDeviceHref = (device?: string) =>
+  router.resolve({ path: '/member/users', query: { deviceFingerprint: device } }).href;
+const navigateTo = (href: string) => window.location.assign(href);
+
 const activeTab = ref<FinanceTransactionTab>(resolveTab(props.initialTab || String(route.query.tab || 'all')));
 const loading = ref(false);
 const notificationLoading = ref(false);
@@ -1166,6 +1256,11 @@ const tabTitle = computed(() => ({
   manual: '手工充值',
   exchange: '交易所 OTC'
 }[activeTab.value] || '全部交易'));
+const targetColumnLabel = computed(() => {
+  if (activeTab.value === 'recharge') return '平台收款信息';
+  if (activeTab.value === 'withdraw') return '会员提现收款信息';
+  return '收款信息';
+});
 
 const tabSourceTypes = (): string[] | undefined => {
   if (activeTab.value === 'recharge') return ['ONLINE_DEPOSIT', 'TRANSFER_DEPOSIT', 'CS_DEPOSIT'];
@@ -1407,6 +1502,32 @@ const resetCreditDialog = () => {
 };
 
 const settlementCurrency = (row: FinanceTransactionVO) => row.settlementCurrency || row.currency || 'VND';
+const targetTypeLabel = (value?: string) => ({
+  BANK: '银行',
+  CARD: '充值卡',
+  EWALLET: '电子钱包',
+  CRYPTO: '虚拟币',
+  QUICK_PAY: '快捷支付',
+  GIFT_CARD: '礼品卡',
+  P2P: 'P2P',
+  COIN12: 'Coin12'
+}[value || ''] || value || '—');
+const targetPlatformText = (row: FinanceTransactionVO) => {
+  const value = row.targetPlatform || '';
+  const known: Record<string, string> = {
+    binance: 'Binance',
+    houbi: 'HTX',
+    htx: 'HTX',
+    remitano: 'Remitano',
+    coin12: 'Coin12',
+    bybit: 'Bybit',
+    okx: 'OKX'
+  };
+  return known[value.toLowerCase()] || value || '—';
+};
+const hasTargetInfo = (row: FinanceTransactionVO) =>
+  Boolean(row.targetPlatform || row.targetCode || row.targetAccountNo || row.targetAccountName || row.targetAddress);
+const targetValue = (row: FinanceTransactionVO) => row.targetAddress || row.targetAccountNo || row.beneficiaryNo || '';
 
 const osLabel = (row: FinanceTransactionVO) => {
   const name = row.clientOs?.trim() || '';
@@ -1545,13 +1666,18 @@ const handleExport = () => {
     modal.msgWarning('当前页没有可导出的数据');
     return;
   }
-  const header = ['来源', '订单号', 'UID', '账号', '提现大类', '方向', '申请金额', '实际到账', '手续费',
-    '收款账号', '收款人', '累计提现金额', '累计提现次数', '最后提现时间', '渠道', '方式', '商户',
+  const header = ['来源', '订单号', 'UID', '账号', '会员层级', '会员标签', '同IP账号数',
+    '设备指纹', '同设备账号数', '提现大类', '方向', '申请金额', '实际到账', '手续费',
+    '收款类型', '收款平台', '收款编码', '收款账号/地址', '收款户名',
+    '累计提现金额', '累计提现次数', '最后提现时间', '渠道', '方式', '商户',
     '状态', '失败原因', '通知状态', '客户端IP', '创建时间', '完成时间'];
   const lines = rows.value.map((row) => [
-    sourceLabel(row.sourceType), row.orderNo, row.uid, row.account, row.withdrawTabCode,
-    row.direction, row.amount, row.arriveAmount, row.feeAmount, row.beneficiaryNo || row.beneficiaryMask,
-    row.beneficiaryName, row.cumulativeWithdrawAmount, row.cumulativeWithdrawCount, row.lastWithdrawAt,
+    sourceLabel(row.sourceType), row.orderNo, row.uid, row.account, row.memberLevelName,
+    row.memberTagNames, row.sameIpAccountCount, row.deviceFingerprint, row.sameDeviceAccountCount,
+    row.withdrawTabCode,
+    row.direction, row.amount, row.arriveAmount, row.feeAmount, targetTypeLabel(row.targetType),
+    targetPlatformText(row), row.targetCode, targetValue(row), row.targetAccountName,
+    row.cumulativeWithdrawAmount, row.cumulativeWithdrawCount, row.lastWithdrawAt,
     row.channel, row.methodType, row.merchantName, row.status, row.failMsg, row.notifyStatus,
     row.clientIp, row.createdAt, row.finishedAt
   ].map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(','));
@@ -1687,6 +1813,55 @@ onMounted(async () => {
 .withdraw-beneficiary-user {
   margin-top: 4px;
   color: var(--el-text-color-regular);
+  font-size: 12px;
+}
+
+.member-level-line,
+.member-tag-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.member-tag-line {
+  margin-top: 6px;
+}
+
+.link-count {
+  margin-top: 5px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.device-link {
+  display: inline-block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.relation-link,
+.device-link {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+.relation-link:hover,
+.device-link:hover {
+  text-decoration: underline;
+}
+
+.target-platform-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.target-code {
+  margin-top: 3px;
+  color: var(--el-text-color-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
 }
 

@@ -38,10 +38,10 @@ let resizeObserver: ResizeObserver | undefined;
 
 const compactNumber = (value: number) => {
   const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return (value / 1_000_000_000).toFixed(2).replace(/\.?0+$/, '') + 'B';
-  if (abs >= 1_000_000) return (value / 1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'M';
-  if (abs >= 10_000) return (value / 1_000).toFixed(1).replace(/\.?0$/, '') + 'K';
-  return String(value);
+  if (abs >= 1_000_000_000) return Math.round(value / 1_000_000_000).toLocaleString('en-US') + 'B';
+  if (abs >= 1_000_000) return Math.round(value / 1_000_000).toLocaleString('en-US') + 'M';
+  if (abs >= 10_000) return Math.round(value / 1_000).toLocaleString('en-US') + 'K';
+  return Math.round(value).toLocaleString('en-US');
 };
 
 const buildOption = () => {
@@ -60,7 +60,7 @@ const buildOption = () => {
         const row = params?.[0];
         if (!row) return '';
         const raw = row.value;
-        const text = raw === null || raw === undefined ? '暂无数据' : String(raw);
+        const text = raw === null || raw === undefined ? '暂无数据' : Math.round(raw).toLocaleString('en-US');
         return `${row.axisValue}<br/>${props.seriesName}：${text}`;
       }
     },

@@ -160,6 +160,10 @@ export interface MemberUserQuery extends PageQuery {
   nickName?: string;
   /** 手机号 */
   phone?: string;
+  /** 同 IP 查询 */
+  loginIp?: string;
+  /** 同设备指纹查询 */
+  deviceFingerprint?: string;
   /** 账号状态 */
   status?: number;
   /** 注册渠道 */

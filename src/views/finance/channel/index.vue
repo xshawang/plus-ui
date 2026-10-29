@@ -13,8 +13,9 @@
             <el-option label="在线充值" :value="1" />
             <el-option label="转账充值" :value="2" />
             <el-option label="客服代充" :value="3" />
-            <el-option label="数字货币" :value="4" />
+            <el-option label="加密货币" :value="4" />
             <el-option label="礼品卡" :value="5" />
+            <el-option label="P2P 充值" :value="6" />
           </el-select>
         </el-form-item>
         <el-form-item label="支付方式">
@@ -37,6 +38,18 @@
         口径：充值大类对应玩家端收银台一级入口，子通道承载通道编号/三方商户/限额/推荐金额/费率/成功率；
         金额单位一律为分（VND1000:1）。
       </div>
+      <el-alert
+        title="加密货币配置已合并到充值通道"
+        type="info"
+        :closable="false"
+        show-icon
+        class="mt-3"
+      >
+        <template #default>
+          CRYPTO 通道的币种、网络、平台价格、收款地址和二维码直接读写
+          <code>crypto_config</code>；保存后充值接口实时查表，无需单独进入“加密货币配置”页面。
+        </template>
+      </el-alert>
     </el-card>
 
     <el-card shadow="hover" class="table-panel">
@@ -63,7 +76,9 @@
                 {{ group.status === 1 ? '启用' : '停用' }}
               </el-tag>
               <span class="ml-3 text-gray-400 text-sm">排序 {{ group.sortNo ?? 0 }}</span>
-              <span class="ml-3 text-gray-400 text-sm">通道 {{ (group.routes || []).length }} 条</span>
+              <span class="ml-3 text-gray-400 text-sm">
+                通道 {{ isQuickPayGroup(group) ? quickPayRoutes(group).length : (group.routes || []).length }} 条
+              </span>
             </div>
           </template>
           <div class="group-actions">
@@ -73,9 +88,66 @@
             </el-button>
             <el-button v-hasPermi="['finance:channel:edit']" link type="primary" @click="handleAddRoute(group)">新增通道</el-button>
           </div>
+          <el-alert
+            v-if="isQuickPayGroup(group)"
+            :title="quickPayMatchTitle(group)"
+            :type="quickPayMatched(group) ? 'success' : 'warning'"
+            :closable="false"
+            show-icon
+            class="client-contract-alert"
+          >
+            <template #default>
+              客户端固定展示 4 个快捷充值平台：FastPay、SNAP QR、1PAY、TAP SCAN。
+              后台只能启用与客户端匹配的这 4 条通道，平台图标、名称和编码均可在“修改”中维护。
+            </template>
+          </el-alert>
+          <el-alert
+            v-if="isEwalletGroup(group)"
+            title="电子钱包按 Viettel Money、MoMo、ZaloPay 分别下发"
+            type="info"
+            :closable="false"
+            show-icon
+            class="client-contract-alert"
+          >
+            <template #default>
+              每一行独立维护客户端编码、渠道名称、图标、收款账号、收款户名、限额、在线时段和超时分钟；
+              “Nội Dung”及 QR 倒计时来自实际订单，不由静态配置写死。
+            </template>
+          </el-alert>
+          <el-alert
+            v-if="isP2pGroup(group)"
+            title="P2P 使用独立渠道配置，充值订单仍需支付确认后才可入账"
+            type="warning"
+            :closable="false"
+            show-icon
+            class="client-contract-alert"
+          >
+            <template #default>
+              P2P 交易对手、成交价、支付超时、挂单文案及平台收款信息保存在
+              <code>finance_withdraw_channel</code>；本页编辑不会伪造充值成功，充值记录先以“待支付/处理中”展示。
+            </template>
+          </el-alert>
           <el-table :data="filterRoutes(group)" border size="small">
             <el-table-column label="通道编号" prop="routeCode" align="center" width="120" />
             <el-table-column label="通道名称" prop="channelName" align="left" min-width="150" show-overflow-tooltip />
+            <el-table-column label="支付方式" align="center" width="110">
+              <template #default="{ row }">{{ methodLabel(row.methodType) }}</template>
+            </el-table-column>
+            <el-table-column label="运行平台" prop="platform" align="center" width="90" />
+            <el-table-column v-if="isQuickPayGroup(group)" label="客户端平台标识" align="left" min-width="150">
+              <template #default="{ row }">
+                <el-tag :type="quickPayPlatformMatches(row as FinanceChannelRouteVO) ? 'success' : 'danger'">
+                  {{ quickPayPlatformCode(row as FinanceChannelRouteVO) }}
+                </el-tag>
+                <span v-if="!quickPayPlatformMatches(row as FinanceChannelRouteVO)" class="text-xs text-red-500 ml-2">
+                  应为 {{ row.routeCode }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="方向" align="center" width="80">
+              <template #default="{ row }">{{ row.direction === 2 ? '提现' : '充值' }}</template>
+            </el-table-column>
+            <el-table-column label="所属商户" prop="merchantName" align="left" min-width="170" show-overflow-tooltip />
             <el-table-column label="图标" align="center" width="72">
               <template #default="{ row }">
                 <el-image
@@ -88,27 +160,71 @@
                 <span v-else class="text-gray-400">-</span>
               </template>
             </el-table-column>
-            <el-table-column label="排序" prop="subSort" align="center" width="70" />
-            <el-table-column label="所属商户" prop="merchantName" align="left" min-width="170" show-overflow-tooltip />
-            <el-table-column label="平台" prop="platform" align="center" width="80" />
-            <el-table-column label="方向" align="center" width="80">
-              <template #default="{ row }">{{ row.direction === 2 ? '提现' : '充值' }}</template>
+            <el-table-column
+              v-if="isCryptoGroup(group)"
+              label="币种 / 网络"
+              align="left"
+              min-width="145"
+              show-overflow-tooltip
+            >
+              <template #default="{ row }">
+                {{ [row.coinName || row.clientCode, row.networkName || row.clientSubCode].filter(Boolean).join(' / ') || '未配置' }}
+              </template>
             </el-table-column>
-            <el-table-column label="支付方式" align="center" width="110">
-              <template #default="{ row }">{{ methodLabel(row.methodType) }}</template>
-            </el-table-column>
-            <el-table-column label="客户端标识" align="left" min-width="180" show-overflow-tooltip>
+            <el-table-column
+              v-else-if="!isQuickPayGroup(group)"
+              label="客户端标识"
+              align="left"
+              min-width="180"
+              show-overflow-tooltip
+            >
               <template #default="{ row }">{{ clientIdentity(row as FinanceChannelRouteVO) }}</template>
+            </el-table-column>
+            <el-table-column
+              v-if="showsAccountColumns(group)"
+              label="收款账户号"
+              align="left"
+              min-width="170"
+              show-overflow-tooltip
+            >
+              <template #default="{ row }">
+                <code v-if="accountNumber(row as FinanceChannelRouteVO)" class="account-value">
+                  {{ accountNumber(row as FinanceChannelRouteVO) }}
+                </code>
+                <span v-else class="text-red-500">未配置</span>
+              </template>
+            </el-table-column>
+            <el-table-column
+              v-if="showsAccountColumns(group)"
+              label="收款账户名"
+              align="left"
+              min-width="150"
+              show-overflow-tooltip
+            >
+              <template #default="{ row }">
+                <span v-if="row.accountName">{{ row.accountName }}</span>
+                <span v-else class="text-red-500">未配置</span>
+              </template>
+            </el-table-column>
+            <el-table-column
+              v-if="isCryptoGroup(group)"
+              label="平台收款地址"
+              align="left"
+              min-width="220"
+              show-overflow-tooltip
+            >
+              <template #default="{ row }">
+                <code v-if="row.address" class="crypto-address">{{ row.address }}</code>
+                <span v-else class="text-gray-400">未配置</span>
+              </template>
             </el-table-column>
             <el-table-column label="客户端下发值" align="left" min-width="230" show-overflow-tooltip>
               <template #default="{ row }">{{ clientDetailSummary(row as FinanceChannelRouteVO) }}</template>
             </el-table-column>
-            <el-table-column label="币种" prop="currency" align="center" width="80" />
-            <el-table-column label="费率(%)" prop="feeRate" align="right" width="90" />
-            <el-table-column label="成功率(%)" prop="successRate" align="right" width="100" />
             <el-table-column label="单笔限额" align="right" width="180">
               <template #default="{ row }">{{ formatMoneyRange(row.amountMin ?? 0, row.amountMax ?? 0) }}</template>
             </el-table-column>
+            <el-table-column label="币种" prop="currency" align="center" width="80" />
             <el-table-column label="开放时段" align="center" width="125">
               <template #default="{ row }">{{ row.openTimeStart || '00:00' }} - {{ row.openTimeEnd || '23:59' }}</template>
             </el-table-column>
@@ -120,6 +236,9 @@
               show-overflow-tooltip
               :formatter="moneyListColumnFormatter"
             />
+            <el-table-column label="费率(%)" prop="feeRate" align="right" width="90" />
+            <el-table-column label="成功率(%)" prop="successRate" align="right" width="100" />
+            <el-table-column label="排序" prop="subSort" align="center" width="70" />
             <el-table-column label="维护开关" align="center" width="100">
               <template #default="{ row }">
                 <el-switch
@@ -130,7 +249,7 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column label="通道合并" align="center" width="100">
+            <el-table-column v-if="!isP2pGroup(group)" label="通道合并" align="center" width="100">
               <template #default="{ row }">
                 <el-switch
                   :model-value="row.mergeFlag"
@@ -140,7 +259,7 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column label="充值黑名单" align="center" width="110">
+            <el-table-column v-if="!isP2pGroup(group)" label="充值黑名单" align="center" width="110">
               <template #default="{ row }">
                 <el-switch
                   :model-value="row.blacklistEnable"
@@ -153,7 +272,15 @@
             <el-table-column label="操作" align="center" fixed="right" width="130">
               <template #default="{ row }">
                 <el-button v-hasPermi="['finance:channel:edit']" link type="primary" @click="handleEditRoute(row as FinanceChannelRouteVO)">修改</el-button>
-                <el-button v-hasPermi="['finance:channel:edit']" link type="danger" @click="handleDeleteRoute(row as FinanceChannelRouteVO)">删除</el-button>
+                <el-button
+                  v-if="!isP2pGroup(group)"
+                  v-hasPermi="['finance:channel:edit']"
+                  link
+                  type="danger"
+                  @click="handleDeleteRoute(row as FinanceChannelRouteVO)"
+                >
+                  删除
+                </el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -174,8 +301,9 @@
             <el-option label="在线充值" :value="1" />
             <el-option label="转账充值" :value="2" />
             <el-option label="客服代充" :value="3" />
-            <el-option label="数字货币" :value="4" />
+            <el-option label="加密货币" :value="4" />
             <el-option label="礼品卡" :value="5" />
+            <el-option label="P2P 充值" :value="6" />
           </el-select>
         </el-form-item>
         <el-form-item label="图标URL">
@@ -212,7 +340,11 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="通道编号" prop="routeCode">
-              <el-input v-model="routeForm.routeCode" placeholder="如 TRC20 / QR3 / Momo 1" />
+              <el-input
+                v-model="routeForm.routeCode"
+                placeholder="如 FASTPAY / TRC20 / MOMO"
+                @input="syncQuickPayIdentity"
+              />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -221,8 +353,8 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="平台标识" prop="platform">
-              <el-input v-model="routeForm.platform" placeholder="go88" />
+            <el-form-item label="运行平台" prop="platform">
+              <el-input v-model="routeForm.platform" placeholder="部署环境，通常为 go88" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -325,12 +457,12 @@
               <el-switch v-model="routeForm.blacklistEnable" :active-value="1" :inactive-value="0" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col v-if="routeForm.methodType !== 'QUICK_PAY'" :span="12">
             <el-form-item label="客户端编码">
               <el-input v-model="routeForm.clientCode" placeholder="银行编码 / 卡品牌 / 币种 / 快捷前缀" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col v-if="routeForm.methodType !== 'QUICK_PAY'" :span="12">
             <el-form-item label="客户端子编码">
               <el-input v-model="routeForm.clientSubCode" placeholder="网络（如 BEP20 / TRC20）" />
             </el-form-item>
@@ -356,23 +488,28 @@
           </el-col>
           <template v-if="routeForm.methodType === 'BANKS' || routeForm.methodType === 'EWALLET'">
             <el-col :span="12">
-              <el-form-item label="银行/渠道编码">
+              <el-form-item label="收款账号">
+                <el-input v-model="routeForm.account" placeholder="客户端 account_no / SĐT" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="收款户名">
+                <el-input v-model="routeForm.accountName" placeholder="客户端 account_name / Tên TK" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="客户端通道编码">
                 <el-input v-model="routeForm.bankCode" placeholder="如 VCB / MOMO" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="银行/渠道名称">
+              <el-form-item label="客户端通道名称">
                 <el-input v-model="routeForm.bankName" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="SmartPay编码">
                 <el-input v-model="routeForm.smartpayCode" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="收款账号">
-                <el-input v-model="routeForm.account" placeholder="客户端 account 字段" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -407,6 +544,89 @@
             </el-col>
           </template>
 
+          <template v-if="routeForm.methodType === 'P2P'">
+            <el-col :span="24">
+              <el-divider content-position="left">P2P 充值平台与客户端展示</el-divider>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="交易对手用户名">
+                <el-input v-model="routeForm.p2pMakerUserName" placeholder="p2p-6585612" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="交易对手显示名">
+                <el-input v-model="routeForm.p2pMakerDisplayName" placeholder="P2P Platform" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="成交价（VND/币）">
+                <el-input-number
+                  v-model="routeForm.p2pPrice"
+                  :min="0.00000001"
+                  :precision="8"
+                  controls-position="right"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="P2P 资产名称">
+                <el-input v-model="routeForm.p2pAssetName" placeholder="KDG" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="支付超时（分钟）">
+                <el-input-number
+                  v-model="routeForm.p2pPaymentTimeLimit"
+                  :min="1"
+                  :max="1440"
+                  controls-position="right"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="最低累计充值">
+                <el-input-number
+                  v-model="routeForm.p2pMinTotalDeposit"
+                  :min="0"
+                  controls-position="right"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="平台收款银行编码">
+                <el-input v-model="routeForm.p2pDepositBankCode" placeholder="客户端 toBankCode" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="平台收款账号">
+                <el-input v-model="routeForm.p2pDepositAccountNo" placeholder="客户端 toAccountNo" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="平台收款户名">
+                <el-input v-model="routeForm.p2pDepositAccountName" placeholder="客户端 toAccountName" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="转账内容模板">
+                <el-input v-model="routeForm.p2pDepositContent" placeholder="如 P2P-{orderNo}" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="挂单自动回复">
+                <el-input v-model="routeForm.p2pAutoReplyText" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <el-form-item label="挂单备注">
+                <el-input v-model="routeForm.p2pNote" type="textarea" :rows="2" />
+              </el-form-item>
+            </el-col>
+          </template>
+
           <el-col v-if="routeForm.methodType === 'CARD'" :span="24">
             <el-divider content-position="left">充值卡客户端明细</el-divider>
           </el-col>
@@ -434,7 +654,7 @@
           </template>
 
           <el-col v-if="routeForm.methodType === 'CRYPTO'" :span="24">
-            <el-divider content-position="left">数字货币客户端明细</el-divider>
+            <el-divider content-position="left">加密货币配置（crypto_config）</el-divider>
           </el-col>
           <template v-if="routeForm.methodType === 'CRYPTO'">
             <el-col :span="12">
@@ -448,9 +668,9 @@
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="虚拟币兑平台币">
+              <el-form-item label="平台价格（平台币/币）">
                 <el-input-number v-model="routeForm.platformRate" :min="0" controls-position="right" style="width: 100%" />
-                <span class="field-hint">如 1 USDT = 1000 平台币</span>
+                <span class="field-hint">同时写入 crypto_config.price 和 platform_rate</span>
               </el-form-item>
             </el-col>
             <el-col :span="24">
@@ -473,28 +693,34 @@
           </el-col>
           <template v-if="routeForm.methodType === 'QUICK_PAY'">
             <el-col :span="12">
-              <el-form-item label="档位前缀">
-                <el-input v-model="routeForm.prefix" />
+              <el-form-item label="客户端平台标识" prop="clientCode">
+                <el-input v-model="routeForm.clientCode" placeholder="FASTPAY / SNAPQR / 1PAY / TAPSCAN" />
+                <span class="field-hint">下发字段 bankcode，必须与通道编号一致</span>
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="充值金额">
+              <el-form-item label="档位前缀" prop="prefix">
+                <el-input v-model="routeForm.prefix" placeholder="通常与通道编号一致" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="收款账户号" prop="receiveNumber">
+                <el-input v-model="routeForm.receiveNumber" placeholder="客户端显示为 Số TK，不是户名" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="收款账户名" prop="accountName">
+                <el-input v-model="routeForm.accountName" placeholder="客户端显示为 Tên TK" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="充值金额（分）">
                 <el-input-number v-model="routeForm.fee" :min="0" controls-position="right" style="width: 100%" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="赠送金额">
+              <el-form-item label="赠送金额（分）">
                 <el-input-number v-model="routeForm.bonusAmount" :min="0" controls-position="right" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="收款标识">
-                <el-input v-model="routeForm.receiveNumber" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="收款账户名">
-                <el-input v-model="routeForm.accountName" />
               </el-form-item>
             </el-col>
             <el-col :span="24">
@@ -571,6 +797,18 @@ import type {
 } from '@/api/finance/channel/types';
 import { merchantOptions } from '@/api/finance/merchant';
 import type { FinanceMerchantVO } from '@/api/finance/merchant/types';
+import {
+  changeWithdrawChannelStatus,
+  changeWithdrawTabStatus,
+  listWithdrawChannelProfiles,
+  listWithdrawTabs,
+  saveWithdrawChannelProfile
+} from '@/api/finance/withdraw-channel';
+import type {
+  WithdrawChannelProfileForm,
+  WithdrawChannelProfileVO,
+  WithdrawTabVO
+} from '@/api/finance/withdraw-channel/types';
 import { formatMoneyRange, moneyListColumnFormatter } from '@/utils/money';
 
 /**
@@ -583,6 +821,9 @@ const loading = ref(false);
 const submitting = ref(false);
 const groups = ref<FinanceChannelGroupVO[]>([]);
 const merchants = ref<FinanceMerchantVO[]>([]);
+const p2pProfiles = ref<WithdrawChannelProfileVO[]>([]);
+const withdrawTabs = ref<WithdrawTabVO[]>([]);
+const p2pOriginalProfile = ref<WithdrawChannelProfileVO>();
 const activeGroups = ref<number[]>([]);
 const groupDialog = ref(false);
 const routeDialog = ref(false);
@@ -597,12 +838,17 @@ const queryParams = reactive<FinanceChannelQuery>({
   direction: undefined
 });
 
+const P2P_GROUP_CODE = 'P2P';
+const P2P_GROUP_TYPE = 6;
+const QUICK_PAY_CLIENT_CODES = ['FASTPAY', 'SNAPQR', '1PAY', 'TAPSCAN'];
+
 const methodOptions = [
   { label: '银行转账', value: 'BANKS' },
   { label: '充值卡', value: 'CARD' },
   { label: '电子钱包', value: 'EWALLET' },
-  { label: '数字货币', value: 'CRYPTO' },
+  { label: '加密货币', value: 'CRYPTO' },
   { label: '快捷充值', value: 'QUICK_PAY' },
+  { label: 'P2P 充值', value: 'P2P' },
   { label: '礼品卡', value: 'GIFT_CARD' }
 ];
 
@@ -678,7 +924,31 @@ const emptyRouteForm = (): FinanceChannelRouteForm => ({
   giftCode: '',
   giftName: '',
   iconUrl: '',
-  jumpUrl: ''
+  jumpUrl: '',
+  payoutMode: 'MANUAL',
+  beneficiaryAddress: '',
+  rateMode: 'NONE',
+  exchangeRate: 1,
+  feeMode: 'NONE',
+  feeFixed: 0,
+  feeCurrency: 'VND',
+  beneficiaryType: 'BANK',
+  accountPattern: '',
+  clientFieldSchemaJson: '{}',
+  channelConfigJson: '{}',
+  priorityNo: 0,
+  p2pAssetName: 'KDG',
+  p2pPrice: 1000,
+  p2pPaymentTimeLimit: 10,
+  p2pMakerUserName: 'P2P-Platform',
+  p2pMakerDisplayName: 'P2P Platform',
+  p2pMinTotalDeposit: 1000000,
+  p2pAutoReplyText: '',
+  p2pNote: '',
+  p2pDepositBankCode: '',
+  p2pDepositAccountNo: '',
+  p2pDepositAccountName: '',
+  p2pDepositContent: ''
 });
 
 const routeForm = reactive<FinanceChannelRouteForm>(emptyRouteForm());
@@ -688,12 +958,54 @@ const groupRules: FormRules = {
   groupName: [{ required: true, message: '大类名称不能为空', trigger: 'blur' }]
 };
 
+const requiredForQuickPay = (message: string) => (
+  _rule: unknown,
+  value: unknown,
+  callback: (error?: Error) => void
+) => {
+  if (routeForm.methodType !== 'QUICK_PAY') {
+    callback();
+    return;
+  }
+  if (!String(value ?? '').trim()) {
+    callback(new Error(message));
+    return;
+  }
+  callback();
+};
+
+const validateQuickPayPlatform = (
+  _rule: unknown,
+  value: unknown,
+  callback: (error?: Error) => void
+) => {
+  if (routeForm.methodType !== 'QUICK_PAY') {
+    callback();
+    return;
+  }
+  const platformCode = String(value ?? '').trim().toUpperCase();
+  const routeCode = String(routeForm.routeCode ?? '').trim().toUpperCase();
+  if (!platformCode) {
+    callback(new Error('客户端平台标识不能为空'));
+    return;
+  }
+  if (routeCode && platformCode !== routeCode) {
+    callback(new Error('客户端平台标识必须与通道编号一致'));
+    return;
+  }
+  callback();
+};
+
 const routeRules: FormRules = {
   groupId: [{ required: true, message: '所属大类不能为空', trigger: 'change' }],
   routeCode: [{ required: true, message: '通道编号不能为空', trigger: 'blur' }],
   channelName: [{ required: true, message: '通道名称不能为空', trigger: 'blur' }],
   methodType: [{ required: true, message: '客户端支付方式不能为空', trigger: 'change' }],
-  platform: [{ required: true, message: '平台标识不能为空', trigger: 'blur' }]
+  platform: [{ required: true, message: '运行平台不能为空', trigger: 'blur' }],
+  clientCode: [{ validator: validateQuickPayPlatform, trigger: 'blur' }],
+  prefix: [{ validator: requiredForQuickPay('档位前缀不能为空'), trigger: 'blur' }],
+  receiveNumber: [{ validator: requiredForQuickPay('收款账户号不能为空'), trigger: 'blur' }],
+  accountName: [{ validator: requiredForQuickPay('收款账户名不能为空'), trigger: 'blur' }]
 };
 
 /** 大类关键字过滤（后端已支持，前端再兜一层以便本地即时反馈） */
@@ -703,7 +1015,12 @@ const routeTotal = computed(() => groups.value.reduce((sum, group) => sum + (gro
 
 /** 通道关键字过滤：作用于当前大类内的通道列表 */
 const filterRoutes = (group: FinanceChannelGroupVO): FinanceChannelRouteVO[] => {
-  const routes = group.routes ?? [];
+  const sourceRoutes = group.routes ?? [];
+  const routes = isQuickPayGroup(group)
+    ? sourceRoutes.filter((route) =>
+        QUICK_PAY_CLIENT_CODES.includes((route.routeCode || route.clientCode || '').toUpperCase())
+      )
+    : sourceRoutes;
   const kw = (queryParams.routeKeyword ?? '').trim().toLowerCase();
   if (!kw) {
     return routes.filter(
@@ -723,6 +1040,132 @@ const filterRoutes = (group: FinanceChannelGroupVO): FinanceChannelRouteVO[] => 
 };
 
 const methodLabel = (method?: string) => methodOptions.find((item) => item.value === method)?.label ?? method ?? '未配置';
+const isCryptoGroup = (group: FinanceChannelGroupVO) =>
+  group.groupCode === 'CRYPTO' || group.groupType === 4;
+const isQuickPayGroup = (group: FinanceChannelGroupVO) =>
+  group.groupCode.toUpperCase() === 'QUICK_PAY';
+const isEwalletGroup = (group: FinanceChannelGroupVO) =>
+  group.groupCode.toUpperCase() === 'EWALLET';
+const isBankGroup = (group: FinanceChannelGroupVO) =>
+  ['BANK', 'BANKS'].includes(group.groupCode.toUpperCase());
+const showsAccountColumns = (group: FinanceChannelGroupVO) =>
+  isQuickPayGroup(group) || isEwalletGroup(group) || isBankGroup(group);
+const isP2pGroup = (group: FinanceChannelGroupVO) =>
+  group.groupCode.toUpperCase() === P2P_GROUP_CODE || group.groupType === P2P_GROUP_TYPE;
+
+const accountNumber = (route: FinanceChannelRouteVO) =>
+  String(route.receiveNumber || route.account || '').trim();
+const quickPayPlatformCode = (route: FinanceChannelRouteVO) =>
+  String(route.clientCode || route.prefix || route.routeCode || '').trim().toUpperCase();
+const quickPayPlatformMatches = (route: FinanceChannelRouteVO) =>
+  quickPayPlatformCode(route) === String(route.routeCode || '').trim().toUpperCase();
+
+const quickPayRoutes = (group: FinanceChannelGroupVO) =>
+  (group.routes ?? []).filter(
+    (route) =>
+      route.methodType === 'QUICK_PAY' &&
+      route.status === 1 &&
+      route.frontEnable === 1
+  );
+const quickPayMatched = (group: FinanceChannelGroupVO) => {
+  const codes = quickPayRoutes(group)
+    .map((route) => (route.routeCode || route.clientCode || '').toUpperCase())
+    .toSorted();
+  return (
+    codes.length === QUICK_PAY_CLIENT_CODES.length &&
+    QUICK_PAY_CLIENT_CODES.every((code) => codes.includes(code))
+  );
+};
+const quickPayMatchTitle = (group: FinanceChannelGroupVO) => {
+  if (quickPayMatched(group)) {
+    return `已与客户端 4 个快捷平台一一匹配（${quickPayRoutes(group).length} 条启用）`;
+  }
+  const actual = quickPayRoutes(group).map((route) => route.routeCode.toUpperCase());
+  const missing = QUICK_PAY_CLIENT_CODES.filter((code) => !actual.includes(code));
+  const extra = actual.filter((code) => !QUICK_PAY_CLIENT_CODES.includes(code));
+  return [
+    `当前启用 ${actual.length} 条，客户端固定 4 条`,
+    missing.length ? `缺少：${missing.join('、')}` : '',
+    extra.length ? `客户端不支持：${extra.join('、')}` : ''
+  ].filter(Boolean).join('；');
+};
+
+const parseChannelConfig = (json?: string): Record<string, any> => {
+  try {
+    const root = JSON.parse(json || '{}');
+    return root && typeof root === 'object' && !Array.isArray(root) ? root : {};
+  } catch {
+    return {};
+  }
+};
+
+const p2pRouteFromProfile = (
+  profile: WithdrawChannelProfileVO,
+  groupId: number
+): FinanceChannelRouteVO => {
+  const p2p = parseChannelConfig(profile.channelConfigJson).p2p ?? {};
+  return {
+    routeId: profile.withdrawChannelId,
+    withdrawChannelId: profile.withdrawChannelId,
+    groupId,
+    routeCode: profile.channelCode,
+    channelName: profile.channelName,
+    subSort: profile.priorityNo ?? profile.sortNo ?? 0,
+    merchantId: profile.merchantId,
+    merchantName: profile.merchantName,
+    currency: profile.currency,
+    currencyRate: '',
+    amountMin: profile.amountMin ?? 0,
+    amountMax: profile.amountMax ?? 0,
+    recommendAmounts: '',
+    feeRate: Number(profile.feeRate ?? 0),
+    successRate: 0,
+    channelRemark: profile.remark ?? '',
+    status: profile.status,
+    mergeFlag: 0,
+    frontEnable: profile.frontEnable,
+    blacklistEnable: 0,
+    platform: profile.platform,
+    direction: 1,
+    methodType: 'P2P',
+    clientCode: profile.clientCode ?? '',
+    clientSubCode: profile.clientSubCode ?? '',
+    dailyLimit: profile.dailyLimit ?? 0,
+    maintenanceCode: profile.maintenanceCode ?? '',
+    addressV1Enabled: 1,
+    addressV3Enabled: 1,
+    channelIcon: profile.iconArt ?? '',
+    openTimeStart: profile.openTimeStart,
+    openTimeEnd: profile.openTimeEnd,
+    account: profile.beneficiaryAddress ?? '',
+    payoutMode: profile.payoutMode,
+    platformKey: profile.platformKey,
+    platformUrl: profile.platformUrl,
+    beneficiaryAddress: profile.beneficiaryAddress,
+    rateMode: profile.rateMode,
+    exchangeRate: Number(profile.exchangeRate ?? 1),
+    feeMode: profile.feeMode,
+    feeFixed: Number(profile.feeFixed ?? 0),
+    feeCurrency: profile.feeCurrency,
+    beneficiaryType: profile.beneficiaryType,
+    accountPattern: profile.accountPattern,
+    clientFieldSchemaJson: profile.clientFieldSchemaJson,
+    channelConfigJson: profile.channelConfigJson,
+    priorityNo: profile.priorityNo,
+    p2pAssetName: String(p2p.assetName || profile.clientCode || 'KDG'),
+    p2pPrice: Number(p2p.price || 1000),
+    p2pPaymentTimeLimit: Number(p2p.paymentTimeLimit || 10),
+    p2pMakerUserName: String(p2p.makerUserName || 'P2P-Platform'),
+    p2pMakerDisplayName: String(p2p.makerDisplayName || profile.channelName || 'P2P Platform'),
+    p2pMinTotalDeposit: Number(p2p.minTotalDeposit || 0),
+    p2pAutoReplyText: String(p2p.autoReplyText || ''),
+    p2pNote: String(p2p.note || ''),
+    p2pDepositBankCode: String(p2p.depositBankCode || ''),
+    p2pDepositAccountNo: String(p2p.depositAccountNo || ''),
+    p2pDepositAccountName: String(p2p.depositAccountName || ''),
+    p2pDepositContent: String(p2p.depositContent || '')
+  };
+};
 
 const clientIdentity = (route: FinanceChannelRouteVO) => {
   if (route.methodType === 'BANKS' || route.methodType === 'EWALLET') {
@@ -733,13 +1176,18 @@ const clientIdentity = (route: FinanceChannelRouteVO) => {
     return [route.coinName || route.clientCode, route.networkName || route.clientSubCode].filter(Boolean).join(' / ');
   }
   if (route.methodType === 'GIFT_CARD') return route.giftCode || route.routeCode;
+  if (route.methodType === 'P2P') {
+    return [
+      route.clientCode || route.routeCode,
+      route.p2pMakerUserName || route.channelName
+    ].filter(Boolean).join(' / ');
+  }
   return [route.prefix || route.clientCode, route.clientSubCode].filter(Boolean).join(' / ');
 };
 
 const clientDetailSummary = (route: FinanceChannelRouteVO) => {
   if (route.methodType === 'BANKS' || route.methodType === 'EWALLET') {
     return [
-      route.account ? `账号 ${route.account}` : '',
       route.statementTime ? `时段 ${route.statementTime}` : '',
       route.timeLimit ? `超时 ${route.timeLimit} 分钟` : ''
     ].filter(Boolean).join('；');
@@ -750,8 +1198,30 @@ const clientDetailSummary = (route: FinanceChannelRouteVO) => {
   if (route.methodType === 'CRYPTO') {
     return [route.address, route.platformRate ? `1:${route.platformRate}` : '', route.qrData ? '已配置二维码' : '未配置二维码'].filter(Boolean).join('；');
   }
+  if (route.methodType === 'P2P') {
+    return [
+      route.p2pPrice ? `成交价 ${route.p2pPrice} VND/${route.p2pAssetName || '币'}` : '',
+      route.p2pPaymentTimeLimit ? `支付超时 ${route.p2pPaymentTimeLimit} 分钟` : '',
+      route.p2pDepositAccountNo ? `收款 ${route.p2pDepositAccountName || ''} ${route.p2pDepositAccountNo}` : '未配置平台收款信息'
+    ].filter(Boolean).join('；');
+  }
   if (route.methodType === 'GIFT_CARD') return [route.giftName, route.jumpUrl, route.account].filter(Boolean).join('；');
-  return [route.fee != null ? `充值 ${route.fee}` : '', route.bonusAmount ? `赠送 ${route.bonusAmount}` : '', route.receiveNumber]
+  if (route.methodType === 'QUICK_PAY') {
+    return [
+      route.prefix ? `档位前缀 ${route.prefix}` : '',
+      route.fee != null ? `充值金额 ${route.fee}` : '',
+      route.bonusAmount ? `赠送金额 ${route.bonusAmount}` : '',
+      route.content
+    ].filter(Boolean).join('；');
+  }
+  return [
+    route.prefix ? `平台 ${route.prefix}` : '',
+    route.fee != null ? `充值 ${route.fee}` : '',
+    route.bonusAmount ? `赠送 ${route.bonusAmount}` : '',
+    route.accountName ? `户名 ${route.accountName}` : '',
+    route.receiveNumber ? `收款 ${route.receiveNumber}` : '',
+    route.content
+  ]
     .filter(Boolean)
     .join('；');
 };
@@ -759,8 +1229,35 @@ const clientDetailSummary = (route: FinanceChannelRouteVO) => {
 const getGroups = async () => {
   loading.value = true;
   try {
-    const res = await listChannelGroups(queryParams);
-    groups.value = res.data ?? [];
+    const [res, p2pRes, tabRes] = await Promise.all([
+      listChannelGroups(queryParams),
+      listWithdrawChannelProfiles({ tabCode: P2P_GROUP_CODE, platform: 'go88' }).catch(() => ({ data: [] })),
+      listWithdrawTabs().catch(() => ({ data: [] }))
+    ]);
+    p2pProfiles.value = p2pRes.data ?? [];
+    withdrawTabs.value = tabRes.data ?? [];
+    const loadedGroups = [...(res.data ?? [])];
+    let p2pGroup = loadedGroups.find((group) => isP2pGroup(group));
+    const p2pTab = withdrawTabs.value.find((tab) => tab.tabCode === P2P_GROUP_CODE);
+    if (!p2pGroup) {
+      p2pGroup = {
+        groupId: -1,
+        groupCode: P2P_GROUP_CODE,
+        groupName: 'P2P 充值',
+        groupType: P2P_GROUP_TYPE,
+        sortNo: 99,
+        status: p2pTab?.status ?? 1,
+        remark: '客户端 P2P 充值',
+        routes: []
+      };
+      loadedGroups.push(p2pGroup);
+    } else if (p2pTab) {
+      p2pGroup.status = p2pTab.status;
+    }
+    p2pGroup.routes = p2pProfiles.value.map((profile) =>
+      p2pRouteFromProfile(profile, p2pGroup!.groupId)
+    );
+    groups.value = loadedGroups;
     if (activeGroups.value.length === 0) {
       activeGroups.value = groups.value.slice(0, 2).map((group) => group.groupId);
     }
@@ -800,7 +1297,7 @@ const handleAddGroup = () => {
 
 const handleEditGroup = (group: FinanceChannelGroupVO) => {
   Object.assign(groupForm, {
-    groupId: group.groupId,
+    groupId: group.groupId > 0 ? group.groupId : undefined,
     groupCode: group.groupCode,
     groupName: group.groupName,
     groupIcon: group.groupIcon ?? '',
@@ -821,12 +1318,24 @@ const submitGroup = async () => {
   submitting.value = true;
   try {
     await saveChannelGroup({ ...groupForm });
+    if (groupForm.groupCode.toUpperCase() === P2P_GROUP_CODE) {
+      await syncP2pTabStatus(groupForm.status ?? 1);
+    }
     modal.msgSuccess('保存成功');
     groupDialog.value = false;
     getGroups();
   } finally {
     submitting.value = false;
   }
+};
+
+const syncP2pTabStatus = async (status: number) => {
+  const p2pTab = withdrawTabs.value.find((tab) => tab.tabCode === P2P_GROUP_CODE);
+  if (!p2pTab || p2pTab.status === status) {
+    return;
+  }
+  await changeWithdrawTabStatus(p2pTab.tabId, status);
+  p2pTab.status = status;
 };
 
 const handleAddRoute = (group: FinanceChannelGroupVO) => {
@@ -838,20 +1347,29 @@ const handleAddRoute = (group: FinanceChannelGroupVO) => {
     currencyRate: group.groupType === 4 ? '' : 'VND1000:1',
     methodType,
     clientCode: '',
-    clientSubCode: ''
+    clientSubCode: '',
+    payoutMode: methodType === 'P2P' ? 'P2P' : 'MANUAL',
+    beneficiaryType: methodType === 'P2P' ? 'P2P_BANK' : methodType === 'EWALLET' ? 'EWALLET' : 'BANK',
+    platform: 'go88'
   });
+  p2pOriginalProfile.value = undefined;
   routeDialog.value = true;
 };
 
 const methodTypeForGroup = (group: FinanceChannelGroupVO) => {
   const code = (group.groupCode ?? '').toUpperCase();
   if (methodOptions.some((item) => item.value === code)) return code;
+  if (group.groupType === P2P_GROUP_TYPE) return 'P2P';
   return group.groupType === 4 ? 'CRYPTO' : 'BANKS';
 };
 
 const handleEditRoute = (route: FinanceChannelRouteVO) => {
+  p2pOriginalProfile.value = route.methodType === 'P2P'
+    ? p2pProfiles.value.find((profile) => profile.withdrawChannelId === route.withdrawChannelId)
+    : undefined;
   Object.assign(routeForm, {
     routeId: route.routeId,
+    withdrawChannelId: route.withdrawChannelId,
     groupId: route.groupId,
     routeCode: route.routeCode,
     channelName: route.channelName,
@@ -910,7 +1428,31 @@ const handleEditRoute = (route: FinanceChannelRouteVO) => {
     giftCode: route.giftCode ?? '',
     giftName: route.giftName ?? '',
     iconUrl: route.iconUrl ?? '',
-    jumpUrl: route.jumpUrl ?? ''
+    jumpUrl: route.jumpUrl ?? '',
+    payoutMode: route.payoutMode ?? 'MANUAL',
+    beneficiaryAddress: route.beneficiaryAddress ?? route.account ?? '',
+    rateMode: route.rateMode ?? 'NONE',
+    exchangeRate: route.exchangeRate ?? 1,
+    feeMode: route.feeMode ?? 'NONE',
+    feeFixed: route.feeFixed ?? 0,
+    feeCurrency: route.feeCurrency ?? route.currency ?? 'VND',
+    beneficiaryType: route.beneficiaryType ?? (route.methodType === 'P2P' ? 'P2P_BANK' : 'BANK'),
+    accountPattern: route.accountPattern ?? '',
+    clientFieldSchemaJson: route.clientFieldSchemaJson ?? '{}',
+    channelConfigJson: route.channelConfigJson ?? '{}',
+    priorityNo: route.priorityNo ?? route.subSort ?? 0,
+    p2pAssetName: route.p2pAssetName ?? 'KDG',
+    p2pPrice: route.p2pPrice ?? 1000,
+    p2pPaymentTimeLimit: route.p2pPaymentTimeLimit ?? 10,
+    p2pMakerUserName: route.p2pMakerUserName ?? 'P2P-Platform',
+    p2pMakerDisplayName: route.p2pMakerDisplayName ?? route.channelName,
+    p2pMinTotalDeposit: route.p2pMinTotalDeposit ?? 0,
+    p2pAutoReplyText: route.p2pAutoReplyText ?? '',
+    p2pNote: route.p2pNote ?? '',
+    p2pDepositBankCode: route.p2pDepositBankCode ?? '',
+    p2pDepositAccountNo: route.p2pDepositAccountNo ?? '',
+    p2pDepositAccountName: route.p2pDepositAccountName ?? '',
+    p2pDepositContent: route.p2pDepositContent ?? ''
   });
   routeDialog.value = true;
 };
@@ -924,10 +1466,29 @@ const inferMethodType = (route: FinanceChannelRouteVO) => {
   return 'BANKS';
 };
 
+const syncQuickPayIdentity = () => {
+  if (routeForm.methodType !== 'QUICK_PAY') {
+    return;
+  }
+  const routeCode = String(routeForm.routeCode ?? '').trim().toUpperCase();
+  routeForm.clientCode = routeCode;
+  if (!String(routeForm.prefix ?? '').trim()) {
+    routeForm.prefix = routeCode;
+  }
+};
+
 const handleMethodTypeChange = () => {
   routeForm.configRefId = undefined;
   if (routeForm.methodType === 'CRYPTO') {
     routeForm.currency = routeForm.currency || 'USDT';
+  } else if (routeForm.methodType === 'QUICK_PAY') {
+    syncQuickPayIdentity();
+  } else if (routeForm.methodType === 'P2P') {
+    routeForm.payoutMode = 'P2P';
+    routeForm.beneficiaryType = 'P2P_BANK';
+    routeForm.currency = 'VND';
+    routeForm.p2pPrice = routeForm.p2pPrice || 1000;
+    routeForm.p2pPaymentTimeLimit = routeForm.p2pPaymentTimeLimit || 10;
   }
 };
 
@@ -938,7 +1499,11 @@ const submitRoute = async () => {
   }
   submitting.value = true;
   try {
-    await saveChannelRoute({ ...routeForm });
+    if (routeForm.methodType === 'P2P') {
+      await submitP2pRoute();
+    } else {
+      await saveChannelRoute({ ...routeForm });
+    }
     modal.msgSuccess('保存成功');
     routeDialog.value = false;
     getGroups();
@@ -947,16 +1512,103 @@ const submitRoute = async () => {
   }
 };
 
+const submitP2pRoute = async () => {
+  const original = p2pOriginalProfile.value;
+  const configRoot = parseChannelConfig(routeForm.channelConfigJson);
+  const p2p = {
+    ...configRoot.p2p,
+    assetName: String(routeForm.p2pAssetName || 'KDG').trim(),
+    price: Number(routeForm.p2pPrice || 0),
+    paymentTimeLimit: Number(routeForm.p2pPaymentTimeLimit || 10),
+    makerUserName: String(routeForm.p2pMakerUserName || '').trim(),
+    makerDisplayName: String(routeForm.p2pMakerDisplayName || '').trim(),
+    minTotalDeposit: Number(routeForm.p2pMinTotalDeposit || 0),
+    autoReplyText: String(routeForm.p2pAutoReplyText || '').trim(),
+    note: String(routeForm.p2pNote || '').trim(),
+    depositBankCode: String(routeForm.p2pDepositBankCode || '').trim(),
+    depositAccountNo: String(routeForm.p2pDepositAccountNo || '').trim(),
+    depositAccountName: String(routeForm.p2pDepositAccountName || '').trim(),
+    depositContent: String(routeForm.p2pDepositContent || '').trim()
+  };
+  const rateValue = Number(routeForm.exchangeRate || 1);
+  const payload: WithdrawChannelProfileForm = {
+    withdrawChannelId: original?.withdrawChannelId,
+    channelCode: String(routeForm.routeCode || '').trim(),
+    channelName: String(routeForm.channelName || '').trim(),
+    platformKey: original?.platformKey ?? '',
+    platformUrl: original?.platformUrl ?? '',
+    iconArt: original?.iconArt ?? routeForm.channelIcon ?? '',
+    tabCode: P2P_GROUP_CODE,
+    platform: String(routeForm.platform || 'go88').trim(),
+    payoutMode: 'P2P',
+    merchantId: routeForm.merchantId,
+    clientCode: String(routeForm.clientCode || routeForm.routeCode || '').trim(),
+    clientSubCode: String(routeForm.clientSubCode || '').trim(),
+    supportedBankCodes: original?.supportedBankCodes
+      ? original.supportedBankCodes.split(',').map((code) => code.trim()).filter(Boolean)
+      : [],
+    currency: String(routeForm.currency || 'VND').trim(),
+    settlementCurrency: original?.settlementCurrency || 'VND',
+    rateFrom: Number(original?.rateFrom || rateValue),
+    rateTo: Number(original?.rateTo || rateValue),
+    clientPrice: Number(original?.clientPrice || rateValue),
+    beneficiaryAddress: String(routeForm.account || routeForm.beneficiaryAddress || '').trim(),
+    amountMin: Number(routeForm.amountMin || 0),
+    amountMax: Number(routeForm.amountMax || 0),
+    dailyLimit: Number(routeForm.dailyLimit || 0),
+    maintenanceCode: String(routeForm.maintenanceCode || '').trim(),
+    openTimeStart: routeForm.openTimeStart || '00:00',
+    openTimeEnd: routeForm.openTimeEnd || '23:59',
+    rateMode: original?.rateMode || 'REALTIME',
+    exchangeRate: rateValue,
+    feeMode: original?.feeMode || 'NONE',
+    feeRate: Number(routeForm.feeRate || 0),
+    feeFixed: Number(original?.feeFixed || 0),
+    feeCurrency: original?.feeCurrency || 'VND',
+    beneficiaryType: 'P2P_BANK',
+    accountPattern: original?.accountPattern ?? '',
+    clientFieldSchemaJson: original?.clientFieldSchemaJson ?? '{}',
+    channelConfigJson: JSON.stringify({ ...configRoot, p2p }),
+    priorityNo: Number(routeForm.priorityNo ?? routeForm.subSort ?? 0),
+    sortNo: Number(routeForm.subSort || 0),
+    status: Number(routeForm.status ?? 1),
+    frontEnable: Number(routeForm.status ?? 1),
+    remark: String(routeForm.channelRemark || '').trim()
+  };
+  await saveWithdrawChannelProfile(payload);
+};
+
 const handleToggleGroup = async (group: FinanceChannelGroupVO) => {
   const next = group.status === 1 ? 0 : 1;
   await modal.confirm(`确认${next === 1 ? '启用' : '停用'}大类「${group.groupName}」？`);
-  await changeChannelGroupStatus(group.groupId, next);
+  if (isP2pGroup(group) && group.groupId <= 0) {
+    await saveChannelGroup({
+      groupCode: P2P_GROUP_CODE,
+      groupName: group.groupName,
+      groupType: P2P_GROUP_TYPE,
+      sortNo: group.sortNo,
+      status: next,
+      remark: group.remark
+    });
+  } else {
+    await changeChannelGroupStatus(group.groupId, next);
+  }
+  if (isP2pGroup(group)) {
+    await syncP2pTabStatus(next);
+  }
   modal.msgSuccess('操作成功');
   getGroups();
 };
 
 const handleSwitch = async (route: FinanceChannelRouteVO, field: string, value: number) => {
-  await changeChannelRouteSwitch(route.routeId, field, value);
+  if (route.methodType === 'P2P') {
+    if (field !== 'status') {
+      return;
+    }
+    await changeWithdrawChannelStatus(route.withdrawChannelId ?? route.routeId, value);
+  } else {
+    await changeChannelRouteSwitch(route.routeId, field, value);
+  }
   modal.msgSuccess('已更新');
   getGroups();
 };
@@ -986,6 +1638,10 @@ loadMerchants();
   margin-bottom: 8px;
 }
 
+.client-contract-alert {
+  margin-bottom: 10px;
+}
+
 .switch-pair {
   display: flex;
   align-items: center;
@@ -998,6 +1654,11 @@ loadMerchants();
   flex-direction: column;
   gap: 10px;
   width: 100%;
+}
+
+.crypto-address {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
 }
 
 .channel-icon {

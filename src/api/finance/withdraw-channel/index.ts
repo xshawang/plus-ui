@@ -1,10 +1,14 @@
 import type { AxiosPromise } from '@/utils/api-types';
 import request from '@/utils/request';
 import type {
+  WithdrawCardConfigForm,
+  WithdrawCardConfigVO,
   WithdrawChannelProfileForm,
   WithdrawChannelProfileVO,
   WithdrawChannelQuery,
   WithdrawClientManifest,
+  WithdrawCryptoPlatformForm,
+  WithdrawCryptoPlatformVO,
   WithdrawTabForm,
   WithdrawTabVO
 } from './types';
@@ -32,3 +36,17 @@ export const saveWithdrawChannelProfile = (data: WithdrawChannelProfileForm): Ax
 
 export const changeWithdrawChannelStatus = (id: number, status: number): AxiosPromise<number> =>
   request({ url: `/infra/finance/withdraw-channel/${id}/status/${status}`, method: 'put' });
+
+export const listWithdrawCardConfigs = (platform = 'go88'): AxiosPromise<WithdrawCardConfigVO[]> =>
+  request({ url: '/infra/finance/withdraw-channel/card-configs', method: 'get', params: { platform } });
+
+export const saveWithdrawCardConfig = (data: WithdrawCardConfigForm): AxiosPromise<number> =>
+  request({ url: '/infra/finance/withdraw-channel/card-config', method: 'post', data });
+
+export const listWithdrawCryptoPlatforms = (): AxiosPromise<WithdrawCryptoPlatformVO[]> =>
+  request({ url: '/infra/finance/withdraw-channel/crypto-platforms', method: 'get' });
+
+export const saveWithdrawCryptoPlatforms = (
+  data: WithdrawCryptoPlatformForm[]
+): AxiosPromise<WithdrawCryptoPlatformVO[]> =>
+  request({ url: '/infra/finance/withdraw-channel/crypto-platforms', method: 'put', data });

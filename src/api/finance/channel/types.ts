@@ -6,7 +6,7 @@ export interface FinanceChannelGroupVO {
   groupCode: string;
   groupName: string;
   groupIcon?: string;
-  /** 1在线充值 2转账充值 3客服代充 4数字货币 5礼品卡 */
+  /** 1在线充值 2转账充值 3客服代充 4数字货币 5礼品卡 6 P2P充值 */
   groupType?: number;
   linkGroupCode?: string;
   sortNo?: number;
@@ -21,6 +21,8 @@ export interface FinanceChannelGroupVO {
 export interface FinanceChannelRouteVO {
   routeId: number;
   groupId: number;
+  /** P2P 通道事实源为 finance_withdraw_channel.withdraw_channel_id */
+  withdrawChannelId?: number;
   routeCode: string;
   channelName: string;
   subSort?: number;
@@ -84,6 +86,34 @@ export interface FinanceChannelRouteVO {
   giftName?: string;
   iconUrl?: string;
   jumpUrl?: string;
+  /** P2P 渠道字段（独立提现渠道表） */
+  payoutMode?: string;
+  platformKey?: string;
+  platformUrl?: string;
+  beneficiaryAddress?: string;
+  rateMode?: string;
+  exchangeRate?: number;
+  feeMode?: string;
+  feeFixed?: number;
+  feeCurrency?: string;
+  beneficiaryType?: string;
+  accountPattern?: string;
+  clientFieldSchemaJson?: string;
+  channelConfigJson?: string;
+  priorityNo?: number;
+  /** P2P 挂单与收款说明，最终存入 channel_config_json.p2p */
+  p2pAssetName?: string;
+  p2pPrice?: number;
+  p2pPaymentTimeLimit?: number;
+  p2pMakerUserName?: string;
+  p2pMakerDisplayName?: string;
+  p2pMinTotalDeposit?: number;
+  p2pAutoReplyText?: string;
+  p2pNote?: string;
+  p2pDepositBankCode?: string;
+  p2pDepositAccountNo?: string;
+  p2pDepositAccountName?: string;
+  p2pDepositContent?: string;
 }
 
 export interface FinanceChannelGroupForm {
@@ -101,6 +131,7 @@ export interface FinanceChannelGroupForm {
 export interface FinanceChannelRouteForm {
   routeId?: number;
   groupId?: number;
+  withdrawChannelId?: number;
   routeCode?: string;
   channelName?: string;
   subSort?: number;
@@ -160,6 +191,30 @@ export interface FinanceChannelRouteForm {
   giftName?: string;
   iconUrl?: string;
   jumpUrl?: string;
+  payoutMode?: string;
+  beneficiaryAddress?: string;
+  rateMode?: string;
+  exchangeRate?: number;
+  feeMode?: string;
+  feeFixed?: number;
+  feeCurrency?: string;
+  beneficiaryType?: string;
+  accountPattern?: string;
+  clientFieldSchemaJson?: string;
+  channelConfigJson?: string;
+  priorityNo?: number;
+  p2pAssetName?: string;
+  p2pPrice?: number;
+  p2pPaymentTimeLimit?: number;
+  p2pMakerUserName?: string;
+  p2pMakerDisplayName?: string;
+  p2pMinTotalDeposit?: number;
+  p2pAutoReplyText?: string;
+  p2pNote?: string;
+  p2pDepositBankCode?: string;
+  p2pDepositAccountNo?: string;
+  p2pDepositAccountName?: string;
+  p2pDepositContent?: string;
 }
 
 export interface FinanceChannelQuery {

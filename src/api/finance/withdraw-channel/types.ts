@@ -126,6 +126,46 @@ export interface WithdrawChannelQuery {
   status?: number;
 }
 
+export interface WithdrawCryptoPlatformVO {
+  name: string;
+  label: string;
+  iconArt?: string;
+  url?: string;
+  active: boolean;
+  sortNo: number;
+}
+
+export interface WithdrawCryptoPlatformForm {
+  name: string;
+  label: string;
+  iconArt?: string;
+  url?: string;
+  active: boolean;
+  sortNo: number;
+}
+
+export interface WithdrawCardConfigVO {
+  id: number;
+  platform: string;
+  cardBrand: string;
+  cardLabel: string;
+  denominations: string;
+  status: number;
+  sortOrder: number;
+  rate?: number;
+}
+
+export interface WithdrawCardConfigForm {
+  id?: number;
+  platform: string;
+  cardBrand: string;
+  cardLabel: string;
+  denominations: string;
+  status: number;
+  sortOrder: number;
+  rate?: number;
+}
+
 export interface WithdrawClientManifest {
   withdrawTabsOrder: Array<{
     key: string;
