@@ -89,7 +89,7 @@ function columnChange(...args: any[]) {
   saveStorage();
 }
 
-// 显隐列初始默认隐藏列
+// 显隐列初始状态
 onMounted(() => {
   // 如果传入了 storageKey，从 localStorage 恢复列显隐状态
   if (props.storageKey) {

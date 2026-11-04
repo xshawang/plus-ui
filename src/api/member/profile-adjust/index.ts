@@ -10,6 +10,8 @@ export interface MemberPlainContactVO {
   loginName?: string;
   phone?: string;
   phoneVerified?: number;
+  email?: string;
+  emailVerified?: number;
   realName?: string;
   kycLevel?: string;
   cardNote?: string;
@@ -29,6 +31,10 @@ export const getPlainContact = (uid: number | string): AxiosPromise<MemberPlainC
 };
 
 /** 行内改档：调整 VIP 等级（需原因，写 user_vip_log） */
-export const adjustMemberVip = (data: { uid: number | string; vipLevel: number; reason: string }): AxiosPromise<number> => {
+export const adjustMemberVip = (data: {
+  uid: number | string;
+  vipLevel: number;
+  reason: string;
+}): AxiosPromise<number> => {
   return request({ url: '/infra/member/detail/vip', method: 'post', data });
 };

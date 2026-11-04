@@ -127,7 +127,7 @@ const resetForm = () => {
   };
   form.hasParent = false;
   form.parentAgentId = undefined;
-  form.currency = String(defaultOf(props.options.currencies)?.value ?? 'VND1000:1');
+  form.currency = String(defaultOf(props.options.currencies)?.value ?? 'VND1:1');
   form.loginName = '';
   form.loginPassword = '';
   form.payPassword = '';

@@ -1,167 +1,142 @@
 <template>
   <div class="p-2 ops-dashboard">
     <div class="dash-topbar">
-      <div class="topbar-copy">
-        <h2 class="dash-title">运营数据看板</h2>
-        <p class="dash-subtitle">核心经营指标 · 今日实时运营 · 今日排行榜 · 多日趋势 · 运营总览</p>
-      </div>
-      <div class="topbar-actions">
-        <span class="muted small">
-          口径：{{ meta.site || '-' }} / 金额单位：{{ meta.rawCurrency || meta.currency }}
+      <div class="command-brand">
+        <h2 class="dash-title">运营指挥台</h2>
+        <span class="command-status" :class="{ danger: snapshotStale || (health && !health.healthy) }">
+          <span class="health-dot" />
+          {{ snapshotStale ? '数据更新失败' : health ? (health.healthy ? '数据正常' : '') : '数据连接中' }}
         </span>
-        <span v-if="meta.timezone" class="muted small">统计时区：{{ meta.timezone }}</span>
+      </div>
+      <div class="topbar-actions command-meta">
+        <span>站点：{{ meta.site || '全部' }}</span>
+        <span>币种：{{ meta.rawCurrency || meta.currency || '-' }}</span>
+        <span>时区：{{ meta.timezone || '-' }}</span>
+        <span class="command-clock font-mono">{{ dashboardClock }}</span>
         <el-button type="primary" plain icon="Refresh" :loading="refreshing" @click="refreshAll">刷新全部</el-button>
       </div>
     </div>
-    <div v-if="!health" class="data-health"></div>
-    <div v-else-if="health" class="data-health">
-      <span class="health-dot" />
-      数据源正常 · 检查于 {{ shortTime(health.snapshotAt) }}
-    </div>
-    <div v-if="snapshotAlerts.length" class="alert-strip">
-      <span v-for="alert in snapshotAlerts" :key="alert.key" class="alert-chip" :class="alert.level">
-        {{ alert.label }} {{ formatCount(alert.count) }}
-        <template v-if="alert.amount !== null && alert.amount !== undefined">
-          / {{ formatMoney(alert.amount) }}
-        </template>
-      </span>
-    </div>
 
-    <!-- 1. 核心经营指标 -->
-    <el-card shadow="hover" class="dash-card">
-      <template #header>
-        <div class="card-head">
-          <h3>核心经营指标</h3>
-          <span v-if="kpiData" class="updated-text">
-            数据截至：{{ shortTime(kpiData.snapshotAt) }}
-            <span v-if="kpiStale" class="stale-text">· 更新失败</span>
-          </span>
-        </div>
-      </template>
-      <StateBox :loading="kpiLoading" :error="kpiError" :empty="!kpiItems.length" :reload="loadSnapshot">
-        <div class="kpi-grid">
-          <div v-for="item in kpiItems" :key="item.key" class="kpi-panel panel">
-            <div class="kpi-label-row">
-              <span class="kpi-label">{{ item.label }}</span>
-              <el-tooltip v-if="item.tooltip" :content="item.tooltip" placement="top">
-                <el-icon class="kpi-hint"><QuestionFilled /></el-icon>
-              </el-tooltip>
-            </div>
-            <div class="kpi-value" :class="{ negative: item.value < 0 }">{{ formatKpiValue(item) }}</div>
-            <div class="kpi-compare">
-              <span v-if="item.hasComparison" class="compare-rate" :class="rateClass(item)">
-                {{ rateText(item.changeRate) }}
-              </span>
-              <span v-else-if="item.key === 'totalMembers'" class="compare-rate muted">累计</span>
-              <span v-else class="compare-rate muted">—</span>
-              <span v-if="item.hasComparison" class="compare-base">较昨日同期</span>
-            </div>
+    <StateBox
+      :loading="kpiLoading || realtimeLoading"
+      :error="kpiError || realtimeError"
+      :reload="loadSnapshot"
+      class="command-state"
+    >
+      <div class="command-kpi-grid">
+        <article v-for="item in commandKpis" :key="item.key" class="command-kpi">
+          <div class="command-kpi-label">
+            {{ item.label }}
+            <el-tooltip v-if="item.tooltip" :content="item.tooltip" placement="top">
+              <el-icon><QuestionFilled /></el-icon>
+            </el-tooltip>
           </div>
-        </div>
-      </StateBox>
-    </el-card>
+          <div class="command-kpi-value">{{ item.value }}</div>
+          <div class="command-kpi-sub" :class="item.subTone">{{ item.sub }}</div>
+        </article>
+      </div>
 
-    <!-- 2. 今日实时运营 -->
-    <el-card shadow="hover" class="dash-card">
-      <template #header>
-        <div class="card-head">
-          <h3>今日实时运营</h3>
-          <div class="live-badge" :class="{ stale: realtimeStale }">
-            <span class="live-dot" />
-            {{ realtimeStale ? '更新失败' : '分钟级刷新' }} · 最后采样：{{ lastRealtimeTime }}
+      <div class="command-main-grid">
+        <section class="panel command-trend-panel">
+          <div class="command-panel-head">
+            <div>
+              <h3>今日 24 小时经营趋势</h3>
+              <span>在线按小时峰值；金额与风险按小时汇总，当前小时实时补查</span>
+            </div>
+            <span v-if="realtimeStale || kpiStale" class="stale-text">更新失败，展示上次成功数据</span>
           </div>
-        </div>
-      </template>
-      <StateBox :loading="realtimeLoading" :error="realtimeError" :reload="loadSnapshot">
-        <div class="realtime-grid">
-          <div class="panel rt-user">
-            <div class="panel-title">用户实时状态</div>
-            <el-alert
-              v-if="realtime && !realtime.online.supported"
-              class="mb-2"
-              type="warning"
-              :closable="false"
-              show-icon
-              :title="realtime.online.message || '当前在线数据暂不可用'"
-            />
-            <div class="big-stat">
-              <div class="big-number">{{ formatCount(realtime?.online.currentUsers) }}</div>
-              <div class="big-label">当前在线（真人去重）</div>
-            </div>
-            <div class="mini-stat-grid">
-              <div class="mini-stat">
-                <span class="mini-value">{{ formatCount(realtime?.online.todayActive) }}</span>
-                <span class="mini-label">今日活跃</span>
-              </div>
-              <div class="mini-stat">
-                <span class="mini-value">{{ formatCount(realtime?.online.todayNew) }}</span>
-                <span class="mini-label">今日新增</span>
-              </div>
-              <div class="mini-stat">
-                <span class="mini-value">
-                  {{ formatCount(realtime?.online.todayPeak) }}
-                  <span v-if="realtime?.online.peakAt" class="peak-at">@{{ realtime.online.peakAt }}</span>
-                </span>
-                <span class="mini-label">今日在线峰值</span>
-              </div>
-            </div>
-            <div v-if="onlineSpark.length" class="spark-block">
-              <div class="spark-title">在线趋势（分钟采样）</div>
-              <TrendChart
-                :labels="onlineSpark.map(p => p.t)"
-                :values="onlineSpark.map(p => p.v)"
-                unit="count"
-                series-name="在线用户"
-                :height="110"
-                color="#22b07d"
-              />
-            </div>
-            <el-empty v-else-if="realtime?.online.supported" description="暂无在线采样数据" :image-size="56" />
-          </div>
+          <CommandTrendChart
+            v-if="commandTrendLabels.length"
+            :labels="commandTrendLabels"
+            :series="commandTrendSeries"
+            :height="286"
+          />
+          <el-empty v-else description="暂无今日趋势数据" :image-size="52" />
+        </section>
 
-          <div class="panel rt-fund">
-            <div class="panel-title">今日资金状态</div>
-            <div class="fund-grid">
-              <div class="fund-item">
-                <span class="fund-label">充值金额</span>
-                <span class="fund-value success">{{ formatMoney(finance?.rechargeAmount) }}</span>
-              </div>
-              <div class="fund-item">
-                <span class="fund-label">提现申请</span>
-                <span class="fund-value warning">{{ formatMoney(finance?.withdrawApplyAmount) }}</span>
-              </div>
-              <div class="fund-item">
-                <span class="fund-label">待处理提现</span>
-                <span class="fund-value warning">
-                  {{ formatMoney(finance?.withdrawPendingAmount) }}
-                  <small>{{ formatCount(finance?.withdrawPendingCount) }} 单</small>
-                </span>
-              </div>
-              <div class="fund-item">
-                <span class="fund-label">成功出款</span>
-                <span class="fund-value success">{{ formatMoney(finance?.withdrawPaidAmount) }}</span>
-              </div>
-              <div class="fund-item">
-                <span class="fund-label">充值 / 提现申请人数</span>
-                <span class="fund-value">
-                  {{ formatCount(finance?.rechargeUsers) }} / {{ formatCount(finance?.withdrawApplyUsers) }}
-                </span>
-              </div>
-              <div class="fund-item">
-                <span class="fund-label">充值 / 提现申请笔数</span>
-                <span class="fund-value">
-                  {{ formatCount(finance?.rechargeCount) }} / {{ formatCount(finance?.withdrawApplyCount) }}
-                </span>
-              </div>
-              <div class="fund-item">
-                <span class="fund-label">提现最长等待</span>
-                <span class="fund-value">{{ pendingAgeText }}</span>
-              </div>
+        <section class="panel command-action-panel">
+          <div class="command-panel-head">
+            <div>
+              <h3>立即处理</h3>
+              <span>当前需要运营介入的事项</span>
             </div>
           </div>
-        </div>
-      </StateBox>
-    </el-card>
+          <div class="command-action-list">
+            <div v-for="item in commandActions" :key="item.key" class="command-action-item" :class="item.tone">
+              <div>
+                <span class="command-action-label">{{ item.label }}</span>
+                <small>{{ item.hint }}</small>
+              </div>
+              <strong>{{ item.value }}</strong>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="command-bottom-grid">
+        <section class="panel command-bottom-card">
+          <div class="command-panel-head">
+            <h3>资金流转</h3>
+            <span>今日经营资金链路</span>
+          </div>
+          <div class="fund-flow">
+            <template v-for="(item, index) in commandFunds" :key="item.key">
+              <div class="fund-flow-item">
+                <span>{{ item.label }}</span>
+                <strong>{{ item.value }}</strong>
+              </div>
+              <span v-if="index < commandFunds.length - 1" class="fund-arrow">→</span>
+            </template>
+          </div>
+        </section>
+
+        <section class="panel command-bottom-card command-games">
+          <div class="command-panel-head">
+            <h3>游戏健康</h3>
+            <span>投注额 Top {{ commandGames.length || 6 }}</span>
+          </div>
+          <el-table v-if="commandGames.length" :data="commandGames" size="small" class="command-game-table">
+            <el-table-column label="游戏 / 厂商" min-width="150">
+              <template #default="{ row }">
+                <div class="game-health-name">{{ row.gameName || row.gameCode }}</div>
+                <small>{{ row.providerName || '未配置厂商' }}</small>
+              </template>
+            </el-table-column>
+            <el-table-column label="投注" align="right" width="105">
+              <template #default="{ row }">{{ formatMoney(row.betAmount) }}</template>
+            </el-table-column>
+            <el-table-column label="GGR" align="right" width="95">
+              <template #default="{ row }">
+                <span :class="{ negative: toNumber(row.ggr) < 0 }">{{ formatSigned(row.ggr) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="RTP" align="right" width="80">
+              <template #default="{ row }">{{ Number(row.rtp ?? 0).toFixed(2) }}%</template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="暂无游戏数据" :image-size="44" />
+        </section>
+
+        <section class="panel command-bottom-card">
+          <div class="command-panel-head">
+            <h3>用户质量</h3>
+            <span>新增 → 活跃 → 付费 → 复充</span>
+          </div>
+          <div class="quality-flow">
+            <template v-for="(item, index) in commandQuality" :key="item.key">
+              <div class="quality-step">
+                <span>{{ item.label }}</span>
+                <strong>{{ item.value }}</strong>
+                <small>{{ item.hint }}</small>
+              </div>
+              <span v-if="index < commandQuality.length - 1" class="quality-arrow">→</span>
+            </template>
+          </div>
+        </section>
+      </div>
+    </StateBox>
+
+    <div class="detail-section-title">经营明细</div>
 
     <!-- 3. 今日排行榜 -->
     <el-card ref="rankingSection" shadow="hover" class="dash-card">
@@ -190,8 +165,8 @@
           <el-table-column label="用户" align="left" min-width="180">
             <template #default="{ row }">
               <div class="user-cell">
-                <span class="user-name">{{ maskName(row.name) }}</span>
-                <span class="user-uid font-mono">{{ maskUid(row.uid) }}</span>
+                <span class="user-name">{{ row.name || '-' }}</span>
+                <span class="user-uid font-mono">{{ row.uid || '-' }}</span>
               </div>
             </template>
           </el-table-column>
@@ -492,7 +467,7 @@
 import { computed, defineAsyncComponent, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 import type { RiskMetrics, RiskTodayResult } from '@/api/report/dashboard/risk-types';
 import type {
-  DashboardAlert,
+  CommandCenterResult,
   DashboardHealth,
   DashboardMeta,
   KpiItem,
@@ -512,6 +487,7 @@ import {
   getDashboardTrend
 } from '@/api/report/dashboard';
 import { getDashboardRiskToday, getDashboardRiskTrend } from '@/api/report/dashboard/risk';
+import CommandTrendChart from '@/components/Dashboard/CommandTrendChart.vue';
 import DashboardStateBox from '@/components/Dashboard/StateBox.vue';
 
 type TrendMetric = 'register' | 'online' | 'recharge';
@@ -531,8 +507,9 @@ const meta = ref<DashboardMeta>({
   timezone: ''
 });
 const health = ref<DashboardHealth>();
-const snapshotAlerts = ref<DashboardAlert[]>([]);
 const snapshotStale = ref(false);
+const commandCenter = ref<CommandCenterResult>();
+const dashboardClock = ref('');
 
 const formatCount = (value?: unknown) =>
   value === null || value === undefined ? '—' : Math.round(toNumber(value)).toLocaleString('en-US');
@@ -557,27 +534,7 @@ const moneyValue = (value: number | null | undefined) => {
   return Math.round(toNumber(value));
 };
 
-const formatKpiValue = (item: KpiItem) => {
-  if (item.value === null || item.value === undefined) return '—';
-  if (item.kind === 'count') return formatCount(item.value);
-  if (item.kind === 'signed') return formatSigned(item.value);
-  return formatMoney(item.value);
-};
-
-const shortTime = (value?: string) => (value ? value.slice(11, 19) : '--');
 const fullTime = (value?: string | null) => (value ? value.slice(0, 19).replace('T', ' ') : '-');
-
-const maskName = (value?: string | null) => {
-  if (!value) return '-';
-  if (value.length <= 2) return `${value[0] || ''}*`;
-  return `${value.slice(0, 2)}***${value.slice(-1)}`;
-};
-
-const maskUid = (value?: string | null) => {
-  if (!value) return '-';
-  if (value.length <= 6) return `${value.slice(0, 2)}****`;
-  return `${value.slice(0, 3)}****${value.slice(-3)}`;
-};
 
 const rateText = (rate?: number | null) => {
   if (rate === null || rate === undefined) return '—';
@@ -606,19 +563,7 @@ let snapshotRequestSeq = 0;
 let lastSnapshotSuccessAt = 0;
 let snapshotInFlight: Promise<void> | null = null;
 
-const kpiItems = computed(() => kpiData.value?.items ?? []);
-
 const finance = computed(() => realtime.value?.finance);
-const lastRealtimeTime = computed(() => {
-  if (!realtime.value) return '--';
-  const trend = realtime.value.online.trend;
-  const lastPoint = trend[trend.length - 1];
-  return lastPoint?.t || shortTime(realtime.value.online.updatedAt || realtime.value.snapshotAt);
-});
-const onlineSpark = computed(() => {
-  const trend = realtime.value?.online.trend ?? [];
-  return trend.slice(-90);
-});
 
 const pendingAgeText = computed(() => {
   const minutes = finance.value?.withdrawPendingOldestMinutes;
@@ -627,6 +572,196 @@ const pendingAgeText = computed(() => {
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   return rest ? `${hours}小时${rest}分` : `${hours}小时`;
+});
+
+const comparisonText = (item?: KpiItem) => {
+  if (!item?.hasComparison) return '—';
+  return `${rateText(item.changeRate)} 较昨日同期`;
+};
+
+const comparisonTone = (item?: KpiItem) => {
+  const tone = item ? rateClass(item) : 'neutral';
+  return tone === 'good' || tone === 'bad' ? tone : 'muted';
+};
+
+const percentText = (value?: number | null) =>
+  value === null || value === undefined ? '—' : `${Number(value).toFixed(2)}%`;
+
+const commandKpis = computed(() => {
+  const items = kpiData.value?.items ?? [];
+  const item = (key: string) => items.find(row => row.key === key);
+  const activeItem = item('activeUsers');
+  const rechargeItem = item('rechargeAmount');
+  const validBetItem = item('validBet');
+  const ggrItem = item('ggr');
+  const quality = commandCenter.value?.quality;
+  const activeUsers = toNumber(quality?.activeUsers ?? activeItem?.value ?? realtime.value?.online.todayActive);
+  const paidUsers = toNumber(quality?.paidUsers ?? finance.value?.rechargeUsers);
+  const pendingCount = toNumber(finance.value?.withdrawPendingCount);
+  const pendingAmount = finance.value?.withdrawPendingAmount;
+
+  return [
+    {
+      key: 'activeUsers',
+      label: '活跃玩家',
+      value: formatCount(activeUsers),
+      sub: comparisonText(activeItem),
+      subTone: comparisonTone(activeItem),
+      tooltip: activeItem?.tooltip
+    },
+    {
+      key: 'paidUsers',
+      label: '付费玩家',
+      value: `${formatCount(paidUsers)} / ${formatCount(activeUsers)}`,
+      sub: `付费率 ${percentText(quality?.paidRate ?? (activeUsers > 0 ? (paidUsers * 100) / activeUsers : 0))}`,
+      subTone: 'info',
+      tooltip: '今日成功充值去重用户 / 今日活跃玩家'
+    },
+    {
+      key: 'rechargeAmount',
+      label: '充值成功',
+      value: formatMoney(finance.value?.rechargeAmount ?? rechargeItem?.value),
+      sub: comparisonText(rechargeItem),
+      subTone: comparisonTone(rechargeItem),
+      tooltip: '今日 payment_order.type=1 且 status=2 的到账金额'
+    },
+    {
+      key: 'withdrawPending',
+      label: '提现待处理',
+      value: `${formatCount(pendingCount)} / ${formatMoney(pendingAmount)}`,
+      sub: `最长等待 ${pendingAgeText.value}`,
+      subTone: pendingCount > 0 ? 'warning' : 'muted',
+      tooltip: '单数 / 金额；包含待审核和已审核待打款'
+    },
+    {
+      key: 'validBet',
+      label: '有效投注',
+      value: formatMoney(validBetItem?.value),
+      sub: comparisonText(validBetItem),
+      subTone: comparisonTone(validBetItem),
+      tooltip: validBetItem?.tooltip
+    },
+    {
+      key: 'ggr',
+      label: 'GGR',
+      value: formatSigned(ggrItem?.value),
+      sub: comparisonText(ggrItem),
+      subTone: comparisonTone(ggrItem),
+      tooltip: ggrItem?.tooltip
+    }
+  ];
+});
+
+const commandTrendLabels = computed(() => commandCenter.value?.trend24h?.map(point => point.hour) ?? []);
+const commandTrendSeries = computed(() => {
+  const points = commandCenter.value?.trend24h ?? [];
+  return [
+    {
+      key: 'online',
+      name: '在线',
+      unit: 'count' as const,
+      color: '#7c5cff',
+      values: points.map(point => point.online)
+    },
+    {
+      key: 'bet',
+      name: '投注',
+      unit: 'money' as const,
+      color: '#4f7cff',
+      values: points.map(point => point.betAmount)
+    },
+    {
+      key: 'recharge',
+      name: '充值',
+      unit: 'money' as const,
+      color: '#22b07d',
+      values: points.map(point => point.rechargeAmount)
+    },
+    {
+      key: 'withdraw',
+      name: '提现',
+      unit: 'money' as const,
+      color: '#f59a3c',
+      values: points.map(point => point.withdrawAmount)
+    },
+    {
+      key: 'risk',
+      name: '风险',
+      unit: 'count' as const,
+      color: '#d15454',
+      values: points.map(point => point.riskCount)
+    }
+  ];
+});
+
+const commandActions = computed(() => {
+  const actions = commandCenter.value?.actions;
+  const actionValue = (value: number | undefined, unit: string) =>
+    actions && value !== undefined ? `${formatCount(value)} ${unit}` : '—';
+  return [
+    {
+      key: 'paymentFailed',
+      label: '支付异常',
+      hint: '今日充值失败状态',
+      value: actionValue(actions?.paymentFailedCount, '笔'),
+      tone: Number(actions?.paymentFailedCount ?? 0) > 0 ? 'danger' : 'ok'
+    },
+    {
+      key: 'withdrawTimeout',
+      label: '提现超时',
+      hint: `待处理超过 ${actions?.withdrawTimeoutMinutes ?? 5} 分钟`,
+      value: actionValue(actions?.withdrawTimeoutCount, '单'),
+      tone: Number(actions?.withdrawTimeoutCount ?? 0) > 0 ? 'danger' : 'ok'
+    },
+    {
+      key: 'withdrawRisk',
+      label: '高风险提现',
+      hint: '当前待处理风控单',
+      value: actions
+        ? `${formatCount(actions.withdrawRiskCount)} 单 / ${formatMoney(actions.withdrawRiskAmount)}`
+        : '—',
+      tone: Number(actions?.withdrawRiskCount ?? 0) > 0 ? 'danger' : 'ok'
+    },
+    {
+      key: 'dataBroken',
+      label: '数据断链',
+      hint: '异常数据源',
+      value: actionValue(actions?.dataBrokenCount, '个'),
+      tone: Number(actions?.dataBrokenCount ?? 0) > 0 ? 'danger' : 'ok'
+    }
+  ];
+});
+
+const commandFunds = computed(() => {
+  const funds = commandCenter.value?.funds;
+  return [
+    { key: 'recharge', label: '充值', value: formatMoney(funds?.rechargeAmount) },
+    { key: 'bet', label: '投注', value: formatMoney(funds?.betAmount) },
+    { key: 'payout', label: '派彩', value: formatMoney(funds?.payoutAmount) },
+    { key: 'withdraw', label: '提现', value: formatMoney(funds?.withdrawAmount) }
+  ];
+});
+
+const commandGames = computed(() => commandCenter.value?.games ?? []);
+
+const commandQuality = computed(() => {
+  const quality = commandCenter.value?.quality;
+  return [
+    { key: 'new', label: '新增', value: formatCount(quality?.newMembers), hint: '今日注册' },
+    { key: 'active', label: '活跃', value: formatCount(quality?.activeUsers), hint: '去重真人' },
+    {
+      key: 'paid',
+      label: '付费',
+      value: formatCount(quality?.paidUsers),
+      hint: `付费率 ${percentText(quality?.paidRate)}`
+    },
+    {
+      key: 'repurchase',
+      label: '复充',
+      value: formatCount(quality?.repurchaseUsers),
+      hint: `复充率 ${percentText(quality?.repurchaseRate)}`
+    }
+  ];
 });
 
 const loadSnapshot = async () => {
@@ -647,7 +782,7 @@ const loadSnapshot = async () => {
       riskToday.value = res.data.risk;
       riskLoading.value = false;
       health.value = res.data.health;
-      snapshotAlerts.value = res.data.alerts ?? [];
+      commandCenter.value = res.data.commandCenter;
       kpiStale.value = false;
       realtimeStale.value = false;
       snapshotStale.value = false;
@@ -975,8 +1110,24 @@ const loadWhenVisible = (element: HTMLElement | undefined, load: () => Promise<u
 };
 
 let snapshotTimer: number | undefined;
+let clockTimer: number | undefined;
 let pollingActive = false;
 let pageActive = false;
+
+const updateDashboardClock = () => {
+  dashboardClock.value = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+};
+
+const startClock = () => {
+  updateDashboardClock();
+  if (clockTimer) return;
+  clockTimer = window.setInterval(updateDashboardClock, 1000);
+};
+
+const stopClock = () => {
+  if (clockTimer) window.clearInterval(clockTimer);
+  clockTimer = undefined;
+};
 
 const stopPolling = () => {
   pollingActive = false;
@@ -1000,6 +1151,7 @@ const startPolling = () => {
 
 onMounted(() => {
   pageActive = true;
+  startClock();
   void loadSnapshot();
   loadWhenVisible(rankingSection.value?.$el, ensureRanking);
   loadWhenVisible(trendSection.value?.$el, ensureTrend);
@@ -1011,17 +1163,20 @@ onMounted(() => {
 
 onActivated(() => {
   pageActive = true;
+  startClock();
   startPolling();
   refreshVisibleDataIfStale();
 });
 
 onDeactivated(() => {
   pageActive = false;
+  stopClock();
   stopPolling();
 });
 
 onBeforeUnmount(() => {
   pageActive = false;
+  stopClock();
   stopPolling();
   sectionObservers.splice(0).forEach(observer => observer.disconnect());
   document.removeEventListener('visibilitychange', refreshVisibleDataIfStale);
@@ -1558,8 +1713,282 @@ onBeforeUnmount(() => {
   color: var(--el-color-danger) !important;
 }
 
+/* 运营指挥台首屏 */
+.command-state {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.command-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.command-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid rgba(34, 176, 125, 0.2);
+  border-radius: 999px;
+  color: var(--el-color-success);
+  background: rgba(34, 176, 125, 0.08);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.command-status.danger {
+  border-color: rgba(225, 92, 92, 0.25);
+  color: var(--el-color-danger);
+  background: rgba(225, 92, 92, 0.08);
+}
+
+.command-meta {
+  gap: 18px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.command-clock {
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.command-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.command-kpi {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+  background: var(--el-bg-color);
+}
+
+.command-kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.command-kpi-value {
+  overflow: hidden;
+  margin-top: 7px;
+  color: var(--el-text-color-primary);
+  font-size: clamp(20px, 2vw, 28px);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-kpi-sub {
+  margin-top: 6px;
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.command-kpi-sub.good {
+  color: var(--el-color-success);
+}
+
+.command-kpi-sub.bad,
+.command-kpi-sub.warning {
+  color: var(--el-color-danger);
+}
+
+.command-kpi-sub.info {
+  color: var(--el-color-primary);
+}
+
+.command-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(300px, 0.8fr);
+  gap: 12px;
+}
+
+.command-trend-panel,
+.command-action-panel,
+.command-bottom-card {
+  min-width: 0;
+  padding: 14px 16px;
+}
+
+.command-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.command-panel-head h3 {
+  margin: 0;
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+}
+
+.command-panel-head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+}
+
+.command-action-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.command-action-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.command-action-item:last-child {
+  border-bottom: 0;
+}
+
+.command-action-item > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.command-action-label {
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+}
+
+.command-action-item small {
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+}
+
+.command-action-item strong {
+  color: var(--el-color-success);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.command-action-item.danger strong {
+  color: var(--el-color-danger);
+}
+
+.command-bottom-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fund-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 108px;
+}
+
+.fund-flow-item,
+.quality-step {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.fund-flow-item span,
+.quality-step span {
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+}
+
+.fund-flow-item strong,
+.quality-step strong {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--el-text-color-primary);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fund-arrow,
+.quality-arrow {
+  color: var(--el-color-primary);
+  font-size: 16px;
+}
+
+.command-game-table {
+  --el-table-header-bg-color: transparent;
+  --el-table-row-hover-bg-color: var(--el-fill-color-lighter);
+}
+
+.game-health-name {
+  overflow: hidden;
+  color: var(--el-text-color-primary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-games small {
+  color: var(--el-text-color-secondary);
+  font-size: 10px;
+}
+
+.quality-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  min-height: 108px;
+}
+
+.quality-step small {
+  color: var(--el-text-color-secondary);
+  font-size: 10px;
+  text-align: center;
+}
+
+.detail-section-title {
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 @media (max-width: 1400px) {
   .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .command-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .command-bottom-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1571,6 +2000,14 @@ onBeforeUnmount(() => {
 
   .fund-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .command-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .command-meta {
+    flex-wrap: wrap;
   }
 }
 </style>

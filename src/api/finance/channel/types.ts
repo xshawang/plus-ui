@@ -29,9 +29,11 @@ export interface FinanceChannelRouteVO {
   merchantId?: number;
   merchantName?: string;
   currency?: string;
-  currencyRate?: string;
   amountMin?: number;
   amountMax?: number;
+  providerAmountMin?: number;
+  providerAmountMax?: number;
+  providerRouteCount?: number;
   recommendAmounts?: string;
   feeRate?: number;
   successRate?: number;
@@ -137,7 +139,6 @@ export interface FinanceChannelRouteForm {
   subSort?: number;
   merchantId?: number;
   currency?: string;
-  currencyRate?: string;
   amountMin?: number;
   amountMax?: number;
   recommendAmounts?: string;

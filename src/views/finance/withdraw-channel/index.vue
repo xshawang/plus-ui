@@ -42,7 +42,7 @@
       </el-form>
       <div class="text-gray-400 text-sm">
         提现渠道使用独立路由表，不读取充值大类或充值通道路由；加密货币不再单独维护，统一在 CRYPTO/COIN12 通道中配置。
-        客户端可控制：标签顺序、显示/隐藏、NEW、维护状态。不可控制：标签文字、页面字段布局、新增任意标签类型、默认标签。
+        客户端可控制：标签顺序、NEW、维护状态；大类维护开关同时控制页签显示/隐藏。不可控制：标签文字、页面字段布局、新增任意标签类型、默认标签。
         NEW 图标使用独立索引，页面按 tabCode 分别生成隐藏数组与 NEW 数组。
       </div>
     </el-card>
@@ -119,9 +119,15 @@
               v-hasPermi="['finance:withdrawchannel:edit']"
               link
               type="primary"
-              @click="openAdd(tab.tabCode)"
+              @click="tab.tabCode === 'BANK' ? openBankProviderAccounts() : openAdd(tab.tabCode)"
             >
-              {{ tab.tabCode === 'CRYPTO' ? '新增虚拟币通道' : '新增该标签渠道' }}
+              {{
+                tab.tabCode === 'BANK'
+                  ? '新增供应商银行明细'
+                  : tab.tabCode === 'CRYPTO'
+                    ? '新增虚拟币通道'
+                    : '新增该标签渠道'
+              }}
             </el-button>
           </div>
           <div v-if="tab.tabCode === 'CRYPTO'" class="crypto-overview">
@@ -207,7 +213,77 @@
             </el-table>
           </div>
           <el-table
-            v-if="tab.tabCode !== 'CARD'"
+            v-if="tab.tabCode === 'BANK'"
+            border
+            size="small"
+            :data="visibleChannelsByTab(tab.tabCode)"
+            class="data-table"
+          >
+            <el-table-column label="供应商" min-width="150" show-overflow-tooltip>
+              <template #default="{ row }">
+                <div class="channel-name">{{ row.providerName || '-' }}</div>
+                <code>{{ row.providerCode || '-' }}</code>
+              </template>
+            </el-table-column>
+            <el-table-column label="商户编码" min-width="140" show-overflow-tooltip>
+              <template #default="{ row }">
+                <div>{{ row.merchantCode || '-' }}</div>
+                <span class="text-gray-400 text-xs">{{ row.merchantName || '' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="业务通道编码" min-width="150" show-overflow-tooltip>
+              <template #default="{ row }"><code>{{ row.channelCode }}</code></template>
+            </el-table-column>
+            <el-table-column label="供应商通道编码" min-width="150" show-overflow-tooltip>
+              <template #default="{ row }">
+                <code>{{ bankProviderChannelCode(row as WithdrawChannelProfileVO) }}</code>
+              </template>
+            </el-table-column>
+            <el-table-column label="银行名称" prop="channelName" min-width="170" show-overflow-tooltip />
+            <el-table-column label="客户端银行编码" width="135" align="center">
+              <template #default="{ row }"><code>{{ row.clientCode || '-' }}</code></template>
+            </el-table-column>
+            <el-table-column label="最小限额" width="130" align="right">
+              <template #default="{ row }">{{ formatMoney(row.amountMin ?? 0) }}</template>
+            </el-table-column>
+            <el-table-column label="最大限额" width="130" align="right">
+              <template #default="{ row }">{{ row.amountMax ? formatMoney(row.amountMax) : '不限' }}</template>
+            </el-table-column>
+            <el-table-column label="维护码" prop="maintenanceCode" width="120" />
+            <el-table-column label="维护开关" width="100" align="center">
+              <template #default="{ row }">
+                <el-switch
+                  v-hasPermi="['finance:withdrawchannel:edit']"
+                  :model-value="row.status"
+                  :active-value="1"
+                  :inactive-value="0"
+                  @change="(value: number) => toggleStatus(row as WithdrawChannelProfileVO, value)"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="170" fixed="right" align="center">
+              <template #default="{ row }">
+                <el-button
+                  v-hasPermi="['finance:withdrawchannel:edit']"
+                  link
+                  type="success"
+                  @click="openProviderRoutes(row as WithdrawChannelProfileVO)"
+                >
+                  三方路由
+                </el-button>
+                <el-button
+                  v-hasPermi="['finance:withdrawchannel:edit']"
+                  link
+                  type="primary"
+                  @click="openEdit(row as WithdrawChannelProfileVO)"
+                >
+                  编辑
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-table
+            v-else-if="tab.tabCode !== 'CARD'"
             border
             size="small"
             :data="visibleChannelsByTab(tab.tabCode)"
@@ -283,8 +359,16 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="90" fixed="right" align="center">
+            <el-table-column label="操作" width="180" fixed="right" align="center">
               <template #default="{ row }">
+                <el-button
+                  v-hasPermi="['finance:withdrawchannel:edit']"
+                  link
+                  type="success"
+                  @click="openProviderRoutes(row as WithdrawChannelProfileVO)"
+                >
+                  三方路由
+                </el-button>
                 <el-button
                   v-hasPermi="['finance:withdrawchannel:edit']"
                   link
@@ -362,11 +446,6 @@
         <el-table-column label="排序" width="130">
           <template #default="{ row }">
             <el-input-number v-model="row.sortNo" :min="1" :max="99" controls-position="right" />
-          </template>
-        </el-table-column>
-        <el-table-column label="显示" width="90" align="center">
-          <template #default="{ row }">
-            <el-switch v-model="row.visible" :active-value="1" :inactive-value="0" />
           </template>
         </el-table-column>
         <el-table-column label="NEW" width="90" align="center">
@@ -543,16 +622,42 @@
             </el-col>
           </template>
           <el-col v-if="profileForm.tabCode === 'BANK'" :span="24">
-            <el-form-item label="支持银行">
+            <el-form-item label="供应商账号">
               <el-select
-                v-model="profileForm.supportedBankCodes"
-                multiple
+                v-model="profileForm.merchantId"
                 filterable
-                allow-create
-                default-first-option
-                placeholder="输入银行编码后回车"
+                clearable
+                placeholder="选择支付渠道中心的供应商账号"
                 style="width: 100%"
-              />
+                @change="handleBankAccountChange"
+              >
+                <el-option
+                  v-for="account in providerAccounts"
+                  :key="account.merchantId"
+                  :label="`${account.providerCode || account.providerId} / ${account.merchantCode} / ${account.merchantName}`"
+                  :value="Number(account.merchantId)"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col v-if="profileForm.tabCode === 'BANK'" :span="24">
+            <el-form-item label="代付银行">
+              <el-select
+                v-model="selectedBankCode"
+                filterable
+                clearable
+                :loading="bankOptionsLoading"
+                placeholder="选择供应商支持的代付银行"
+                style="width: 100%"
+                @change="handleBankOptionChange"
+              >
+                <el-option
+                  v-for="bank in bankOptions"
+                  :key="`${bank.providerChannelCode}-${bank.bankCode}`"
+                  :label="`${bank.bankName} / ${bank.bankCode} / ${bank.providerChannelCode}`"
+                  :value="bank.bankCode"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -737,13 +842,34 @@
     <el-dialog v-model="manifestDialog" title="客户端提现配置下发值" width="720px" append-to-body>
       <el-input :model-value="manifestText" type="textarea" :rows="20" readonly />
     </el-dialog>
+
+    <ProviderRouteBindingDrawer
+      v-model="providerRouteDrawer"
+      scene="PAYOUT"
+      :business-ref-id="providerBusinessRefId"
+      :business-label="providerBusinessLabel"
+      :merchant-id="providerBusinessMerchantId"
+      :bank-code="providerBusinessBankCode"
+      :platform="providerBusinessPlatform"
+      :currency="providerBusinessCurrency"
+    />
   </div>
 </template>
 
 <script setup name="FinanceWithdrawChannel" lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import type { FormInstance, FormRules } from 'element-plus';
 import modal from '@/plugins/modal';
+import ProviderRouteBindingDrawer from '@/views/finance/components/ProviderRouteBindingDrawer.vue';
+import {
+  listPayoutBankOptions,
+  listProviderAccounts
+} from '@/api/finance/payment-provider';
+import type {
+  PayoutBankOptionVO,
+  ProviderAccountVO
+} from '@/api/finance/payment-provider';
 import type {
   WithdrawCardConfigForm,
   WithdrawCardConfigVO,
@@ -778,6 +904,8 @@ const payoutModes = [
   { label: 'P2P 交易所', value: 'P2P' },
   { label: '币商/Coin12', value: 'COIN_EXCHANGE' }
 ];
+
+const router = useRouter();
 const rateModes = [
   { label: '不需要', value: 'NONE' },
   { label: '固定汇率', value: 'FIXED' },
@@ -807,6 +935,17 @@ const platformDialog = ref(false);
 const cardDialog = ref(false);
 const manifestDialog = ref(false);
 const manifestText = ref('');
+const providerRouteDrawer = ref(false);
+const providerBusinessRefId = ref<number>();
+const providerBusinessLabel = ref('');
+const providerBusinessMerchantId = ref<number>();
+const providerBusinessBankCode = ref('');
+const providerBusinessPlatform = ref('go88');
+const providerBusinessCurrency = ref('VND');
+const providerAccounts = ref<ProviderAccountVO[]>([]);
+const bankOptions = ref<PayoutBankOptionVO[]>([]);
+const bankOptionsLoading = ref(false);
+const selectedBankCode = ref('');
 const submitting = ref(false);
 const tabsLoading = ref(false);
 const profileFormRef = ref<FormInstance>();
@@ -1024,8 +1163,86 @@ const loadCardConfigs = async () => {
   cardConfigs.value = res.data ?? [];
 };
 
+const loadProviderAccounts = async () => {
+  try {
+    const res = await listProviderAccounts();
+    providerAccounts.value = (res.data ?? []).filter((item) => item.status !== 0);
+  } catch {
+    providerAccounts.value = [];
+  }
+};
+
+const loadBankOptions = async (merchantId?: number, preferredBankCode = '') => {
+  bankOptions.value = [];
+  selectedBankCode.value = '';
+  if (!merchantId) return;
+  const account = providerAccounts.value.find(
+    (item) => Number(item.merchantId) === Number(merchantId)
+  );
+  bankOptionsLoading.value = true;
+  try {
+    const res = await listPayoutBankOptions({
+      providerId: account?.providerId,
+      merchantId,
+      currency: profileForm.currency || 'VND'
+    });
+    bankOptions.value = res.data ?? [];
+    if (preferredBankCode) {
+      selectedBankCode.value = preferredBankCode;
+    }
+  } catch {
+    bankOptions.value = [];
+  } finally {
+    bankOptionsLoading.value = false;
+  }
+};
+
+const handleBankAccountChange = async (merchantId?: number) => {
+  profileForm.supportedBankCodes = [];
+  delete channelConfigRoot.value.bank;
+  await loadBankOptions(merchantId);
+};
+
+const handleBankOptionChange = (bankCode?: string) => {
+  const bank = bankOptions.value.find((item) => item.bankCode === bankCode);
+  if (!bank) return;
+  const account = providerAccounts.value.find(
+    (item) => Number(item.merchantId) === Number(profileForm.merchantId)
+  );
+  profileForm.channelCode = [
+    'BANK',
+    account?.providerCode || bank.providerCode,
+    account?.merchantCode || bank.merchantCode,
+    bank.bankCode
+  ].filter(Boolean).join('_').replace(/[^A-Za-z0-9_]/g, '_').toUpperCase();
+  profileForm.channelName = bank.bankName;
+  profileForm.clientCode = bank.bankCode;
+  // client_sub_code 属于客户端渠道匹配维度，不能写入供应商协议编码。
+  profileForm.clientSubCode = '';
+  profileForm.supportedBankCodes = [bank.bankCode];
+  profileForm.amountMin = Number(bank.amountMin ?? 0);
+  profileForm.amountMax = Number(bank.amountMax ?? 0);
+  profileForm.payoutMode = 'THIRD_PARTY';
+  channelConfigRoot.value.bank = {
+    providerId: bank.providerId,
+    providerCode: bank.providerCode,
+    merchantId: bank.merchantId,
+    merchantCode: bank.merchantCode,
+    providerChannelCode: bank.providerChannelCode,
+    providerPayType: bank.providerPayType,
+    bankCode: bank.bankCode,
+    bankName: bank.bankName
+  };
+};
+
 const loadAll = async () => {
-  await Promise.all([loadTabs(), loadProfiles(), loadCryptoPlatforms(), loadCardConfigs()]);
+  await Promise.all([
+    loadTabs(),
+    loadProfiles(),
+    loadCryptoPlatforms(),
+    loadCardConfigs(),
+    loadProviderAccounts()
+  ]);
 };
 
 const resetQuery = () => {
@@ -1136,6 +1353,10 @@ const asRecord = (value: unknown): Record<string, unknown> =>
     ? (value as Record<string, unknown>)
     : {};
 
+const bankProviderChannelCode = (row: WithdrawChannelProfileVO) => {
+  return row.providerChannelCode || '-';
+};
+
 const resetChannelExtras = () => {
   Object.assign(p2pConfig, defaultP2pConfig());
   Object.assign(coin12Config, defaultCoin12Config());
@@ -1163,6 +1384,8 @@ const buildChannelConfigJson = () =>
 
 const openAdd = (tabCode?: string) => {
   Object.assign(profileForm, defaultProfile());
+  bankOptions.value = [];
+  selectedBankCode.value = '';
   resetChannelExtras();
   if (tabCode) {
     profileForm.tabCode = tabCode;
@@ -1198,6 +1421,18 @@ const openAdd = (tabCode?: string) => {
     }
   }
   profileDialog.value = true;
+};
+
+const openBankProviderAccounts = async () => {
+  await router.push({
+    path: '/finance/payment-provider',
+    query: {
+      tab: 'accounts',
+      payout: '1',
+      source: 'withdraw-bank',
+      returnTo: router.currentRoute.value.fullPath
+    }
+  });
 };
 
 const openEdit = (row: WithdrawChannelProfileVO) => {
@@ -1250,6 +1485,19 @@ const openEdit = (row: WithdrawChannelProfileVO) => {
     remark: row.remark ?? ''
   });
   profileDialog.value = true;
+  if (row.tabCode === 'BANK' && row.merchantId) {
+    loadBankOptions(row.merchantId, row.clientCode || '');
+  }
+};
+
+const openProviderRoutes = (row: WithdrawChannelProfileVO) => {
+  providerBusinessRefId.value = row.withdrawChannelId;
+  providerBusinessLabel.value = `${row.channelCode} / ${row.channelName}`;
+  providerBusinessMerchantId.value = row.merchantId;
+  providerBusinessBankCode.value = row.clientCode || '';
+  providerBusinessPlatform.value = row.platform || 'go88';
+  providerBusinessCurrency.value = row.currency || 'VND';
+  providerRouteDrawer.value = true;
 };
 
 const submitProfile = async () => {
@@ -1266,6 +1514,17 @@ const submitProfile = async () => {
     profileForm.iconArt = '';
   }
   profileForm.clientCode = String(profileForm.clientCode || '').trim().toUpperCase();
+  if (profileForm.tabCode === 'BANK') {
+    if (!profileForm.merchantId) {
+      modal.msgError('请选择供应商账号');
+      return;
+    }
+    if (!selectedBankCode.value) {
+      modal.msgError('请选择供应商支持的代付银行');
+      return;
+    }
+    profileForm.supportedBankCodes = [selectedBankCode.value];
+  }
   if (profileForm.tabCode === 'P2P' && Number(p2pConfig.price) <= 0) {
     modal.msgError('P2P 成交价必须大于 0');
     return;
@@ -1327,7 +1586,7 @@ const toggleStatus = async (row: WithdrawChannelProfileVO, status: number) => {
 
 const toggleTabStatus = async (tab: WithdrawTabVO, status: number) => {
   await changeWithdrawTabStatus(tab.tabId, status);
-  modal.msgSuccess(status === 1 ? '提现标签维护已解除' : '提现标签已进入维护');
+  modal.msgSuccess(status === 1 ? '提现页签已显示并恢复进入' : '提现页签已隐藏并进入维护');
   await loadAll();
 };
 

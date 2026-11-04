@@ -145,9 +145,10 @@
             <el-link type="primary" :underline="false" @click="handleGoLedger(row)">{{ row.uid }}</el-link>
           </template>
         </el-table-column>
-        <el-table-column label="登录名" align="center" min-width="130" show-overflow-tooltip>
+        <el-table-column label="登录名 / 昵称" align="center" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
             <el-link type="primary" :underline="false" @click="handleUpdate(row)">{{ row.loginName }}</el-link>
+            <div class="text-gray-400 text-sm">{{ row.nickName || '—' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="aff_id（注册渠道）" align="center" min-width="150" show-overflow-tooltip>
@@ -158,8 +159,12 @@
             <el-tag :type="row.isStreamer === 1 ? 'danger' : 'info'">{{ row.isStreamer === 1 ? '主播号' : '否' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="昵称" align="center" prop="nickName" min-width="120" show-overflow-tooltip />
-        <el-table-column label="手机号" align="center" prop="phone" min-width="120" show-overflow-tooltip />
+        <el-table-column label="手机号 / 验证" align="center" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">
+            <div>{{ row.phone || '—' }}</div>
+            <div class="text-gray-400 text-sm">{{ row.phoneVerified === 1 ? '已验证' : '未验证' }}</div>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" align="center" width="90">
           <template #default="{ row }">
             <el-tag :type="userStatusType(row.status)">{{ userStatusMap[row.status] ?? row.status }}</el-tag>
@@ -175,18 +180,22 @@
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column label="累计充值" align="right" width="140">
+        <el-table-column label="累计充提" align="right" min-width="190">
           <template #default="{ row }">
-            <el-link type="success" :underline="false" @click="handleGoRecharge(row)">
-              {{ formatMoney(row.totalRechargeAmount) }}
-            </el-link>
-          </template>
-        </el-table-column>
-        <el-table-column label="累计提现" align="right" width="140">
-          <template #default="{ row }">
-            <el-link type="warning" :underline="false" @click="handleGoWithdraw(row)">
-              {{ formatMoney(row.totalWithdrawAmount) }}
-            </el-link>
+            <div>
+              充
+              <el-link type="success" :underline="false" @click="handleGoRecharge(row)">
+                {{ formatMoney(row.totalRechargeAmount) }}
+              </el-link>
+              / {{ row.totalRechargeCount ?? 0 }} 次
+            </div>
+            <div>
+              提
+              <el-link type="warning" :underline="false" @click="handleGoWithdraw(row)">
+                {{ formatMoney(row.totalWithdrawAmount) }}
+              </el-link>
+              / {{ row.totalWithdrawCount ?? 0 }} 次
+            </div>
           </template>
         </el-table-column>
         <!-- 01 文档扩展列：层级与标签 / 账号类型与注册验证 / 充提次数与差额首充 / 代理链 -->
@@ -217,9 +226,8 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="充提次数 / 差额 / 首充" align="right" min-width="190">
+        <el-table-column label="充提差额 / 首充" align="right" min-width="170">
           <template #default="{ row }">
-            <div>充 {{ row.totalRechargeCount ?? 0 }} 次 · 提 {{ row.totalWithdrawCount ?? 0 }} 次</div>
             <div class="text-gray-400 text-sm">
               差额 {{ formatMoney(row.balanceDiff) }} · 首充 {{ formatMoney(row.firstDepositAmount) }}
             </div>
@@ -231,7 +239,13 @@
             <div class="text-gray-400 text-sm">{{ row.parentAgentName || '—' }} / {{ row.topAgentName || '—' }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="注册IP" align="center" prop="registerIp" min-width="130" show-overflow-tooltip />
+        <el-table-column label="注册IP / 设备" align="center" min-width="235" show-overflow-tooltip>
+          <template #default="{ row }">
+            <div>{{ row.registerIp || '—' }}</div>
+            <div class="text-gray-400 text-sm">指纹：{{ row.registerDevice || '—' }}</div>
+            <div class="text-gray-400 text-sm">{{ registerDeviceLabel(row as MemberUserVO) }}</div>
+          </template>
+        </el-table-column>
         <el-table-column label="注册时间" align="center" prop="registerAt" width="170">
           <template #default="{ row }">{{ row.registerAt }}</template>
         </el-table-column>
@@ -359,6 +373,17 @@
           <el-col :span="8">
             <el-form-item label="昵称" prop="nickName">
               <el-input v-model="form.nickName" placeholder="昵称" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="登录密码" prop="loginPassword">
+              <el-input
+                v-model="form.loginPassword"
+                type="password"
+                show-password
+                maxlength="64"
+                placeholder="留空不修改，6-64 位"
+              />
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -609,10 +634,19 @@ const userFormRef = ref<ElFormInstance>();
  */
 const registerClientType = ref('');
 
+const validateOptionalPassword = (_rule: any, value: string, callback: (error?: Error) => void) => {
+  if (!value || (value.length >= 6 && value.length <= 64)) {
+    callback();
+    return;
+  }
+  callback(new Error('登录密码长度必须为 6-64 位'));
+};
+
 const initFormData: MemberUserForm = {
   uid: undefined,
   loginName: undefined,
   nickName: undefined,
+  loginPassword: '',
   phone: undefined,
   phoneVerified: 0,
   status: 1,
@@ -653,7 +687,8 @@ const data = reactive<{ queryParams: MemberUserQuery; form: MemberUserForm; rule
   },
   form: { ...initFormData },
   rules: {
-    nickName: [{ required: true, message: '昵称不能为空', trigger: 'blur' }]
+    nickName: [{ required: true, message: '昵称不能为空', trigger: 'blur' }],
+    loginPassword: [{ validator: validateOptionalPassword, trigger: 'blur' }]
   }
 });
 const { queryParams, form, rules } = toRefs(data);
@@ -682,6 +717,12 @@ const formatMoney = (value?: number) => {
 const formatMoneyInt = (value?: number) => {
   if (value === null || value === undefined) return '0';
   return Math.round(Number(value)).toLocaleString('en-US');
+};
+
+const registerDeviceLabel = (row: MemberUserVO) => {
+  const browser = [row.registerBrowser, row.registerBrowserVersion].filter(Boolean).join(' ');
+  const os = [row.registerOs, row.registerOsVersion].filter(Boolean).join(' ');
+  return [browser, os].filter(Boolean).join(' / ') || '设备画像未采集';
 };
 
 const getList = async () => {

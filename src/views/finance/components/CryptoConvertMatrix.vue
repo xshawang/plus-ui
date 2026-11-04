@@ -21,7 +21,7 @@
         <el-link type="primary" :underline="false" @click="gotoExchangeRate">汇率管理</el-link>
       </div>
 
-      <!-- 参照图：一个币种一段，居中显示「越南(VND1000:1)」标题 + 纵向勾选清单 -->
+      <!-- 一个币种一段，标题只展示币种代码，不再展示金额比例。 -->
       <div v-for="currency in displayCurrencies" :key="currency.code" class="currency-block">
         <div class="currency-title">{{ currencyTitle(currency) }}</div>
         <div class="coin-list">
@@ -64,7 +64,7 @@ import type { CryptoMatrixCurrency, CryptoMatrixOptions } from '@/api/finance/re
  *
  * 背景：参照页把"哪些数字货币可以用来充值"做成**按币种纵向罗列的勾选清单**——
  * 区块标题右侧「修改」，正文居中显示"可转化充值的数字货币（需先添加数字货币三方支付）"+ 右侧「汇率管理」，
- * 每个币种居中显示标题（如 越南(VND1000:1)），下面是 USDT…USDS 的纵向复选框；底部是红色注意事项与「取消/确认」。
+ * 每个币种居中显示标题（如 越南(VND)），下面是 USDT…USDS 的纵向复选框；底部是红色注意事项与「取消/确认」。
  *
  * 为什么按币种分段展示：勾选配置本身是"币种 × 数字货币"的二维关系；参照页一个币种一段，
  * 这里默认只展示"平台已启用币种"（sys_currency_config.master_switch=1，例如仅越南盾 VND），与参照页一致；
@@ -82,7 +82,7 @@ const options = reactive<CryptoMatrixOptions>({ currencies: [], coins: [], matri
 const draft = ref<Record<string, string[]>>({});
 
 const currencyTitle = (currency: CryptoMatrixCurrency) =>
-  `${currency.name}(${currency.code}${currency.ratio ? currency.ratio : ''})`;
+  `${currency.name}(${currency.code})`;
 
 /**
  * 展示哪些币种：优先平台已启用币种；若一个都没启用，则退回"已配置过勾选的币种"或首个币种，

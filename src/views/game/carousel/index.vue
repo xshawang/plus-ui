@@ -84,7 +84,7 @@
           <h4>基础配置</h4>
           <el-form :model="form" label-width="170px">
             <el-form-item label="币种" required>
-              <el-select v-model="form.currency" style="width: 100%"><el-option label="越南(VND1000:1)" value="VND" /></el-select>
+              <el-select v-model="form.currency" style="width: 100%"><el-option label="越南(VND1:1)" value="VND" /></el-select>
             </el-form-item>
             <el-form-item label="展示位置" required>
               <el-select v-model="form.positionCode" style="width: 100%">

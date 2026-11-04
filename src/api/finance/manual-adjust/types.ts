@@ -8,13 +8,13 @@ export interface FinanceMemberAssetVO {
   realName?: string;
   vipLevel?: number;
   status?: number;
-  /** 主钱包可用余额（分） */
+  /** 主钱包可用余额（VND） */
   available?: number;
-  /** 利息宝/保险箱余额（分） */
+  /** 利息宝/保险箱余额（VND） */
   extra?: number;
   bonus?: number;
   frozen?: number;
-  /** 合计总余额 = available + extra（分） */
+  /** 合计总余额 = available + extra（VND） */
   total?: number;
 }
 

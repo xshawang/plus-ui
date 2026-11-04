@@ -31,7 +31,7 @@
       </el-form>
       <div class="text-gray-400 text-sm">
         口径：后台只做查询 / 发起 / 手动解除，达标计算由稽核域（player TurnoverService）负责；
-        数据源为 user_turnover_task，金额单位：分。
+        数据源为 user_turnover_task，金额单位：VND。
       </div>
     </el-card>
 
@@ -122,7 +122,7 @@
         <el-form-item label="限定游戏范围">
           <el-input v-model="form.gameScope" placeholder="空=全平台，逗号分隔 game_code" style="width: 320px" />
         </el-form-item>
-        <el-alert type="info" :closable="false" title="目标流水 = 记账金额 × 流水倍数（向下取整到分）；同一关联单号只会生成一条任务。" />
+        <el-alert type="info" :closable="false" title="目标流水 = 记账金额 × 流水倍数（按 VND 取整）；同一关联单号只会生成一条任务。" />
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -325,8 +325,8 @@ const handleDetail = async (row: FinanceAuditTaskVO) => {
   modal.alert(
     `任务ID：${detail.taskId}\n会员：${detail.account ?? detail.uid}（V${detail.vipLevel ?? 0}）\n` +
       `来源：${sourceText(detail.sourceType)} / ${detail.sourceNo}\n` +
-      `记账：${detail.sourceAmount ?? 0} 分 × ${detail.rolloverMultiple ?? 1} = 目标 ${detail.targetAmount ?? 0} 分\n` +
-      `已打码：${detail.rolledAmount ?? 0} 分，剩余：${detail.remainingAmount ?? 0} 分\n` +
+      `记账：${detail.sourceAmount ?? 0} VND × ${detail.rolloverMultiple ?? 1} = 目标 ${detail.targetAmount ?? 0} VND\n` +
+      `已打码：${detail.rolledAmount ?? 0} VND，剩余：${detail.remainingAmount ?? 0} VND\n` +
       `状态：${statusText(detail.status)}   限定范围：${detail.gameScope || '全平台'}`
   );
 };

@@ -3,7 +3,13 @@
     <el-card shadow="hover" class="search-panel">
       <el-form :inline="true" class="query-form">
         <el-form-item label="会员ID">
-          <el-input v-model="uidInput" placeholder="请输入会员ID" clearable style="width: 240px" @keyup.enter="handleLoad" />
+          <el-input
+            v-model="uidInput"
+            placeholder="请输入会员ID"
+            clearable
+            style="width: 240px"
+            @keyup.enter="handleLoad"
+          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" :loading="loading" @click="handleLoad">查询</el-button>
@@ -46,14 +52,24 @@
                         {{ name }}
                       </button>
                     </template>
-                    <button v-hasPermi="['member:user:edit']" type="button" class="member-tag-add" @click="openTagDialog">
+                    <button
+                      v-hasPermi="['member:user:edit']"
+                      type="button"
+                      class="member-tag-add"
+                      @click="openTagDialog"
+                    >
                       {{ overview.tagNames ? '+ 标签' : '+ 添加标签' }}
                     </button>
                   </div>
                   <div class="member-id-row">
                     <span class="member-id-label">ID</span>
                     <code>{{ overview.uid }}</code>
-                    <el-button link type="primary" icon="CopyDocument" @click="copyText(String(overview.uid), '会员ID')">
+                    <el-button
+                      link
+                      type="primary"
+                      icon="CopyDocument"
+                      @click="copyText(String(overview.uid), '会员ID')"
+                    >
                       复制
                     </el-button>
                   </div>
@@ -67,10 +83,13 @@
               <div class="identity-actions">
                 <el-button icon="CopyDocument" @click="copyText(String(overview.uid), '会员ID')">复制ID</el-button>
                 <el-button icon="Tickets" @click="goLedger">查看流水</el-button>
-                <el-button v-hasPermi="['ops:messagetask:add']" icon="Message" @click="openMessageDialog">发站内信</el-button>
+                <el-button v-hasPermi="['ops:messagetask:add']" icon="Message" @click="openMessageDialog">
+                  发站内信
+                </el-button>
                 <el-dropdown trigger="click" @command="handleMoreCommand">
                   <el-button>
-                    更多<span class="more-caret">▾</span>
+                    更多
+                    <span class="more-caret">▾</span>
                   </el-button>
                   <template #dropdown>
                     <el-dropdown-menu>
@@ -87,15 +106,9 @@
                       <el-dropdown-item v-if="canEditMember" command="edit-tags" icon="CollectionTag">
                         管理标签
                       </el-dropdown-item>
-                      <el-dropdown-item v-if="canViewPlain" command="plain" icon="View">
-                        明文查看
-                      </el-dropdown-item>
-                      <el-dropdown-item v-if="canEditMember" command="email" icon="Message">
-                        维护邮箱
-                      </el-dropdown-item>
-                      <el-dropdown-item v-if="canEditMember" command="vip" icon="Edit">
-                        VIP 改档
-                      </el-dropdown-item>
+                      <el-dropdown-item v-if="canViewPlain" command="plain" icon="View">明文查看</el-dropdown-item>
+                      <el-dropdown-item v-if="canEditMember" command="email" icon="Message">维护邮箱</el-dropdown-item>
+                      <el-dropdown-item v-if="canEditMember" command="vip" icon="Edit">VIP 改档</el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
                 </el-dropdown>
@@ -110,33 +123,50 @@
                     ⚠ 无充值记录
                   </span>
                 </div>
-                <div class="kpi-value">{{ fmtFen(totalBalance) }} <small>{{ overview.currency || 'VND' }}</small></div>
+                <div class="kpi-value">
+                  {{ fmtFen(totalBalance) }}
+                  <small>{{ overview.currency || 'VND' }}</small>
+                </div>
                 <div class="kpi-note">
                   可用 {{ fmtFen(overview.availableBalance) }}
-                  <template v-if="Number(overview.frozenBalance) > 0"> · 冻结 {{ fmtFen(overview.frozenBalance) }}</template>
+                  <template v-if="Number(overview.frozenBalance) > 0">
+                    · 冻结 {{ fmtFen(overview.frozenBalance) }}
+                  </template>
                 </div>
               </article>
               <article class="kpi-card">
                 <div class="kpi-label">总充值</div>
-                <div class="kpi-value">{{ fmtFen(overview.totalRechargeAmount) }} <small>{{ overview.currency || 'VND' }}</small></div>
+                <div class="kpi-value">
+                  {{ fmtFen(overview.totalRechargeAmount) }}
+                  <small>{{ overview.currency || 'VND' }}</small>
+                </div>
                 <div class="kpi-note">{{ overview.totalRechargeCount ?? 0 }} 次成功充值</div>
               </article>
               <article class="kpi-card">
                 <div class="kpi-label">总提现</div>
-                <div class="kpi-value">{{ fmtFen(overview.totalWithdrawAmount) }} <small>{{ overview.currency || 'VND' }}</small></div>
+                <div class="kpi-value">
+                  {{ fmtFen(overview.totalWithdrawAmount) }}
+                  <small>{{ overview.currency || 'VND' }}</small>
+                </div>
                 <div class="kpi-note">{{ overview.totalWithdrawCount ?? 0 }} 次成功提现</div>
               </article>
               <article class="kpi-card">
                 <div class="kpi-label">充提差额</div>
-                <div class="kpi-value">{{ fmtFen(overview.balanceDiff) }} <small>{{ overview.currency || 'VND' }}</small></div>
+                <div class="kpi-value">
+                  {{ fmtFen(overview.balanceDiff) }}
+                  <small>{{ overview.currency || 'VND' }}</small>
+                </div>
                 <div class="kpi-note">累计充值 − 累计提现</div>
               </article>
               <article class="kpi-card">
                 <div class="kpi-label">打码进度</div>
                 <div class="kpi-value kpi-value--turnover">
-                  当前 {{ fmtFen(overview.totalValidBetAmount) }} <small>{{ overview.currency || 'VND' }}</small>
+                  当前 {{ fmtFen(overview.totalValidBetAmount) }}
+                  <small>{{ overview.currency || 'VND' }}</small>
                 </div>
-                <div class="kpi-note">待完成 {{ fmtFen(overview.withdrawRequiredTurnover) }} {{ overview.currency || 'VND' }}</div>
+                <div class="kpi-note">
+                  待完成 {{ fmtFen(overview.withdrawRequiredTurnover) }} {{ overview.currency || 'VND' }}
+                </div>
               </article>
               <article class="kpi-card kpi-card--vip">
                 <div class="kpi-label">VIP{{ overview.vipLevel ?? 0 }}</div>
@@ -155,7 +185,9 @@
               <section class="info-card">
                 <div class="info-card__header">
                   <h3>账号信息</h3>
-                  <el-button v-hasPermi="['member:user:edit']" link type="primary" @click="openTagDialog">管理标签</el-button>
+                  <el-button v-hasPermi="['member:user:edit']" link type="primary" @click="openTagDialog">
+                    管理标签
+                  </el-button>
                 </div>
                 <div class="info-list">
                   <div class="info-row">
@@ -184,13 +216,18 @@
                   </div>
                   <div class="info-row">
                     <span>注册时间</span>
-                    <strong>{{ fmtDateTime(overview.registerAt) }} <small>{{ relativeTime(overview.registerAt) }}</small></strong>
+                    <strong>
+                      {{ fmtDateTime(overview.registerAt) }}
+                      <small>{{ relativeTime(overview.registerAt) }}</small>
+                    </strong>
                   </div>
                   <div class="info-row">
                     <span>注册 IP</span>
                     <strong class="inline-value">
                       {{ overview.registerIp || '—' }}
-                      <el-tag v-if="isLoopbackIp(overview.registerIp)" type="warning" size="small" effect="plain">本地/代理</el-tag>
+                      <el-tag v-if="isLoopbackIp(overview.registerIp)" type="warning" size="small" effect="plain">
+                        本地/代理
+                      </el-tag>
                       <el-button
                         v-if="overview.registerIp"
                         link
@@ -211,13 +248,18 @@
                 <div class="info-list">
                   <div class="info-row">
                     <span>最后登录</span>
-                    <strong>{{ fmtDateTime(overview.lastLoginAt) }} <small>{{ relativeTime(overview.lastLoginAt) }}</small></strong>
+                    <strong>
+                      {{ fmtDateTime(overview.lastLoginAt) }}
+                      <small>{{ relativeTime(overview.lastLoginAt) }}</small>
+                    </strong>
                   </div>
                   <div class="info-row">
                     <span>最后登录 IP</span>
                     <strong class="inline-value">
                       {{ overview.lastLoginIp || '—' }}
-                      <el-tag v-if="isLoopbackIp(overview.lastLoginIp)" type="warning" size="small" effect="plain">本地/代理</el-tag>
+                      <el-tag v-if="isLoopbackIp(overview.lastLoginIp)" type="warning" size="small" effect="plain">
+                        本地/代理
+                      </el-tag>
                       <el-button
                         v-if="overview.lastLoginIp"
                         link
@@ -286,14 +328,27 @@
 
         <el-tab-pane label="联系方式" name="contact">
           <el-descriptions :column="2" border>
-            <el-descriptions-item label="手机号（掩码）">{{ contact.phoneMask || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="手机已验证">{{ contact.phoneVerified === 1 ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="手机号">{{ contactPhone }}</el-descriptions-item>
+            <el-descriptions-item label="手机已验证">
+              {{ contactPhoneVerified === 1 ? '是' : '否' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="邮箱">{{ contactEmail }}</el-descriptions-item>
+            <el-descriptions-item label="邮箱已验证">
+              {{ contactEmailVerified === 1 ? '是' : '否' }}
+            </el-descriptions-item>
             <el-descriptions-item label="真实姓名">{{ contact.realName || '—' }}</el-descriptions-item>
             <el-descriptions-item label="KYC等级">{{ contact.kycLevel ?? 0 }}</el-descriptions-item>
             <el-descriptions-item label="KYC状态">{{ kycStatusLabel(contact.kycStatus) }}</el-descriptions-item>
             <el-descriptions-item label="KYC通过时间">{{ contact.kycVerifiedAt || '—' }}</el-descriptions-item>
           </el-descriptions>
-          <div class="text-gray-400 text-sm mt-2">合规提示：明文手机号需安全码解密（该能力待接入，见需求文档 02 遗留）。</div>
+          <div v-if="canViewPlain" class="text-gray-400 text-sm mt-2">
+            <span v-if="plainContactLoading">正在加载完整联系方式...</span>
+            <span v-else-if="plainContactError">完整联系方式加载失败：{{ plainContactError }}，当前已回退为掩码。</span>
+            <span v-else>已按当前权限自动加载完整联系方式，服务端会记录本次敏感信息查看日志。</span>
+          </div>
+          <div v-else class="text-gray-400 text-sm mt-2">
+            当前账号缺少 member:detail:plain 权限，仅展示后端提供的掩码信息。
+          </div>
         </el-tab-pane>
 
         <el-tab-pane label="个人资料" name="profile">
@@ -305,7 +360,9 @@
             </el-descriptions-item>
             <el-descriptions-item label="性别">{{ genderLabel(profile.gender) }}</el-descriptions-item>
             <el-descriptions-item label="生日">{{ profile.birthday || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="国家/语言">{{ (profile.countryCode || '—') + ' / ' + (profile.languageCode || '—') }}</el-descriptions-item>
+            <el-descriptions-item label="国家/语言">
+              {{ (profile.countryCode || '—') + ' / ' + (profile.languageCode || '—') }}
+            </el-descriptions-item>
             <el-descriptions-item label="邀请码">{{ profile.inviteCode || '—' }}</el-descriptions-item>
             <el-descriptions-item label="邀请人UID">{{ profile.inviteUid || '—' }}</el-descriptions-item>
             <el-descriptions-item label="上级代理UID">{{ profile.parentAgentUid || '—' }}</el-descriptions-item>
@@ -314,12 +371,7 @@
         </el-tab-pane>
 
         <el-tab-pane v-if="canViewPlain" label="提现账号" name="withdraw">
-          <el-table
-            v-loading="tabLoading.withdraw"
-            :data="withdrawAccounts"
-            border
-            empty-text="暂无提现账户记录"
-          >
+          <el-table v-loading="tabLoading.withdraw" :data="withdrawAccounts" border empty-text="暂无提现账户记录">
             <el-table-column label="账户类型" align="center" width="150">
               <template #default="{ row }">
                 <el-tag :type="withdrawSourceTagType(row as MemberWithdrawAccountVO)" effect="plain">
@@ -331,12 +383,7 @@
               <template #default="{ row }">
                 <div v-if="row.accountNo" class="withdraw-plain-value">
                   <code>{{ row.accountNo }}</code>
-                  <el-button
-                    link
-                    type="primary"
-                    icon="CopyDocument"
-                    @click="copyText(row.accountNo, '提现账号')"
-                  />
+                  <el-button link type="primary" icon="CopyDocument" @click="copyText(row.accountNo, '提现账号')" />
                   <el-tag type="success" size="small" effect="plain">明文</el-tag>
                 </div>
                 <div v-else class="withdraw-masked-value">
@@ -356,7 +403,8 @@
             <el-table-column label="银行 / 币种" align="center" min-width="170" show-overflow-tooltip>
               <template #default="{ row }">
                 <template v-if="row.coinName">
-                  {{ row.coinName }}<span v-if="row.networkName"> · {{ row.networkName }}</span>
+                  {{ row.coinName }}
+                  <span v-if="row.networkName">· {{ row.networkName }}</span>
                 </template>
                 <template v-else>
                   {{ row.bankName || row.bankCode || '—' }}
@@ -397,7 +445,9 @@
             </el-table-column>
             <el-table-column label="变动金额" align="right" width="140">
               <template #default="{ row }">
-                <span :class="Number(row.changeAmount) >= 0 ? 'text-red-500' : 'text-green-600'">{{ fmtFen(row.changeAmount) }}</span>
+                <span :class="Number(row.changeAmount) >= 0 ? 'text-red-500' : 'text-green-600'">
+                  {{ fmtFen(row.changeAmount) }}
+                </span>
               </template>
             </el-table-column>
             <el-table-column label="变动前余额" align="right" width="140">
@@ -429,7 +479,9 @@
             </el-table-column>
             <el-table-column label="会员输赢" align="right" width="140">
               <template #default="{ row }">
-                <span :class="Number(row.netWinLoss) >= 0 ? 'text-red-500' : 'text-green-600'">{{ fmtFen(row.netWinLoss) }}</span>
+                <span :class="Number(row.netWinLoss) >= 0 ? 'text-red-500' : 'text-green-600'">
+                  {{ fmtFen(row.netWinLoss) }}
+                </span>
               </template>
             </el-table-column>
             <el-table-column label="杀率" align="right" width="110">
@@ -456,7 +508,13 @@
           <el-table v-loading="tabLoading.device" :data="devices" border>
             <el-table-column label="会员账号" prop="loginName" align="center" min-width="120" show-overflow-tooltip />
             <el-table-column label="最近登录" prop="lastLoginAt" align="center" width="180" />
-            <el-table-column label="设备号" prop="deviceFingerprint" align="center" min-width="180" show-overflow-tooltip />
+            <el-table-column
+              label="设备号"
+              prop="deviceFingerprint"
+              align="center"
+              min-width="180"
+              show-overflow-tooltip
+            />
             <el-table-column label="客户端" align="center" min-width="200">
               <template #default="{ row }">
                 <div>{{ clientOsText(row) }}</div>
@@ -477,7 +535,9 @@
             <el-table-column label="设备" prop="loginDevice" align="left" min-width="200" show-overflow-tooltip />
             <el-table-column label="结果" align="center" width="90">
               <template #default="{ row }">
-                <el-tag :type="row.loginResult === 1 ? 'success' : 'danger'">{{ row.loginResult === 1 ? '成功' : '失败' }}</el-tag>
+                <el-tag :type="row.loginResult === 1 ? 'success' : 'danger'">
+                  {{ row.loginResult === 1 ? '成功' : '失败' }}
+                </el-tag>
               </template>
             </el-table-column>
             <el-table-column label="失败原因" prop="failReason" align="left" min-width="150" show-overflow-tooltip />
@@ -486,8 +546,16 @@
 
         <el-tab-pane label="历史备注" name="remark">
           <div class="mb-2">
-            <el-input v-model="newRemark" type="textarea" :rows="2" placeholder="请输入新备注（将记录变更履历）" style="max-width: 640px" />
-            <el-button v-hasPermi="['member:user:edit']" class="ml-2" type="primary" @click="submitRemark">保存备注</el-button>
+            <el-input
+              v-model="newRemark"
+              type="textarea"
+              :rows="2"
+              placeholder="请输入新备注（将记录变更履历）"
+              style="max-width: 640px"
+            />
+            <el-button v-hasPermi="['member:user:edit']" class="ml-2" type="primary" @click="submitRemark">
+              保存备注
+            </el-button>
           </div>
           <el-table v-loading="tabLoading.remark" :data="remarks" border>
             <el-table-column label="时间" prop="createdAt" align="center" width="180" />
@@ -501,18 +569,33 @@
 
     <el-empty v-else description="请输入会员ID后查询" />
 
-    <el-dialog v-model="plainDialog.visible" title="联系方式明文查看（高敏操作已记日志）" width="720px" append-to-body destroy-on-close>
+    <el-dialog
+      v-model="plainDialog.visible"
+      title="联系方式明文查看（高敏操作已记日志）"
+      width="720px"
+      append-to-body
+      destroy-on-close
+    >
       <el-descriptions :column="2" border>
         <el-descriptions-item label="会员ID">{{ plainDialog.data.uid }}</el-descriptions-item>
         <el-descriptions-item label="会员账号">{{ plainDialog.data.loginName }}</el-descriptions-item>
         <el-descriptions-item label="手机号">{{ plainDialog.data.phone || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="手机已验证">{{ plainDialog.data.phoneVerified === 1 ? '是' : '否' }}</el-descriptions-item>
+        <el-descriptions-item label="手机已验证">
+          {{ plainDialog.data.phoneVerified === 1 ? '是' : '否' }}
+        </el-descriptions-item>
         <el-descriptions-item label="真实姓名">{{ plainDialog.data.realName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="KYC等级">{{ plainDialog.data.kycLevel || '-' }}</el-descriptions-item>
         <el-descriptions-item label="邮箱">{{ plainDialog.data.email || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="邮箱已验证">{{ plainDialog.data.emailVerified === 1 ? '是' : '否' }}</el-descriptions-item>
+        <el-descriptions-item label="邮箱已验证">
+          {{ plainDialog.data.emailVerified === 1 ? '是' : '否' }}
+        </el-descriptions-item>
       </el-descriptions>
-      <el-alert class="mt-3" type="warning" :closable="false" :title="plainDialog.data.cardNote || '提现卡号仅存哈希与掩码，无法还原明文'" />
+      <el-alert
+        class="mt-3"
+        type="warning"
+        :closable="false"
+        :title="plainDialog.data.cardNote || '提现卡号仅存哈希与掩码，无法还原明文'"
+      />
       <el-table class="mt-3" border :data="plainDialog.data.accounts ?? []" max-height="260">
         <el-table-column label="银行" prop="bankName" align="center" min-width="120" show-overflow-tooltip />
         <el-table-column label="开户名" prop="accountName" align="center" min-width="110" show-overflow-tooltip />
@@ -527,7 +610,13 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="vipDialog.visible" title="VIP 等级调整（写 user_vip_log）" width="520px" append-to-body destroy-on-close>
+    <el-dialog
+      v-model="vipDialog.visible"
+      title="VIP 等级调整（写 user_vip_log）"
+      width="520px"
+      append-to-body
+      destroy-on-close
+    >
       <el-form label-width="110px">
         <el-form-item label="会员ID">
           <span>{{ currentUid }}</span>
@@ -536,7 +625,13 @@
           <el-input-number v-model="vipDialog.vipLevel" :min="0" :max="99" controls-position="right" />
         </el-form-item>
         <el-form-item label="调整原因">
-          <el-input v-model="vipDialog.reason" type="textarea" :rows="3" maxlength="255" placeholder="必填：说明调整依据" />
+          <el-input
+            v-model="vipDialog.reason"
+            type="textarea"
+            :rows="3"
+            maxlength="255"
+            placeholder="必填：说明调整依据"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -585,11 +680,22 @@
         </el-form-item>
         <el-form-item label="目标层级">
           <el-select v-model="levelDialog.levelId" filterable style="width: 100%">
-            <el-option v-for="level in levelOptions" :key="level.levelId" :label="level.levelName" :value="level.levelId" />
+            <el-option
+              v-for="level in levelOptions"
+              :key="level.levelId"
+              :label="level.levelName"
+              :value="level.levelId"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="调整原因">
-          <el-input v-model="levelDialog.reason" type="textarea" :rows="3" maxlength="255" placeholder="必填：说明层级调整依据" />
+          <el-input
+            v-model="levelDialog.reason"
+            type="textarea"
+            :rows="3"
+            maxlength="255"
+            placeholder="必填：说明层级调整依据"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -628,8 +734,22 @@
 <script setup name="MemberDetail" lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import modal from '@/plugins/modal';
-import { useUserStore } from '@/store/modules/user';
+import type {
+  MemberBetStatVO,
+  MemberContactVO,
+  MemberDetailOverviewVO,
+  MemberMessageVO,
+  MemberProfileVO,
+  MemberRemarkVO,
+  MemberTransactionVO,
+  MemberWithdrawAccountVO
+} from '@/api/member/detail/types';
+import type { MemberDeviceVO } from '@/api/member/device/types';
+import type { MemberLevelVO } from '@/api/member/level/types';
+import type { MemberLogVO } from '@/api/member/log/types';
+import type { MemberPlainContactVO } from '@/api/member/profile-adjust';
+import type { MemberTagVO } from '@/api/member/tag/types';
+import type { MemberUserVO } from '@/api/member/users/types';
 import {
   getMemberDetailContact,
   getMemberDetailOverview,
@@ -641,28 +761,15 @@ import {
   listMemberWithdrawAccount,
   updateMemberRemark
 } from '@/api/member/detail';
-import type {
-  MemberBetStatVO,
-  MemberContactVO,
-  MemberDetailOverviewVO,
-  MemberMessageVO,
-  MemberProfileVO,
-  MemberRemarkVO,
-  MemberTransactionVO,
-  MemberWithdrawAccountVO
-} from '@/api/member/detail/types';
 import { listMemberDevice } from '@/api/member/device';
-import type { MemberDeviceVO } from '@/api/member/device/types';
 import { listMemberLevelOptions } from '@/api/member/level';
-import type { MemberLevelVO } from '@/api/member/level/types';
 import { listMemberLog } from '@/api/member/log';
-import type { MemberLogVO } from '@/api/member/log/types';
 import { listMemberTagOptions, listMemberTagsOfUser } from '@/api/member/tag';
-import type { MemberTagVO } from '@/api/member/tag/types';
 // FIX(2026-10-10): 会员详情支持"账号 → uid"解析，需要复用会员列表接口（见 handleLoad）
 import { batchMemberLevel, batchMemberStatus, batchMemberTag, listMemberUser } from '@/api/member/users';
-import type { MemberUserVO } from '@/api/member/users/types';
 import { addMessageTask, sendMessageTask } from '@/api/ops/message';
+import modal from '@/plugins/modal';
+import { useUserStore } from '@/store/modules/user';
 
 type DataBody<T> = { data?: T };
 type PageBody<T> = { rows?: T[]; total?: number };
@@ -676,6 +783,10 @@ const currentUid = ref<string | number | null>(null);
 
 const overview = reactive<MemberDetailOverviewVO>({ uid: 0 });
 const contact = reactive<MemberContactVO>({ uid: 0 });
+const plainContact = reactive<Partial<MemberPlainContactVO>>({});
+const plainContactLoading = ref(false);
+const plainContactError = ref('');
+let plainContactRequestId = 0;
 const profile = reactive<MemberProfileVO>({ uid: 0 });
 const withdrawAccounts = ref<MemberWithdrawAccountVO[]>([]);
 const transactions = ref<MemberTransactionVO[]>([]);
@@ -700,6 +811,51 @@ const hasPermission = (permission: string) =>
   userStore.permissions.includes('*:*:*') || userStore.permissions.includes(permission);
 const canEditMember = computed(() => hasPermission('member:user:edit'));
 const canViewPlain = computed(() => hasPermission('member:detail:plain'));
+const contactPhone = computed(() =>
+  canViewPlain.value ? plainContact.phone || contact.phoneMask || '—' : contact.phoneMask || '—'
+);
+const contactPhoneVerified = computed(() =>
+  canViewPlain.value ? (plainContact.phoneVerified ?? contact.phoneVerified) : contact.phoneVerified
+);
+const contactEmail = computed(() => (canViewPlain.value ? plainContact.email || '—' : '—'));
+const contactEmailVerified = computed(() => (canViewPlain.value ? plainContact.emailVerified : undefined));
+
+const clearPlainContact = () => {
+  plainContactRequestId += 1;
+  Object.keys(plainContact).forEach(key => delete plainContact[key]);
+  plainContactLoading.value = false;
+  plainContactError.value = '';
+};
+
+/** 按权限自动加载完整联系方式；失败时保留后端掩码，不阻断联系方式页签。 */
+const loadPlainContact = async (uid: number | string, showError = false) => {
+  const requestId = ++plainContactRequestId;
+  plainContactLoading.value = true;
+  plainContactError.value = '';
+  const { ElMessage } = await import('element-plus');
+  const { getPlainContact } = await import('@/api/member/profile-adjust');
+  try {
+    const res: any = await getPlainContact(uid);
+    if (requestId !== plainContactRequestId || String(currentUid.value) !== String(uid)) {
+      return null;
+    }
+    Object.assign(plainContact, res?.data ?? {});
+    return res?.data ?? null;
+  } catch (e) {
+    if (requestId !== plainContactRequestId || String(currentUid.value) !== String(uid)) {
+      return null;
+    }
+    plainContactError.value = (e as Error).message || '请求失败';
+    if (showError) {
+      ElMessage.error('查询失败：' + plainContactError.value);
+    }
+    return null;
+  } finally {
+    if (requestId === plainContactRequestId) {
+      plainContactLoading.value = false;
+    }
+  }
+};
 
 /**
  * 金额展示（原数展示，不再做「分 → 元」折算）。
@@ -721,13 +877,13 @@ const statusTagType = computed(() => {
   if (overview.status === 2) return 'danger';
   return 'info';
 });
-const accountInitial = computed(() => (overview.loginName || String(overview.uid || '')).slice(0, 1).toUpperCase() || '?');
+const accountInitial = computed(
+  () => (overview.loginName || String(overview.uid || '')).slice(0, 1).toUpperCase() || '?'
+);
 const isTestAccount = computed(() => overview.accountType === 'TEST');
 const accountKindLabel = computed(() => (isTestAccount.value ? '测试账号' : '正常账号'));
 const totalBalance = computed(() => Number(overview.availableBalance ?? 0) + Number(overview.frozenBalance ?? 0));
-const hasFundingAnomaly = computed(
-  () => totalBalance.value > 0 && Number(overview.totalRechargeAmount ?? 0) <= 0
-);
+const hasFundingAnomaly = computed(() => totalBalance.value > 0 && Number(overview.totalRechargeAmount ?? 0) <= 0);
 const registerPlatformLabel = computed(() => {
   const type = (overview.registerClientType || '').toLowerCase();
   if (type === 'app') return 'App';
@@ -736,7 +892,8 @@ const registerPlatformLabel = computed(() => {
 });
 const loginTerminalLabel = computed(() => {
   const client = (overview.lastLoginClientType || '').toLowerCase();
-  const clientLabel = client === 'app' ? 'App' : client === 'web' || client === 'h5' ? 'Web' : overview.lastLoginClientType || '—';
+  const clientLabel =
+    client === 'app' ? 'App' : client === 'web' || client === 'h5' ? 'Web' : overview.lastLoginClientType || '—';
   return [clientLabel, overview.lastLoginOs].filter(Boolean).join(' · ') || '—';
 });
 const vipReady = computed(
@@ -774,17 +931,22 @@ const vipProgressText = computed(() => {
   if (vipReady.value) {
     return '已达升级条件，等待系统自动升级';
   }
-  return `距 VIP${Number(overview.vipLevel ?? 0) + 1} 还需充值 ${Number(overview.vipUpgradeNeedPay ?? 0).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })} VND / 打码 ${Number(overview.vipUpgradeNeedRounds ?? 0)} 局`;
+  return `距 VIP${Number(overview.vipLevel ?? 0) + 1} 还需充值 ${Number(overview.vipUpgradeNeedPay ?? 0).toLocaleString(
+    'en-US',
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  )} VND / 打码 ${Number(overview.vipUpgradeNeedRounds ?? 0)} 局`;
 });
 const remarkDirty = computed(() => remarkDraft.value !== (overview.remark ?? ''));
 const genderLabel = (gender?: number) => (gender === 1 ? '男' : gender === 2 ? '女' : '未知');
-const kycStatusLabel = (status?: number) => (status === 2 ? '通过' : status === 3 ? '驳回' : status === 1 ? '待审核' : '未提交');
+const kycStatusLabel = (status?: number) =>
+  status === 2 ? '通过' : status === 3 ? '驳回' : status === 1 ? '待审核' : '未提交';
 const verifyTypeLabel = (type?: string) =>
-  ({ NONE: '无验证', SMS: '短信', EMAIL: '邮箱', KYC: '实名' } as Record<string, string>)[type ?? 'NONE'] ?? '无验证';
-const accountTypeLabel = (type?: number) => (type === 1 ? '银行卡' : type === 2 ? 'UPI' : type === 3 ? '手机钱包' : '其他');
+  (({ NONE: '无验证', SMS: '短信', EMAIL: '邮箱', KYC: '实名' }) as Record<string, string>)[type ?? 'NONE'] ?? '无验证';
+const accountTypeLabel = (type?: number) =>
+  type === 1 ? '银行卡' : type === 2 ? 'UPI' : type === 3 ? '手机钱包' : '其他';
 const withdrawAccountKind = (row: MemberWithdrawAccountVO) => {
   if (row.accountKind) return row.accountKind;
   if (row.coinName) return '虚拟币地址';
@@ -798,9 +960,11 @@ const withdrawSourceTagType = (row: MemberWithdrawAccountVO) => {
 };
 const withdrawAccountStatusLabel = (status?: number) =>
   status === 1 ? '正常' : status === 2 ? '冻结' : status === 3 ? '已删除' : '—';
-const mailTypeLabel = (type?: number) => (type === 2 ? '活动奖励' : type === 3 ? '好友' : type === 4 ? '客服' : type === 5 ? '公告' : '系统');
+const mailTypeLabel = (type?: number) =>
+  type === 2 ? '活动奖励' : type === 3 ? '好友' : type === 4 ? '客服' : type === 5 ? '公告' : '系统';
 const bizTypeLabel = (type?: number) =>
-  ({ 1: '充值', 2: '提现', 3: '下注', 4: '派彩', 5: '退款', 6: '人工调账' } as Record<number, string>)[type ?? -1] ?? '其他';
+  (({ 1: '充值', 2: '提现', 3: '下注', 4: '派彩', 5: '退款', 6: '人工调账' }) as Record<number, string>)[type ?? -1] ??
+  '其他';
 
 /**
  * 标签取色（与【用户列表】同一套「文字 + 颜色块」效果）。
@@ -814,7 +978,8 @@ const getTagColor = (tagColor?: string, index?: number) => {
 };
 
 /** 客户端展示＝OS + 系统版本（需求口径：客户端包含 os/os_version/browser/browser_version） */
-const clientOsText = (row: { os?: string; osVersion?: string }) => [row.os, row.osVersion].filter(Boolean).join(' ') || '—';
+const clientOsText = (row: { os?: string; osVersion?: string }) =>
+  [row.os, row.osVersion].filter(Boolean).join(' ') || '—';
 const clientBrowserText = (row: { browser?: string; browserVersion?: string }) =>
   [row.browser, row.browserVersion].filter(Boolean).join(' ') || '—';
 
@@ -836,7 +1001,10 @@ const relativeTime = (value?: string) => {
 };
 
 const isLoopbackIp = (value?: string) => {
-  const ip = (value || '').trim().toLowerCase().replace(/^::ffff:/, '');
+  const ip = (value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^::ffff:/, '');
   return ip === '::1' || ip === 'localhost' || ip === '0.0.0.0' || ip.startsWith('127.');
 };
 
@@ -882,8 +1050,12 @@ const handleLoad = async () => {
     if (!/^\d+$/.test(input)) {
       // 注意：后端 loginName 是**模糊**匹配（实测 "g318test" 会命中 g318test1/g318test2），
       // 因此这里必须再按"精确相等"过滤一次，否则会把近似账号当成目标会员。
-      const matched = (await listMemberUser({ loginName: input, pageNum: 1, pageSize: 20 })) as unknown as PageBody<MemberUserVO>;
-      const exact = (matched.rows ?? []).filter((item) => item.loginName === input);
+      const matched = (await listMemberUser({
+        loginName: input,
+        pageNum: 1,
+        pageSize: 20
+      })) as unknown as PageBody<MemberUserVO>;
+      const exact = (matched.rows ?? []).filter(item => item.loginName === input);
       if (!exact.length) {
         modal.msgWarning(`未找到账号为「${input}」的会员，请输入数字会员ID或正确的会员账号`);
         return;
@@ -895,6 +1067,7 @@ const handleLoad = async () => {
       uid = String(exact[0].uid);
       uidInput.value = uid;
     }
+    clearPlainContact();
     currentUid.value = uid;
     const data = await loadOverview(uid);
     if (!data) {
@@ -902,7 +1075,7 @@ const handleLoad = async () => {
       return;
     }
     // 切换会员后清空缓存，避免串号
-    Object.keys(loaded).forEach((key) => delete loaded[key]);
+    Object.keys(loaded).forEach(key => delete loaded[key]);
     loaded.overview = true;
     await loadTab(activeTab.value);
   } finally {
@@ -915,7 +1088,8 @@ const resetAll = () => {
   currentUid.value = null;
   Object.assign(overview, { uid: 0 });
   remarkDraft.value = '';
-  Object.keys(loaded).forEach((key) => delete loaded[key]);
+  Object.keys(loaded).forEach(key => delete loaded[key]);
+  clearPlainContact();
 };
 
 const loadTab = async (tab: string) => {
@@ -928,6 +1102,9 @@ const loadTab = async (tab: string) => {
     if (tab === 'contact') {
       const res = (await getMemberDetailContact(uid)) as unknown as DataBody<MemberContactVO>;
       Object.assign(contact, res.data ?? { uid: 0 });
+      if (canViewPlain.value) {
+        await loadPlainContact(uid);
+      }
     } else if (tab === 'profile') {
       const res = (await getMemberDetailProfile(uid)) as unknown as DataBody<MemberProfileVO>;
       Object.assign(profile, res.data ?? { uid: 0 });
@@ -944,13 +1121,21 @@ const loadTab = async (tab: string) => {
       messages.value = res.rows ?? [];
     } else if (tab === 'device') {
       // includeRegisterDevice=1：按「使用过（uid）或 注册设备指纹」取数（见后端 MemberDeviceMapper）
-      const res = (await listMemberDevice({ uid, includeRegisterDevice: 1, pageNum: 1, pageSize: 20 })) as unknown as PageBody<MemberDeviceVO>;
+      const res = (await listMemberDevice({
+        uid,
+        includeRegisterDevice: 1,
+        pageNum: 1,
+        pageSize: 20
+      })) as unknown as PageBody<MemberDeviceVO>;
       devices.value = res.rows ?? [];
     } else if (tab === 'log') {
       const res = (await listMemberLog({ uid, pageNum: 1, pageSize: 20 })) as unknown as PageBody<MemberLogVO>;
       logs.value = res.rows ?? [];
     } else if (tab === 'remark') {
-      const res = (await listMemberRemarkHistory(uid, { pageNum: 1, pageSize: 20 })) as unknown as PageBody<MemberRemarkVO>;
+      const res = (await listMemberRemarkHistory(uid, {
+        pageNum: 1,
+        pageSize: 20
+      })) as unknown as PageBody<MemberRemarkVO>;
       remarks.value = res.rows ?? [];
     }
     loaded[tab] = true;
@@ -972,7 +1157,10 @@ const submitRemark = async () => {
   if (!currentUid.value) {
     return;
   }
-  const res = (await updateMemberRemark({ uid: currentUid.value, remark: newRemark.value })) as unknown as DataBody<number>;
+  const res = (await updateMemberRemark({
+    uid: currentUid.value,
+    remark: newRemark.value
+  })) as unknown as DataBody<number>;
   modal.msgSuccess(`备注已保存（履历 ${res.data ?? 0}）`);
   newRemark.value = '';
   await loadTab('remark');
@@ -1002,7 +1190,7 @@ const showRemarkHistory = () => {
   activeTab.value = 'remark';
 };
 
-watch(activeTab, async (tab) => {
+watch(activeTab, async tab => {
   if (!loaded[tab]) {
     await loadTab(tab);
   }
@@ -1011,7 +1199,7 @@ watch(activeTab, async (tab) => {
 // 用 watch 监听 query.uid，immediate 让首次也执行
 watch(
   () => route.query.uid,
-  (uid) => {
+  uid => {
     if (uid) {
       uidInput.value = String(uid);
       handleLoad();
@@ -1033,14 +1221,10 @@ const openPlain = async () => {
   if (!currentUid.value) {
     return;
   }
-  const { ElMessage } = await import('element-plus');
-  const { getPlainContact } = await import('@/api/member/profile-adjust');
-  try {
-    const res: any = await getPlainContact(currentUid.value);
-    plainDialog.data = res?.data ?? {};
+  const data = plainContact.uid ? plainContact : await loadPlainContact(currentUid.value, true);
+  if (data) {
+    plainDialog.data = data;
     plainDialog.visible = true;
-  } catch (e) {
-    ElMessage.error('查询失败：' + (e as Error).message);
   }
 };
 
@@ -1079,15 +1263,11 @@ const emailDialog = reactive<{ visible: boolean; email: string; verified: number
 });
 
 const openEmail = async () => {
-  const { ElMessage } = await import('element-plus');
-  const { getPlainContact } = await import('@/api/member/profile-adjust');
-  try {
-    const res: any = await getPlainContact(currentUid.value);
-    emailDialog.email = res?.data?.email ?? '';
-    emailDialog.verified = res?.data?.emailVerified === 1 ? 1 : 0;
+  const data = plainContact.uid ? plainContact : await loadPlainContact(currentUid.value, true);
+  if (data) {
+    emailDialog.email = data.email ?? '';
+    emailDialog.verified = data.emailVerified === 1 ? 1 : 0;
     emailDialog.visible = true;
-  } catch (e) {
-    ElMessage.error('查询失败：' + (e as Error).message);
   }
 };
 
@@ -1167,8 +1347,8 @@ const submitTagDialog = async () => {
   if (!currentUid.value) return;
   const before = new Set(currentTagIds.value);
   const after = new Set(tagDialog.tagIds);
-  const addIds = tagDialog.tagIds.filter((id) => !before.has(id));
-  const removeIds = currentTagIds.value.filter((id) => !after.has(id));
+  const addIds = tagDialog.tagIds.filter(id => !before.has(id));
+  const removeIds = currentTagIds.value.filter(id => !after.has(id));
   if (!addIds.length && !removeIds.length) {
     tagDialog.visible = false;
     return;
@@ -1315,9 +1495,7 @@ const submitMessageDialog = async () => {
   padding: 22px 24px;
   border: 1px solid var(--el-border-color-light);
   border-radius: 14px;
-  background:
-    radial-gradient(circle at 100% 0, var(--el-color-primary-light-9), transparent 45%),
-    var(--el-bg-color);
+  background: radial-gradient(circle at 100% 0, var(--el-color-primary-light-9), transparent 45%), var(--el-bg-color);
 }
 
 .identity-main {

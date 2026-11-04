@@ -3,15 +3,28 @@
     <el-card shadow="hover" class="search-panel">
       <el-form :inline="true" class="query-form">
         <el-form-item label="时间">
-          <el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD"
-                          range-separator="-" start-placeholder="开始日期" end-placeholder="结束日期" style="width: 280px" />
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            value-format="YYYY-MM-DD"
+            range-separator="-"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            style="width: 280px"
+          />
         </el-form-item>
         <el-form-item label="会员">
           <el-select v-model="query.accountField" style="width: 120px">
             <el-option label="会员账号" value="LOGIN_NAME" />
             <el-option label="会员ID" value="UID" />
           </el-select>
-          <el-input v-model="query.accountValue" placeholder="账号或UID" clearable style="width: 190px" @keyup.enter="getList" />
+          <el-input
+            v-model="query.accountValue"
+            placeholder="账号或UID"
+            clearable
+            style="width: 190px"
+            @keyup.enter="getList"
+          />
         </el-form-item>
         <el-form-item label="游戏">
           <el-select v-model="query.gameCode" placeholder="全部" clearable filterable style="width: 160px">
@@ -28,14 +41,25 @@
 
     <el-card v-if="showCumulative" shadow="hover" class="summary-panel">
       <div class="cumulative">
-        <span>累计投注：<b>{{ fmt(cumulative.betAmount) }}</b></span>
-        <span>累计派发：<b>{{ fmt(cumulative.payoutAmount) }}</b></span>
-        <span>累计差额：<b :class="diffClass(cumulative.netWinLoss)">{{ fmt(cumulative.netWinLoss) }}</b></span>
+        <span>
+          累计投注：
+          <b>{{ fmt(cumulative.betAmount) }}</b>
+        </span>
+        <span>
+          累计派发：
+          <b>{{ fmt(cumulative.payoutAmount) }}</b>
+        </span>
+        <span>
+          累计差额：
+          <b :class="diffClass(cumulative.netWinLoss)">{{ fmt(cumulative.netWinLoss) }}</b>
+        </span>
       </div>
     </el-card>
 
     <el-card shadow="hover" class="summary-panel">
-      <template #header><div class="table-heading"><h3>按游戏汇总</h3></div></template>
+      <template #header>
+        <div class="table-heading"><h3>按游戏汇总</h3></div>
+      </template>
       <el-table :data="gameSummary" border size="small">
         <el-table-column label="游戏编码" prop="gameCode" width="140" />
         <el-table-column label="游戏名称" prop="gameName" min-width="180" show-overflow-tooltip />
@@ -97,7 +121,13 @@
           </template>
         </el-table-column>
       </el-table>
-      <pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="getList" />
+      <pagination
+        v-show="total > 0"
+        v-model:page="query.pageNum"
+        v-model:limit="query.pageSize"
+        :total="total"
+        @pagination="getList"
+      />
     </el-card>
 
     <el-dialog v-model="analysis.visible" :title="`输赢分析 - ${analysis.loginName}`" width="800px" append-to-body>
@@ -119,7 +149,9 @@
           <template #default="{ row }">{{ fmt(row.payoutAmount) }}</template>
         </el-table-column>
         <el-table-column label="盈亏" align="right">
-          <template #default="{ row }"><span :class="diffClass(row.netWinLoss)">{{ fmt(row.netWinLoss) }}</span></template>
+          <template #default="{ row }">
+            <span :class="diffClass(row.netWinLoss)">{{ fmt(row.netWinLoss) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="杀率" align="center" width="90">
           <template #default="{ row }">{{ Number(row.killRate ?? 0).toFixed(2) }}%</template>
@@ -131,8 +163,8 @@
 </template>
 
 <script setup name="MemberBetDetail" lang="ts">
-import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
+import { onMounted, reactive, ref } from 'vue';
 import {
   getMemberBetCumulative,
   listMemberBetDetail,
@@ -150,8 +182,14 @@ const dateRange = ref<string[]>([]);
 const gameOptions = ref<Array<{ value: string; label: string }>>([]);
 const gameSummary = ref<any[]>([]);
 const cumulative = ref<any>({ betAmount: 0, payoutAmount: 0, netWinLoss: 0 });
-const showCumulative = ref(false);
-const query = reactive<any>({ pageNum: 1, pageSize: 10, accountField: 'LOGIN_NAME', accountValue: undefined, gameCode: undefined });
+const showCumulative = ref(true);
+const query = reactive<any>({
+  pageNum: 1,
+  pageSize: 10,
+  accountField: 'LOGIN_NAME',
+  accountValue: undefined,
+  gameCode: undefined
+});
 const analysis = reactive<any>({ visible: false, loginName: '', granularity: 'DAY', uid: undefined, rows: [] });
 
 const fmt = (value: any) => Number(value ?? 0).toLocaleString('en-US');
@@ -242,12 +280,35 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.table-heading h3 { margin: 0 0 4px; font-size: 15px; }
-.tip { color: #909399; font-size: 12px; }
-.sub { color: #909399; font-size: 12px; }
-.text-red { color: #f56c6c; font-weight: 600; }
-.text-green { color: #67c23a; font-weight: 600; }
-.summary-panel { margin-bottom: 12px; }
-.cumulative { display: flex; gap: 32px; font-size: 14px; }
-.cumulative b { font-size: 16px; }
+.table-heading h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.tip {
+  color: #909399;
+  font-size: 12px;
+}
+.sub {
+  color: #909399;
+  font-size: 12px;
+}
+.text-red {
+  color: #f56c6c;
+  font-weight: 600;
+}
+.text-green {
+  color: #67c23a;
+  font-weight: 600;
+}
+.summary-panel {
+  margin-bottom: 12px;
+}
+.cumulative {
+  display: flex;
+  gap: 32px;
+  font-size: 14px;
+}
+.cumulative b {
+  font-size: 16px;
+}
 </style>

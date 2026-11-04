@@ -250,7 +250,7 @@ const configTab = ref('reward');
 
 const query = ref<RiskRewardQuery>({ pageNum: 1, pageSize: 10, accountField: 'LOGIN_NAME' });
 const handleForm = reactive<{ id?: number | string; resultStatus: number; remark: string }>({ resultStatus: 2, remark: '' });
-const configForm = reactive<{ currency: string }>({ currency: 'VND1000:1' });
+const configForm = reactive<{ currency: string }>({ currency: 'VND1:1' });
 const alertForm = reactive<{ enabled: boolean; intervalSeconds: number }>({ enabled: true, intervalSeconds: 60 });
 
 /** 监测参数 5 行（与截图顺序、单位一致） */
@@ -425,7 +425,7 @@ const openConfig = async () => {
       const res: any = await listRewardCurrencies();
       currencyOptions.value = (res?.data ?? []) as RiskCurrencyOption[];
     } catch (error) {
-      currencyOptions.value = [{ label: '越南(VND1000:1)', value: 'VND1000:1' }];
+      currencyOptions.value = [{ label: '越南(VND1:1)', value: 'VND1:1' }];
     }
   }
   await loadConfig();

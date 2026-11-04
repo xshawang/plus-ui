@@ -100,7 +100,7 @@ async function load() {
       dimension: dimension.value,
       startDate: range.value?.[0],
       endDate: range.value?.[1],
-      currency: 'VND1000:1'
+      currency: 'VND1:1'
     })) as unknown as any)?.data ?? [];
   } finally {
     loading.value = false;

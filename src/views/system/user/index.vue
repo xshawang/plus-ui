@@ -146,7 +146,7 @@
                   v-model:show-search="showSearch"
                   :columns="columns"
                   :search="false"
-                  storage-key="sys_user_column_visible"
+                  storage-key="sys_user_column_visible_v2"
                   @query-table="getList"
                 ></right-toolbar>
               </div>
@@ -506,7 +506,7 @@ const upload = reactive<ImportOption>({
 });
 // 列显隐信息
 const columns = ref<FieldOption[]>([
-  { key: 0, label: `用户编号`, visible: false, children: [] },
+  { key: 0, label: `用户编号`, visible: true, children: [] },
   { key: 1, label: `用户名称`, visible: true, children: [] },
   { key: 2, label: `用户昵称`, visible: true, children: [] },
   { key: 3, label: `部门`, visible: true, children: [] },

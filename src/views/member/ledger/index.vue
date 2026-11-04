@@ -6,17 +6,20 @@
           <el-form-item label="UID" prop="uid">
             <el-input v-model="queryParams.uid" placeholder="用户UID" clearable @keyup.enter="handleQuery" />
           </el-form-item>
+          <el-form-item label="用户名/昵称" prop="memberKeyword">
+            <el-input
+              v-model="queryParams.memberKeyword"
+              placeholder="请输入用户名或昵称"
+              clearable
+              style="width: 200px"
+              @keyup.enter="handleQuery"
+            />
+          </el-form-item>
           <el-form-item label="流水号" prop="ledgerNo">
             <el-input v-model="queryParams.ledgerNo" placeholder="流水号" clearable @keyup.enter="handleQuery" />
           </el-form-item>
           <el-form-item label="游戏" prop="gameCode">
-            <el-select
-              v-model="queryParams.gameCode"
-              placeholder="全部"
-              clearable
-              filterable
-              style="width: 220px"
-            >
+            <el-select v-model="queryParams.gameCode" placeholder="全部" clearable filterable style="width: 220px">
               <el-option
                 v-for="item in gameOptions"
                 :key="item.gameCode"
@@ -55,7 +58,7 @@
 
     <!--
       按查询条件分组统计（需求：一行三款游戏，逐款展示 游戏名(game_code) / 投注 / 派彩 / 差异；
-      无游戏标记的流水与游戏对齐；末行给出总收入 / 总支出 / 总差异；默认收起）。
+      无游戏标记的流水与游戏对齐；末行给出总收入 / 总支出 / 总差异；默认展开）。
       数据来自 /infra/member/ledger/summary（与列表同一套筛选条件，但不分页）⇒ 翻页不会改变统计值。
     -->
     <el-card shadow="hover" class="summary-panel">
@@ -64,9 +67,9 @@
           <div class="table-heading">
             <h3>投注 / 派彩统计</h3>
             <span class="summary-tip">
-              口径：按当前查询条件全量统计（不限本页），一行三款游戏；投注 = 各游戏扣款、派彩 = 各游戏入账、
-              差异 = 投注 − 派彩（>0 标红、&lt;0 标绿）；末行 总收入 = 各游戏投注合计、总支出 = 各游戏派彩合计、
-              总差异 = 总收入 − 总支出；其他收入 / 其他支出单列展示，不计入这三项合计
+              口径：按当前查询条件全量统计（不限本页），一行三款游戏；投注 = 各游戏扣款、派彩 = 各游戏入账、 差异 = 投注
+              − 派彩（>0 标红、&lt;0 标绿）；末行 总收入 = 各游戏投注合计、总支出 = 各游戏派彩合计、 总差异 = 总收入 −
+              总支出；其他收入 / 其他支出单列展示，不计入这三项合计
             </span>
           </div>
           <div class="toolbar-actions">
@@ -98,7 +101,8 @@
           <el-table-column label="投注" align="right" width="125">
             <template #default="{ row }">
               <span v-if="row.blocks[index]?.other" class="font-mono">
-                <span class="cell-sub">收入</span>{{ formatMoney(row.blocks[index].otherIncome) }}
+                <span class="cell-sub">收入</span>
+                {{ formatMoney(row.blocks[index].otherIncome) }}
               </span>
               <span v-else-if="row.blocks[index]" class="font-mono">
                 {{ formatMoney(row.blocks[index].bet) }}
@@ -108,7 +112,8 @@
           <el-table-column label="派彩" align="right" width="125">
             <template #default="{ row }">
               <span v-if="row.blocks[index]?.other" class="font-mono">
-                <span class="cell-sub">支出</span>{{ formatMoney(row.blocks[index].otherExpense) }}
+                <span class="cell-sub">支出</span>
+                {{ formatMoney(row.blocks[index].otherExpense) }}
               </span>
               <span v-else-if="row.blocks[index]" class="font-mono">
                 {{ formatMoney(row.blocks[index].payout) }}
@@ -133,7 +138,9 @@
           <div class="table-heading">
             <h3>账户流水</h3>
             <el-tag v-if="queryParams.uid" type="primary" class="ml-1">UID：{{ queryParams.uid }}</el-tag>
-            <span v-else class="text-gray-400 text-sm">默认查询当天流水；从用户列表点击 UID 进入可查看单个用户流水</span>
+            <span v-else class="text-gray-400 text-sm">
+              默认查询当天流水；从用户列表点击 UID 进入可查看单个用户流水
+            </span>
           </div>
           <div class="toolbar-actions">
             <el-button type="primary" plain icon="Refresh" @click="refreshAll">刷新</el-button>
@@ -189,10 +196,7 @@
         <el-table-column label="币种" align="center" prop="currency" width="80" />
         <el-table-column label="变动金额" align="right" width="150">
           <template #default="{ row }">
-            <span
-              :style="{ color: Number(row.changeAmount) >= 0 ? '#16a34a' : '#dc2626' }"
-              class="font-mono"
-            >
+            <span :style="{ color: Number(row.changeAmount) >= 0 ? '#16a34a' : '#dc2626' }" class="font-mono">
               {{ formatSigned(row.changeAmount) }}
             </span>
           </template>
@@ -224,13 +228,18 @@
 </template>
 
 <script setup name="MemberLedger" lang="ts">
+import { computed, onMounted, reactive, ref, toRefs, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import type {
+  GameCodeOption,
+  WalletLedgerQuery,
+  WalletLedgerSummaryVO,
+  WalletLedgerVO
+} from '@/api/member/ledger/types';
 import { getWalletLedgerSummary, listLedgerGameCodes, listWalletLedger } from '@/api/member/ledger';
-import type { GameCodeOption, WalletLedgerQuery, WalletLedgerSummaryVO, WalletLedgerVO } from '@/api/member/ledger/types';
 import { useLoading } from '@/hooks/async/useLoading';
 import { useDateRangeQuery } from '@/hooks/form/useDateRangeQuery';
 import { useSearchReset } from '@/hooks/form/useSearchReset';
-import { computed, onMounted, reactive, ref, toRefs, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
 const router = useRouter();
@@ -269,7 +278,9 @@ const bizTypeTag = (bizType?: number) => {
  * 业务类型展示：优先使用钱包侧落库的 ext_json.bizName；
  * 兜底按 commandType/旧 bizType 字典换算。
  */
-const bizTypeOf = (row: WalletLedgerVO): {
+const bizTypeOf = (
+  row: WalletLedgerVO
+): {
   label: string;
   type: 'primary' | 'success' | 'info' | 'warning' | 'danger';
 } => {
@@ -325,8 +336,8 @@ const total = ref(0);
 const { loading, withLoading } = useLoading(true);
 const summary = ref<WalletLedgerSummaryVO>({});
 const { loading: summaryLoading, withLoading: withSummaryLoading } = useLoading(true);
-/** 统计面板默认隐藏（需求：默认隐藏「投注/派彩统计」）；展开后才请求统计接口，避免白跑一次聚合查询 */
-const summaryVisible = ref(false);
+/** 统计面板默认展开；首次进入、查询和重置时与列表使用同一组条件加载。 */
+const summaryVisible = ref(true);
 const { dateRange, applyDateRange } = useDateRangeQuery();
 
 /**
@@ -349,6 +360,7 @@ const data = reactive<{ queryParams: WalletLedgerQuery }>({
     pageNum: 1,
     pageSize: 10,
     uid: undefined,
+    memberKeyword: undefined,
     ledgerNo: undefined,
     bizNo: undefined,
     bizType: undefined,
@@ -367,7 +379,7 @@ const loadGameOptions = async () => {
 
 const formatMoney = (value?: number) => {
   if (value === null || value === undefined) return '0.00';
-  return (Number(value) ).toLocaleString('en-US', {
+  return Number(value).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
@@ -375,10 +387,13 @@ const formatMoney = (value?: number) => {
 
 const formatSigned = (value?: number) => {
   const num = Number(value ?? 0);
-  return (num >= 0 ? '+' : '') + num.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
+  return (
+    (num >= 0 ? '+' : '') +
+    num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  );
 };
 
 /**
@@ -398,7 +413,7 @@ const GAMES_PER_ROW = 3;
  */
 const summaryItems = computed<Array<Record<string, any>>>(() => {
   const data = summary.value;
-  const items: Array<Record<string, any>> = (data.games ?? []).map((game) => ({
+  const items: Array<Record<string, any>> = (data.games ?? []).map(game => ({
     key: `game-${game.gameCode}`,
     // 游戏名(game_code)：有中文名时显示「中文名(代码)」，字典缺失时只显示代码
     label: game.gameName ? `${game.gameName}(${game.gameCode})` : String(game.gameCode ?? ''),
@@ -450,12 +465,21 @@ const summaryRows = computed<Array<{ key: string; blocks: Array<Record<string, a
  */
 const summaryMethod = ({ columns }: { columns: unknown[] }) => {
   // 末行按「每款游戏一组列」排布：第 1 组总收入、第 2 组总支出、第 3 组总差异
-  const totalIncome = Number(summary.value.betTotal ?? 0);      // 总收入 = 各游戏投注合计
-  const totalExpense = Number(summary.value.payoutTotal ?? 0);  // 总支出 = 各游戏派彩合计
+  const totalIncome = Number(summary.value.betTotal ?? 0); // 总收入 = 各游戏投注合计
+  const totalExpense = Number(summary.value.payoutTotal ?? 0); // 总支出 = 各游戏派彩合计
   const totals = [
-    '总收入', formatMoney(totalIncome), '', '',
-    '总支出', formatMoney(totalExpense), '', '',
-    '总差异', formatSigned(totalIncome - totalExpense), '', ''
+    '总收入',
+    formatMoney(totalIncome),
+    '',
+    '',
+    '总支出',
+    formatMoney(totalExpense),
+    '',
+    '',
+    '总差异',
+    formatSigned(totalIncome - totalExpense),
+    '',
+    ''
   ];
   return columns.map((_column, index) => totals[index] ?? '');
 };
@@ -470,7 +494,7 @@ const getList = async () => {
 
 /**
  * 统计与列表同条件，但只在「查询 / 重置 / 手动刷新」时加载：统计不分页，翻页不必重算。
- * 面板默认隐藏：隐藏时直接跳过，不白白发一次聚合查询。
+ * 面板收起时跳过聚合查询，重新展开后再按当前条件加载。
  */
 const loadSummary = async () => {
   if (!summaryVisible.value) {

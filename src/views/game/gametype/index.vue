@@ -119,7 +119,7 @@ import { listGameType, addGameType, updateGameType, switchGameTypeField, topGame
 
 defineOptions({ name: 'GameType' });
 
-const CURRENCY = 'VND1000:1';
+const CURRENCY = 'VND1:1';
 const loading = ref(false);
 const rows = ref<any[]>([]);
 const dialog = reactive({ visible: false, title: '', loading: false });

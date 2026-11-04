@@ -195,6 +195,57 @@ export interface DashboardAlert {
   amount?: number | null;
 }
 
+export interface CommandCenterAction {
+  paymentFailedCount: number;
+  withdrawTimeoutCount: number;
+  withdrawRiskCount: number;
+  withdrawRiskAmount: number;
+  dataBrokenCount: number;
+  withdrawTimeoutMinutes: number;
+}
+
+export interface CommandCenterTrendPoint {
+  hour: string;
+  online: number | null;
+  betAmount: number | null;
+  rechargeAmount: number | null;
+  withdrawAmount: number | null;
+  riskCount: number | null;
+}
+
+export interface CommandCenterGameHealth {
+  gameCode: string;
+  gameName: string;
+  providerName: string;
+  betAmount: number;
+  payoutAmount: number;
+  ggr: number;
+  rtp: number;
+}
+
+export interface CommandCenterResult {
+  updatedAt: string;
+  trend24h: CommandCenterTrendPoint[];
+  actions: CommandCenterAction;
+  funds: {
+    rechargeAmount: number;
+    betAmount: number;
+    payoutAmount: number;
+    withdrawAmount: number;
+    ggr: number;
+  };
+  games: CommandCenterGameHealth[];
+  quality: {
+    newMembers: number;
+    activeUsers: number;
+    paidUsers: number;
+    repurchaseUsers: number;
+    paidRate: number;
+    repurchaseRate: number;
+  };
+  riskTodayCount: number;
+}
+
 export interface DashboardSnapshotResult {
   meta: DashboardMeta;
   kpi: KpiResult;
@@ -202,4 +253,5 @@ export interface DashboardSnapshotResult {
   risk: import('./risk-types').RiskTodayResult;
   health: DashboardHealth;
   alerts: DashboardAlert[];
+  commandCenter: CommandCenterResult;
 }

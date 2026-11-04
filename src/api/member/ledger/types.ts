@@ -70,6 +70,8 @@ export interface WalletLedgerVO {
 export interface WalletLedgerQuery extends PageQuery {
   /** 用户UID */
   uid?: string | number;
+  /** 用户名或昵称（模糊匹配） */
+  memberKeyword?: string;
   /** 流水号 */
   ledgerNo?: string;
   /** 业务单号 */

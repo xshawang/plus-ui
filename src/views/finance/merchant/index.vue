@@ -36,7 +36,7 @@
         <div class="toolbar-shell">
           <div class="table-heading">
             <h3>第三方支付 / 三方代付商户</h3>
-            <p>共 {{ total }} 条 · 费率与限额单位：分；密钥仅保存掩码展示</p>
+            <p>共 {{ total }} 条 · 金额限额单位：VND；密钥仅保存掩码展示</p>
           </div>
           <div class="toolbar-actions">
             <el-button v-hasPermi="['finance:merchant:edit']" type="primary" icon="Plus" @click="handleAdd">新增商户</el-button>

@@ -37,6 +37,10 @@ export interface RechargeOrderVO {
   bankCode?: string;
   thirdPartyOrderNo?: string;
   cardProvider?: string;
+  providerCode?: string;
+  providerName?: string;
+  merchantCode?: string;
+  merchantName?: string;
   callbackAt?: string;
   createdAt?: string;
   updatedAt?: string;

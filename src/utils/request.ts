@@ -19,6 +19,37 @@ const encryptHeader = 'encrypt-key';
 let downloadLoadingInstance: LoadingInstance | undefined;
 // 是否显示重新登录
 export const isRelogin = { show: false };
+const AUTH_FAILURE_MESSAGE = '认证失败，请重新登录';
+
+function isAuthFailure(code: unknown, message?: string) {
+  return (
+    String(code) === String(HttpStatus.UNAUTHORIZED) ||
+    Boolean(message?.includes('认证失败')) ||
+    Boolean(message?.includes('请重新登录')) ||
+    Boolean(message?.includes('会话已过期'))
+  );
+}
+
+function redirectToLoginAfterAuthFailure() {
+  if (router.currentRoute.value.path === '/login') {
+    isRelogin.show = false;
+    return;
+  }
+  if (isRelogin.show) {
+    return;
+  }
+  isRelogin.show = true;
+  const redirect = router.currentRoute.value.fullPath || '/';
+  useUserStore().clearAuthState();
+  void router
+    .replace({
+      path: '/login',
+      query: { redirect: encodeURIComponent(redirect) }
+    })
+    .finally(() => {
+      isRelogin.show = false;
+    });
+}
 
 function createHandledError(message: string) {
   const error = new Error(message) as Error & { isHandled?: boolean };
@@ -202,39 +233,9 @@ service.interceptors.response.use(
     if (res.request.responseType === 'blob' || res.request.responseType === 'arraybuffer') {
       return res.data;
     }
-    if (code === 401) {
-      // prettier-ignore
-      if (!isRelogin.show) {
-				isRelogin.show = true;
-				ElMessageBox.confirm(
-					"登录状态已过期，您可以继续留在该页面，或者重新登录",
-					"系统提示",
-					{
-						confirmButtonText: "重新登录",
-						cancelButtonText: "取消",
-						type: "warning",
-					},
-				)
-					.then(() => {
-						isRelogin.show = false;
-						useUserStore()
-							.logout()
-							.then(() => {
-								router.replace({
-									path: "/login",
-									query: {
-										redirect: encodeURIComponent(
-											router.currentRoute.value.fullPath || "/",
-										),
-									},
-								});
-							});
-					})
-					.catch(() => {
-						isRelogin.show = false;
-					});
-			}
-      return Promise.reject('无效的会话，或者会话已过期，请重新登录。');
+    if (isAuthFailure(code, msg)) {
+      redirectToLoginAfterAuthFailure();
+      return Promise.reject(AUTH_FAILURE_MESSAGE);
     } else if (code === HttpStatus.SERVER_ERROR) {
       ElMessage({ message: msg, type: 'error' });
       return Promise.reject(createHandledError(msg));
@@ -255,6 +256,11 @@ service.interceptors.response.use(
   },
   async (error: any) => {
     const message = (await extractErrorMessage(error)) || errorCode['default'];
+    if (error?.response?.status === HttpStatus.UNAUTHORIZED || isAuthFailure(undefined, message)) {
+      redirectToLoginAfterAuthFailure();
+      error.isHandled = true;
+      return Promise.reject(error);
+    }
     ElMessage({ message: message, type: 'error', duration: 5 * 1000 });
     error.isHandled = true;
     return Promise.reject(error);
@@ -288,7 +294,11 @@ export function download(url: string, params: any, fileName: string) {
 				const rspObj = JSON.parse(resText);
 				const errMsg =
 					errorCode[rspObj.code] || rspObj.msg || errorCode["default"];
-				ElMessage.error(errMsg);
+				if (isAuthFailure(rspObj.code, errMsg)) {
+					redirectToLoginAfterAuthFailure();
+				} else {
+					ElMessage.error(errMsg);
+				}
 			}
 			downloadLoadingInstance?.close();
 		})

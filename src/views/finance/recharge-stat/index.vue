@@ -22,7 +22,7 @@
         </el-form-item>
       </el-form>
       <div class="text-gray-400 text-sm">
-        口径：<b>payment_order.type = 1 AND status = 2</b>（成功充值），金额单位「分」；
+        口径：<b>payment_order.type = 1 AND status = 2</b>（成功充值），金额单位 VND；
         通道成功率 = 成功笔数 ÷ 全部申请笔数；三方商户维度经
         <code>finance_channel_route.route_code = payment_order.bank_code</code> 关联商户档案。
         <span v-if="rangeText">当前区间：{{ rangeText }}</span>

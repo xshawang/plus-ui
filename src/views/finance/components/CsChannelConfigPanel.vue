@@ -314,8 +314,7 @@ const SETTINGS_FIELDS = [
   { key: 'order_expire_minutes', label: '订单有效时间(分钟)', type: 'number' },
   { key: 'turnover_default_principal', label: '默认层级-本金稽核倍数', type: 'text' },
   { key: 'turnover_default_bonus', label: '默认层级-奖金稽核倍数', type: 'text' },
-  { key: 'member_currency', label: '客服代充默认会员币种', type: 'text' },
-  { key: 'member_currency_rate', label: '会员币种比例展示', type: 'text' }
+  { key: 'member_currency', label: '客服代充默认会员币种', type: 'text' }
 ] as const;
 const SETTINGS_GROUP = 'finance-cs-recharge-setting';
 

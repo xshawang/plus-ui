@@ -36,7 +36,7 @@
       </el-form>
       <div class="text-gray-400 text-sm">
         口径：充值大类对应玩家端收银台一级入口，子通道承载通道编号/三方商户/限额/推荐金额/费率/成功率；
-        金额单位一律为分（VND1000:1）。
+        金额单位统一为越南盾（VND），数据库数值即实际金额。
       </div>
       <el-alert
         title="加密货币配置已合并到充值通道"
@@ -221,8 +221,13 @@
             <el-table-column label="客户端下发值" align="left" min-width="230" show-overflow-tooltip>
               <template #default="{ row }">{{ clientDetailSummary(row as FinanceChannelRouteVO) }}</template>
             </el-table-column>
-            <el-table-column label="单笔限额" align="right" width="180">
-              <template #default="{ row }">{{ formatMoneyRange(row.amountMin ?? 0, row.amountMax ?? 0) }}</template>
+            <el-table-column label="单笔限额" align="right" width="210">
+              <template #default="{ row }">
+                <div>{{ formatMoneyRange(effectiveLimitMin(row as FinanceChannelRouteVO), effectiveLimitMax(row as FinanceChannelRouteVO)) }}</div>
+                <span v-if="Number(row.providerRouteCount || 0) > 0" class="text-xs text-gray-400">
+                  三方通道 {{ row.providerRouteCount }} 条
+                </span>
+              </template>
             </el-table-column>
             <el-table-column label="币种" prop="currency" align="center" width="80" />
             <el-table-column label="开放时段" align="center" width="125">
@@ -269,9 +274,17 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column label="操作" align="center" fixed="right" width="130">
+            <el-table-column label="操作" align="center" fixed="right" width="220">
               <template #default="{ row }">
                 <el-button v-hasPermi="['finance:channel:edit']" link type="primary" @click="handleEditRoute(row as FinanceChannelRouteVO)">修改</el-button>
+                <el-button
+                  v-hasPermi="['finance:withdrawchannel:edit']"
+                  link
+                  type="success"
+                  @click="openProviderRoutes(row as FinanceChannelRouteVO)"
+                >
+                  三方路由
+                </el-button>
                 <el-button
                   v-if="!isP2pGroup(group)"
                   v-hasPermi="['finance:channel:edit']"
@@ -405,11 +418,6 @@
           <el-col :span="12">
             <el-form-item label="币种">
               <el-input v-model="routeForm.currency" placeholder="VND" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="币种比例">
-              <el-input v-model="routeForm.currencyRate" placeholder="VND1000:1" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -714,12 +722,12 @@
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="充值金额（分）">
+              <el-form-item label="充值金额（VND）">
                 <el-input-number v-model="routeForm.fee" :min="0" controls-position="right" style="width: 100%" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="赠送金额（分）">
+              <el-form-item label="赠送金额（VND）">
                 <el-input-number v-model="routeForm.bonusAmount" :min="0" controls-position="right" style="width: 100%" />
               </el-form-item>
             </el-col>
@@ -773,6 +781,15 @@
         <el-button type="primary" :loading="submitting" @click="submitRoute">确认</el-button>
       </template>
     </el-dialog>
+
+    <ProviderRouteBindingDrawer
+      v-model="providerRouteDrawer"
+      scene="DEPOSIT"
+      :business-ref-id="providerBusinessRefId"
+      :business-label="providerBusinessLabel"
+      :platform="providerBusinessPlatform"
+      :currency="providerBusinessCurrency"
+    />
   </div>
 </template>
 
@@ -780,6 +797,7 @@
 import { computed, reactive, ref } from 'vue';
 import type { FormInstance, FormRules } from 'element-plus';
 import modal from '@/plugins/modal';
+import ProviderRouteBindingDrawer from '@/views/finance/components/ProviderRouteBindingDrawer.vue';
 import {
   changeChannelGroupStatus,
   changeChannelRouteSwitch,
@@ -829,6 +847,11 @@ const groupDialog = ref(false);
 const routeDialog = ref(false);
 const groupFormRef = ref<FormInstance>();
 const routeFormRef = ref<FormInstance>();
+const providerRouteDrawer = ref(false);
+const providerBusinessRefId = ref<number>();
+const providerBusinessLabel = ref('');
+const providerBusinessPlatform = ref('go88');
+const providerBusinessCurrency = ref('VND');
 
 const queryParams = reactive<FinanceChannelQuery>({
   groupKeyword: '',
@@ -872,7 +895,6 @@ const emptyRouteForm = (): FinanceChannelRouteForm => ({
   subSort: 0,
   merchantId: undefined,
   currency: 'VND',
-  currencyRate: 'VND1000:1',
   amountMin: 0,
   amountMax: 0,
   recommendAmounts: '',
@@ -1052,6 +1074,10 @@ const showsAccountColumns = (group: FinanceChannelGroupVO) =>
   isQuickPayGroup(group) || isEwalletGroup(group) || isBankGroup(group);
 const isP2pGroup = (group: FinanceChannelGroupVO) =>
   group.groupCode.toUpperCase() === P2P_GROUP_CODE || group.groupType === P2P_GROUP_TYPE;
+const effectiveLimitMin = (route: FinanceChannelRouteVO) =>
+  route.providerAmountMin ?? route.amountMin ?? 0;
+const effectiveLimitMax = (route: FinanceChannelRouteVO) =>
+  route.providerAmountMax ?? route.amountMax ?? 0;
 
 const accountNumber = (route: FinanceChannelRouteVO) =>
   String(route.receiveNumber || route.account || '').trim();
@@ -1114,7 +1140,6 @@ const p2pRouteFromProfile = (
     merchantId: profile.merchantId,
     merchantName: profile.merchantName,
     currency: profile.currency,
-    currencyRate: '',
     amountMin: profile.amountMin ?? 0,
     amountMax: profile.amountMax ?? 0,
     recommendAmounts: '',
@@ -1344,7 +1369,6 @@ const handleAddRoute = (group: FinanceChannelGroupVO) => {
     ...emptyRouteForm(),
     groupId: group.groupId,
     currency: group.groupType === 4 ? 'USDT' : 'VND',
-    currencyRate: group.groupType === 4 ? '' : 'VND1000:1',
     methodType,
     clientCode: '',
     clientSubCode: '',
@@ -1376,7 +1400,6 @@ const handleEditRoute = (route: FinanceChannelRouteVO) => {
     subSort: route.subSort ?? 0,
     merchantId: route.merchantId && route.merchantId > 0 ? route.merchantId : undefined,
     currency: route.currency ?? 'VND',
-    currencyRate: route.currencyRate ?? '',
     amountMin: route.amountMin ?? 0,
     amountMax: route.amountMax ?? 0,
     recommendAmounts: route.recommendAmounts ?? '',
@@ -1455,6 +1478,14 @@ const handleEditRoute = (route: FinanceChannelRouteVO) => {
     p2pDepositContent: route.p2pDepositContent ?? ''
   });
   routeDialog.value = true;
+};
+
+const openProviderRoutes = (route: FinanceChannelRouteVO) => {
+  providerBusinessRefId.value = route.routeId;
+  providerBusinessLabel.value = `${route.routeCode} / ${route.channelName}`;
+  providerBusinessPlatform.value = route.platform || 'go88';
+  providerBusinessCurrency.value = route.currency || 'VND';
+  providerRouteDrawer.value = true;
 };
 
 const inferMethodType = (route: FinanceChannelRouteVO) => {

@@ -99,6 +99,11 @@ export interface MemberUserVO {
   /** 最近登录终端 */
   lastLoginClientType?: string;
   lastLoginOs?: string;
+  /** 注册设备对应最早记录的浏览器与操作系统。 */
+  registerOs?: string;
+  registerOsVersion?: string;
+  registerBrowser?: string;
+  registerBrowserVersion?: string;
   /**
    * 注册设备（客户端类型，只读展示）。
    *
@@ -115,12 +120,14 @@ export interface MemberUserVO {
  * 用户编辑表单
  *
  * loginName/uid 为主键与唯一标识，编辑弹窗中只读；
- * 密码不随资料修改提交，登录密码重置走专用接口 resetMemberUserPassword。
+ * loginPassword 为可选字段：留空不修改，非空时随资料修改同事务更新登录密码。
  */
 export interface MemberUserForm {
   uid?: string | number;
   loginName?: string;
   nickName?: string;
+  /** 可选登录密码；留空表示不修改。 */
+  loginPassword?: string;
   /** 头像地址（详情回填后原值回传；弹窗内不再提供编辑入口） */
   avatarUrl?: string;
   phone?: string;

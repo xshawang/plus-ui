@@ -31,10 +31,13 @@ router.beforeEach(async (to, from) => {
       return true;
     } else {
       if (useUserStore().roles.length === 0) {
-        isRelogin.show = true;
         // 判断当前用户是否已拉取完user_info信息
         const [err] = await tos(useUserStore().getInfo());
         if (err) {
+          if (isRelogin.show) {
+            NProgress.done();
+            return false;
+          }
           await useUserStore().logout();
           if (!isHandledRequestError(err)) {
             ElMessage.error(err instanceof Error ? err.message : String(err));

@@ -90,7 +90,7 @@
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="150px">
         <el-form-item label="币种" prop="currency">
           <el-select v-model="form.currency" style="width: 260px">
-            <el-option label="越南(VND1000:1)" value="VND" />
+            <el-option label="越南(VND1:1)" value="VND" />
           </el-select>
         </el-form-item>
         <el-form-item label="收件人" prop="targetType">

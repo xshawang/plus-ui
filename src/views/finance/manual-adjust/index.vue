@@ -631,7 +631,7 @@ const handleReject = async (row: FinanceManualAdjustVO) => {
 const showRemark = async (row: FinanceManualAdjustVO) => {
   modal.alert(
     `工单号：${row.adjustNo}\n类型：${typeText(row.adjustType)}\n状态：${statusText(row.status)}\n` +
-      `加/扣金额：${row.adjustAmount ?? 0} 分\n稽核倍数：${row.turnoverMultiple ?? 0}（应打码 ${row.turnoverAmount ?? 0} 分）\n` +
+      `加/扣金额：${row.adjustAmount ?? 0} VND\n稽核倍数：${row.turnoverMultiple ?? 0}（应打码 ${row.turnoverAmount ?? 0} VND）\n` +
       `追缴：${row.chaseAmount ?? 0} / 已追 ${row.chasedAmount ?? 0} / 未追 ${row.unchasedAmount ?? 0}\n` +
       `补单说明：${row.adjustReason || '-'}\n前台备注：${row.frontRemark || '-'}\n后台备注：${row.backRemark || '-'}\n` +
       `失败原因：${row.failReason || '-'}\n钱包流水号：${row.ledgerNo || '-'}`

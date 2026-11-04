@@ -39,9 +39,14 @@ export interface WithdrawChannelProfileVO {
   platform: string;
   payoutMode: string;
   merchantId?: number;
+  merchantCode?: string;
   merchantName?: string;
+  providerId?: number;
+  providerCode?: string;
+  providerName?: string;
   clientCode?: string;
   clientSubCode?: string;
+  providerChannelCode?: string;
   supportedBankCodes?: string;
   currency: string;
   settlementCurrency: string;

@@ -64,7 +64,7 @@ import { formatCappedMoney, cappedMoneyColumnFormatter } from '@/utils/money';
 
 defineOptions({ name: 'GameRank' });
 
-const CURRENCY = 'VND1000:1';
+const CURRENCY = 'VND1:1';
 const loading = ref(false);
 const rows = ref<any[]>([]);
 const total = ref(0);

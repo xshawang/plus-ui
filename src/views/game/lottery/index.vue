@@ -18,7 +18,7 @@
         </el-form-item>
         <el-form-item label="币种">
           <el-select v-model="query.currency" style="width: 190px" @change="onHeaderChange">
-            <el-option label="越南(VND1000:1)" value="VND1000:1" />
+            <el-option label="越南(VND1:1)" value="VND1:1" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="tab === 'play'" label="档位">
@@ -82,7 +82,7 @@ defineOptions({ name: 'GameLottery' });
 
 const tab = ref('play');
 const header = reactive<any>({ lotteryGames: [], tiers: [], issues: [], tierNote: '', defaultTier: 2 });
-const query = reactive<any>({ lotteryCode: '133001', currency: 'VND1000:1', tierNo: 2 });
+const query = reactive<any>({ lotteryCode: '133001', currency: 'VND1:1', tierNo: 2 });
 const tierNoteDialog = reactive({ visible: false, note: '' });
 
 const currentTierName = computed(() => {

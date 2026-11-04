@@ -79,7 +79,7 @@
             </el-form-item>
           </el-form>
           <div class="text-gray-400 text-sm mb-2">
-            数据源为 bank_config（玩家端充提通道共用），后台只做排序权重与启停，不改结构；金额单位：分。
+            数据源为 bank_config（玩家端充提通道共用），后台只做排序权重与启停，不改结构；金额单位：VND。
           </div>
           <el-table v-loading="bankLoading" border :data="banks">
             <el-table-column label="编码" prop="bankCode" align="center" width="140" />
@@ -136,7 +136,7 @@
           <span class="ml-2 text-gray-400 text-sm">留空自动推算</span>
         </el-form-item>
         <el-form-item label="生效汇率展示">
-          <el-input v-model="rateForm.displayRate" placeholder="如 VND1000:1" />
+          <el-input v-model="rateForm.displayRate" placeholder="如 VND" />
         </el-form-item>
         <el-form-item label="自动同步">
           <el-switch v-model="rateForm.autoSync" :active-value="1" :inactive-value="0" />

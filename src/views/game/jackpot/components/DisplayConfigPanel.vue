@@ -79,7 +79,7 @@
           <el-form :model="form" label-width="190px">
             <el-form-item label="币种" required>
               <el-select v-model="form.currency" style="width: 100%">
-                <el-option label="越南(VND1000:1)" value="VND1000:1" />
+                <el-option label="越南(VND1:1)" value="VND1:1" />
               </el-select>
             </el-form-item>
             <el-form-item label="数据来源" required>
@@ -271,7 +271,7 @@ function parseCustomCss(css: string) {
 }
 const query = reactive<any>({ pageNum: 1, pageSize: 10 });
 const dialog = reactive({ visible: false, title: '新增', loading: false });
-const form = reactive<any>({ currency: 'VND1000:1', sourceType: 2, displayMode: 1, poolImageMode: 1,
+const form = reactive<any>({ currency: 'VND1:1', sourceType: 2, displayMode: 1, poolImageMode: 1,
   positionCode: 1, jumpType: 'NONE', amountMin: 2000000, amountMax: 2000000, decimalPlaces: 0,
   numberStyle: 'style1', skinStyle: 'style1', displayStatus: 0, virtualBaseAmount: 0, virtualGrowthPerHour: 0 });
 
@@ -304,7 +304,7 @@ function resetQuery() {
 }
 
 function openAdd() {
-  Object.assign(form, { id: undefined, currency: 'VND1000:1', sourceType: 2, displayMode: 1, poolImageMode: 1,
+  Object.assign(form, { id: undefined, currency: 'VND1:1', sourceType: 2, displayMode: 1, poolImageMode: 1,
     positionCode: 1, jumpType: 'NONE', amountMin: 2000000, amountMax: 2000000, decimalPlaces: 0,
     numberStyle: 'style1', skinStyle: 'style1', displayStatus: 0 });
   dialog.title = '新增';

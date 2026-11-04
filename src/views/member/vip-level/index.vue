@@ -64,7 +64,7 @@
           <el-input v-model="form.levelName" maxlength="32" placeholder="如 VIP3 / 黄金会员" />
         </el-form-item>
         <el-form-item label="币种">
-          <el-input v-model="form.currency" style="width: 220px" placeholder="如 VND1000:1" />
+          <el-input v-model="form.currency" style="width: 220px" placeholder="如 VND1:1" />
         </el-form-item>
         <el-form-item label="徽章图URL">
           <el-input v-model="form.badgeIcon" placeholder="可为空，客户端按默认徽章展示" />
@@ -122,7 +122,7 @@ const rows = ref<VipLevelConfigVO[]>([]);
 const formRef = ref();
 const dialog = reactive({ visible: false, title: '' });
 const isEdit = ref(false);
-const form = reactive<VipLevelConfigVO>({ vipLevel: 0, levelName: '', currency: 'VND1000:1', status: 1 });
+const form = reactive<VipLevelConfigVO>({ vipLevel: 0, levelName: '', currency: 'VND1:1', status: 1 });
 
 const rules = {
   vipLevel: [{ required: true, message: 'VIP等级不能为空', trigger: 'blur' }],
@@ -160,7 +160,7 @@ const handleAdd = () => {
   Object.assign(form, {
     vipLevel: (rows.value.at(-1)?.vipLevel ?? 0) + 1,
     levelName: '',
-    currency: rows.value[0]?.currency ?? 'VND1000:1',
+    currency: rows.value[0]?.currency ?? 'VND1:1',
     badgeIcon: '',
     minPayTotal: 0,
     minTurnoverAmount: 0,

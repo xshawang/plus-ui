@@ -65,10 +65,20 @@ export interface FinanceTransactionVO {
   routeId?: number | string;
   merchantId?: number | string;
   merchantName?: string;
+  merchantCode?: string;
   providerCode?: string;
   providerOrderNo?: string;
+  providerId?: number | string;
+  providerChannelId?: number | string;
+  providerChannelCode?: string;
+  transferStatus?: string;
+  transferFailCount?: number;
+  auditPolicySnapshot?: string;
+  memberTagsSnapshot?: string;
   status?: string;
   sourceStatus?: string;
+  auditOperatorId?: string;
+  auditAt?: string;
   requestId?: string;
   requestAt?: string;
   createdAt?: string;
@@ -243,6 +253,21 @@ export interface FinanceTransactionOptions {
   statuses: string[];
 }
 
+export interface FinanceOrderExportTaskForm {
+  orderType: 'RECHARGE' | 'WITHDRAW';
+  query: FinanceTransactionQuery;
+}
+
+export interface FinanceOrderExportTaskVO {
+  taskId: number | string;
+  taskNo: string;
+  bizType: string;
+  fileName: string;
+  filePassword?: string;
+  status: number;
+  failReason?: string;
+}
+
 export const listFinanceTransactions = (query?: FinanceTransactionQuery): AxiosPromise<PageResult<FinanceTransactionVO>> =>
   request({ url: '/infra/finance/transaction/list', method: 'get', params: query });
 
@@ -256,6 +281,12 @@ export const getFinanceTransactionMetrics = (
   query?: FinanceTransactionQuery
 ): AxiosPromise<Array<Record<string, unknown>>> =>
   request({ url: '/infra/finance/transaction/metrics', method: 'get', params: query });
+
+/** 大数据量财务订单创建后台异步导出任务，完成后到「报表 → 导出下载」下载。 */
+export const createFinanceOrderExportTask = (
+  data: FinanceOrderExportTaskForm
+): AxiosPromise<FinanceOrderExportTaskVO> =>
+  request({ url: '/infra/finance/transaction/export-task', method: 'post', data });
 
 export const financeTransactionAction = (data: {
   sourceType: string;

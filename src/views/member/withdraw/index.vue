@@ -92,17 +92,17 @@
               审核通过
             </el-button>
             <el-button
-              v-if="row.status === 1"
+              v-if="row.status === 0 || row.status === 5"
               v-hasPermi="['member:withdraw:edit']"
               link
               type="success"
               icon="Check"
               @click="handleSuccess(row)"
             >
-              提现成功
+              确认到账
             </el-button>
             <el-button
-              v-if="row.status === 0 || row.status === 1"
+              v-if="row.status === 0 || row.status === 5"
               v-hasPermi="['member:withdraw:edit']"
               link
               type="danger"
@@ -146,21 +146,21 @@ const route = useRoute();
 
 /**
  * 提现订单状态（withdraw_order）：
- * 0=APPLIED 待审核；1=WALLET_FROZEN 已审核/待打款；2=PAID 提现成功；
- * 3=REJECTED 已驳回；4=CANCELED 已取消
+ * 0=待审核；5=已审核；1=处理中；2=成功；3=失败；4=历史取消
  */
 const withdrawStatusMap: Record<number, string> = {
   0: '待审核',
-  1: '已审核/待打款',
-  2: '提现成功',
-  3: '已驳回',
-  4: '已取消'
+  1: '处理中',
+  2: '成功',
+  3: '失败',
+  4: '历史取消',
+  5: '已审核'
 };
 
 const withdrawStatusType = (status?: number) => {
   if (status === 2) return 'success';
   if (status === 3 || status === 4) return 'danger';
-  if (status === 1) return 'warning';
+  if (status === 1 || status === 5) return 'warning';
   return 'info';
 };
 
@@ -216,17 +216,17 @@ const { resetQuery } = useSearchReset({
   afterReset: () => handleQuery()
 });
 
-/** 审核通过：后端仅变更订单状态（0待审核 -> 1已审核/待打款） */
+/** 审核：后端仅变更为已审核（0 -> 5）。 */
 const handleAudit = async (row: WithdrawOrderVO) => {
-  await modal.confirm('确认审核通过提现单“' + row.orderNo + '”？审核通过仅变更订单状态。');
+  await modal.confirm('确认审核提现单“' + row.orderNo + '”？审核仅变更为已审核，不扣冻结。');
   await auditMemberWithdraw({ id: row.id as string | number, orderNo: row.orderNo });
   modal.msgSuccess('审核通过');
   await getList();
 };
 
-/** 提现成功：预留第三方打款对接，后端当前占位推进状态（1 -> 2） */
+/** 确认到账：扣冻结并写提现流水，不调用供应商（0/5 -> 2）。 */
 const handleSuccess = async (row: WithdrawOrderVO) => {
-  await modal.confirm('确认将提现单“' + row.orderNo + '”标记为提现成功？将进入第三方打款流程（当前为占位实现）。');
+  await modal.confirm('确认提现单“' + row.orderNo + '”已人工到账？将扣减冻结并写提现流水，不调用供应商。');
   await successMemberWithdraw({ id: row.id as string | number, orderNo: row.orderNo });
   modal.msgSuccess('操作成功');
   await getList();

@@ -120,7 +120,7 @@ import {
 
 defineOptions({ name: 'GameSubGame' });
 
-const CURRENCY = 'VND1000:1';
+const CURRENCY = 'VND1:1';
 const route = useRoute();
 const loading = ref(false);
 const rows = ref<any[]>([]);

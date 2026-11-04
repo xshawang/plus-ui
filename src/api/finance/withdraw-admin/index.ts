@@ -65,6 +65,7 @@ export interface WithdrawAdminVO {
   lockOperatorId?: string;
   lockAt?: string;
   auditOperatorId?: string;
+  auditAt?: string;
   payOperatorId?: string;
   payMerchantCode?: string;
   payRetryCount?: number;
@@ -96,15 +97,19 @@ export interface WithdrawActionForm {
 export const listWithdrawAdmin = (query?: WithdrawAdminQuery): AxiosPromise<PageResult<WithdrawAdminVO>> =>
   request({ url: '/infra/finance/withdraw/list', method: 'get', params: query });
 
-/** 风控审核通过（0→1）。 */
+/** 审核（0→5）。 */
 export const auditWithdraw = (data: WithdrawActionForm): AxiosPromise<Record<string, unknown>> =>
   request({ url: '/infra/finance/withdraw/audit', method: 'post', data });
 
-/** 驳回（0/1→3，资金退回可用余额）。 */
+/** 人工确认到账（0/5→2，扣冻结并写提现流水，不调用供应商）。 */
+export const confirmWithdraw = (data: WithdrawActionForm): AxiosPromise<Record<string, unknown>> =>
+  request({ url: '/infra/finance/withdraw/confirm', method: 'post', data });
+
+/** 驳回（0/5→3，资金退回可用余额）。 */
 export const rejectWithdraw = (data: WithdrawActionForm): AxiosPromise<Record<string, unknown>> =>
   request({ url: '/infra/finance/withdraw/reject', method: 'post', data });
 
-/** 财务出款（1→2）。 */
+/** 转账（0/5→1，由供应商回调推进最终态）。 */
 export const payWithdraw = (data: WithdrawActionForm): AxiosPromise<Record<string, unknown>> =>
   request({ url: '/infra/finance/withdraw/pay', method: 'post', data });
 
@@ -116,7 +121,7 @@ export const noAuditPayWithdraw = (data: WithdrawActionForm): AxiosPromise<Recor
 export const rePayWithdraw = (data: WithdrawActionForm): AxiosPromise<Record<string, unknown>> =>
   request({ url: '/infra/finance/withdraw/re-pay', method: 'post', data });
 
-/** 提现转充值（0/1→4，净额不变）。 */
+/** 提现转充值（0/1/5→4，净额不变）。 */
 export const transferWithdrawToRecharge = (data: WithdrawActionForm): AxiosPromise<Record<string, unknown>> =>
   request({ url: '/infra/finance/withdraw/transfer-to-recharge', method: 'post', data });
 

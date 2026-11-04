@@ -31,8 +31,7 @@ export interface CreditOrderForm {
   channelCode?: string;
   /** 会员币种（客户端/后台可传，留空取客服代充设置默认值） */
   currency?: string;
-  /** 会员币种比例展示 */
-  currencyRate?: string;
+  /** 历史币种比例字段，仅供后端兼容读取。 */
   /** 标记（运营自定义标签） */
   tag?: string;
   /** 来源客服渠道（仅客服代充单；选定后服务端按「渠道 + 会员层级」自动带出赠送金额） */
@@ -67,7 +66,6 @@ export interface CreditOrderVO {
   turnoverMultiple?: number;
   channelCode?: string;
   currency?: string;
-  currencyRate?: string;
   tag?: string;
   payerName?: string;
   payerAccount?: string;
@@ -87,7 +85,7 @@ export interface CreditOrderVO {
   channelName?: string;
   /** 充值大类（finance_channel_group.group_name，未配置回落「客服代充」/「转账充值」） */
   rechargeGroupName?: string;
-  /** 总上分金额 = 订单金额 + 赠送金额（分） */
+  /** 总上分金额 = 订单金额 + 赠送金额（VND） */
   totalCreditAmount?: number;
   status: number;
   sourceType?: number;

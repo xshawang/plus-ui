@@ -492,7 +492,7 @@ async function submitRemark() {
 /** 「请选择类型/平台」候选：类型来自 /game/type/options，平台来自 /game/platform/options（截图同一个下拉） */
 async function loadPlatformChoices() {
   try {
-    const types: any = ((await gameTypeOptions('VND1000:1')) as unknown as any)?.data ?? [];
+    const types: any = ((await gameTypeOptions('VND1:1')) as unknown as any)?.data ?? [];
     const plats: any = ((await platformOptions()) as unknown as any)?.data ?? [];
     platformChoices.value = [
       ...(types || []).map((t: any) => ({ label: `类型：${t.typeName}`, value: `TYPE:${t.typeCode}` })),

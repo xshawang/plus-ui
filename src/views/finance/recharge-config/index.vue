@@ -52,7 +52,7 @@
                 v-model="values[control.key] as string"
                 :style="{ width: control.wide ? '460px' : '340px' }"
               />
-              <span v-if="control.suffix" class="ml-2 text-gray-400 text-sm">{{ currencySuffix }}</span>
+              <span v-if="control.suffix" class="ml-2 text-gray-400 text-sm">VND</span>
               <span class="ml-2 text-gray-400 text-sm">{{ descMap[control.key] }}</span>
             </el-form-item>
           </el-form>
@@ -65,7 +65,7 @@
 </template>
 
 <script setup name="FinanceRechargeConfig" lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { reactive, ref } from 'vue';
 import modal from '@/plugins/modal';
 import RechargeTabsEditor from '../components/RechargeTabsEditor.vue';
 import CryptoConvertMatrix from '../components/CryptoConvertMatrix.vue';
@@ -76,7 +76,6 @@ import {
   listPageDisplayConfig,
   listPopupConfig,
   listPromoConfig,
-  getCryptoMatrixOptions,
   listRechargeSettingConfig,
   listTransferSettingConfig,
   listWithdrawSettingConfig,
@@ -109,7 +108,7 @@ interface Control {
   label: string;
   type: ControlType;
   wide?: boolean;
-  /** 数值后缀提示（如最低金额后面跟会员币种比例 VND1000:1） */
+  /** 数值后缀提示：充值最低金额统一显示 VND。 */
   suffix?: boolean;
   options?: Array<{ label: string; value: string }>;
 }
@@ -346,7 +345,7 @@ const groups: Group[] = [
           { label: '自动填充本人姓名且不可修改(合规)', value: 'SELF_LOCKED' }
         ]
       },
-      // 参照图6：合规最低金额（后缀展示会员币种比例，如 VND1000:1）
+      // 合规最低金额直接使用数据库 VND 数值。
       { key: 'min_first_recharge_amount', label: '首充最低金额(合规)', type: 'number', suffix: true },
       { key: 'min_recharge_amount', label: '充值最低金额(合规)', type: 'number', suffix: true },
       { key: 'form_payer_wallet', label: '付款人钱包地址填写(0/1/2)', type: 'number' },
@@ -506,8 +505,6 @@ const groups: Group[] = [
 const activeGroup = ref(groups[0].key);
 const loading = ref(false);
 const saving = ref(false);
-/** 会员币种比例后缀（如 VND1000:1）：取平台默认启用币种，用于「首充/充值最低金额」右侧提示 */
-const currencySuffix = ref('');
 const values = reactive<Record<string, number | string>>({});
 const descMap = reactive<Record<string, string>>({});
 
@@ -564,20 +561,4 @@ const handleTabChange = () => {
 
 load();
 
-/**
- * 取会员币种比例后缀（参照页在最低金额右侧展示「VND1000:1」）。
- *
- * 为什么复用数字货币矩阵的数据源：币种清单与比例来自 sys_currency_config，
- * 矩阵端点已经把它和字典一起返回，无需再新增一个只读接口。
- */
-onMounted(async () => {
-  try {
-    const res = await getCryptoMatrixOptions();
-    const currencies = res.data?.currencies ?? [];
-    const preferred = currencies.find((item) => item.masterSwitch === 1) ?? currencies.find((item) => item.code === 'VND') ?? currencies[0];
-    currencySuffix.value = preferred ? `${preferred.code}${preferred.ratio ?? ''}` : '';
-  } catch {
-    currencySuffix.value = '';
-  }
-});
 </script>

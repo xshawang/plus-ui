@@ -432,7 +432,7 @@ import {
 
 defineOptions({ name: 'GamePlatform' });
 
-const CURRENCY = 'VND1000:1';
+const CURRENCY = 'VND1:1';
 const router = useRouter();
 
 const loading = ref(false);

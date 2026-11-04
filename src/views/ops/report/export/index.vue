@@ -41,9 +41,11 @@
       <el-table v-loading="loading" border :data="rows" empty-text="暂无数据" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="50" align="center" />
         <el-table-column label="导出时间" prop="createdAt" align="center" width="180" />
+        <el-table-column label="任务号" prop="taskNo" min-width="180" show-overflow-tooltip />
         <el-table-column label="所属模块" prop="moduleName" align="center" width="110" />
         <el-table-column label="模块内容" prop="moduleContent" align="center" min-width="150" show-overflow-tooltip />
         <el-table-column label="文件名" prop="fileName" min-width="220" show-overflow-tooltip />
+        <el-table-column label="导出记录数" prop="rowCount" align="center" width="110" />
         <el-table-column label="文件大小" align="center" width="110">
           <template #default="{ row }">{{ formatSize(row.fileSize) }}</template>
         </el-table-column>
@@ -90,7 +92,7 @@
 </template>
 
 <script setup name="OpsReportExport" lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useLoading } from '@/hooks/async/useLoading';
 import modal from '@/plugins/modal';
 import {
@@ -110,6 +112,7 @@ const timeRange = ref<string[]>([]);
 const selectedIds = ref<number[]>([]);
 const selectAllCurrent = ref(false);
 const batchAction = ref('');
+let refreshTimer: number | undefined;
 
 const queryParams = reactive({
   module: '',
@@ -173,7 +176,17 @@ const getList = async () => {
     rows.value = res.data?.rows || [];
     total.value = res.data?.total || 0;
     selectAllCurrent.value = false;
+    scheduleAutoRefresh();
   });
+};
+
+/** 生成中的任务自动刷新，任务结束后停止轮询，避免用户反复手工刷新。 */
+const scheduleAutoRefresh = () => {
+  if (refreshTimer) {
+    window.clearTimeout(refreshTimer);
+  }
+  const generating = rows.value.some((row) => Number(row.status) === 0 || Number(row.status) === 1);
+  refreshTimer = generating ? window.setTimeout(() => getList(), 3000) : undefined;
 };
 
 const handleQuery = () => {
@@ -274,5 +287,11 @@ onMounted(async () => {
   options.modules = res.data?.modules || [];
   options.statuses = res.data?.statuses || [];
   handleQuickRange();
+});
+
+onBeforeUnmount(() => {
+  if (refreshTimer) {
+    window.clearTimeout(refreshTimer);
+  }
 });
 </script>

@@ -33,7 +33,7 @@
         </el-form-item>
       </el-form>
       <div class="text-gray-400 text-sm">
-        资金口径：金额与赠送均以「分」存储；审核通过才调用钱包 deposit 入账（本金 bizNo 与赠送 bizNo 分开，同单重审不重复加钱）；
+        资金口径：金额与赠送均以 VND 存储；审核通过才调用钱包 deposit 入账（本金 bizNo 与赠送 bizNo 分开，同单重审不重复加钱）；
         入账后由平台按充值稽核配置自动生成流水稽核任务（本页填写的倍数仅作记录）。
       </div>
     </el-card>
@@ -59,13 +59,7 @@
           <template #default="{ row }">{{ (row as CreditOrderVO).memberLevel || '默认层级' }}</template>
         </el-table-column>
         <el-table-column label="注册来源" prop="registerSource" align="center" width="120" show-overflow-tooltip />
-        <!-- 会员币种(比例)：建单快照，两段展示更贴近参照页（VND / VND1000:1） -->
-        <el-table-column label="会员币种(比例)" align="center" width="150" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ (row as CreditOrderVO).currency || '—' }}
-            <span v-if="(row as CreditOrderVO).currencyRate"> / {{ (row as CreditOrderVO).currencyRate }}</span>
-          </template>
-        </el-table-column>
+        <el-table-column label="会员币种" prop="currency" align="center" width="120" show-overflow-tooltip />
         <el-table-column label="订单金额" prop="amount" align="right" width="140" :formatter="moneyColumnFormatter" />
         <el-table-column label="赠送金额" prop="bonusAmount" align="right" width="120" :formatter="moneyColumnFormatter" />
         <el-table-column label="总上分金额" prop="totalCreditAmount" align="right" width="150" :formatter="moneyColumnFormatter" />
@@ -174,12 +168,9 @@
           </el-select>
           <div v-if="giftHint" class="text-gray-400 text-sm">{{ giftHint }}</div>
         </el-form-item>
-        <!-- 会员币种(比例)与标记：参照运营后台客服代充列表列口径，建单时快照，留空取「充值设置 → 客服代充设置」默认值 -->
+        <!-- 会员币种与标记：充值金额按 VND 原值入账，不再维护币种比例。 -->
         <el-form-item label="会员币种">
           <el-input v-model="form.currency" placeholder="留空取客服代充设置默认值(VND)" style="width: 260px" />
-        </el-form-item>
-        <el-form-item label="币种比例">
-          <el-input v-model="form.currencyRate" placeholder="如 VND1000:1（留空取默认值）" style="width: 260px" />
         </el-form-item>
         <el-form-item label="标记">
           <el-input v-model="form.tag" placeholder="运营自定义标签（如 大额/风控复核）" style="width: 260px" />
@@ -353,7 +344,6 @@ const form = reactive<CreditOrderForm>({
   turnoverMultiple: 0,
   channelCode: '',
   currency: '',
-  currencyRate: '',
   tag: '',
   payerName: '',
   payerAccount: '',
@@ -386,7 +376,6 @@ const allColumns: CsvColumn[] = [
   { label: '会员层级', prop: 'memberLevel' },
   { label: '注册来源', prop: 'registerSource' },
   { label: '会员币种', prop: 'currency' },
-  { label: '币种比例', prop: 'currencyRate' },
   { label: '订单金额', prop: 'amount' },
   { label: '赠送金额', prop: 'bonusAmount' },
   { label: '总上分金额', prop: 'totalCreditAmount' },
@@ -482,7 +471,6 @@ const openCreate = (creditNow = false) => {
     csConfigId: undefined,
     bonusOverride: false,
     currency: '',
-    currencyRate: '',
     tag: '',
     payerName: '',
     payerAccount: '',
@@ -590,7 +578,7 @@ const audit = async (row: CreditOrderVO, approve: boolean) => {
     const result = await modal.prompt('请输入驳回原因');
     remark = String(result.value ?? '');
   } else {
-    await modal.confirm(`确认审核通过并立即入账 ${row.amount} 分给 ${row.account ?? row.uid}？`);
+    await modal.confirm(`确认审核通过并立即入账 ${row.amount} VND 给 ${row.account ?? row.uid}？`);
   }
   if (isTransfer.value) {
     await auditTransferOrder(row.orderId, approve, remark);

@@ -100,8 +100,32 @@
           <el-form-item label="活跃度过期天数">
             <el-input-number v-model="box.values.activity_point_expire_days" :min="0" :controls="false" style="width: 200px" />
           </el-form-item>
-          <el-form-item label="宝箱规则(JSON)">
-            <el-input v-model="box.values.box_rule_json" type="textarea" :rows="3" placeholder='如 {"needPoint":100,"reward":0}' />
+          <el-form-item label="宝箱档位">
+            <div class="tier-editor">
+              <el-table :data="boxTierRows" border size="small">
+                <el-table-column label="档位号" width="110">
+                  <template #default="{ row }">
+                    <el-input-number v-model="row.tierNo" :min="1" :max="99" :controls="false" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="周活跃度门槛" min-width="150">
+                  <template #default="{ row }">
+                    <el-input-number v-model="row.threshold" :min="1" :controls="false" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="奖励金额" min-width="140">
+                  <template #default="{ row }">
+                    <el-input-number v-model="row.rewardAmount" :min="0" :controls="false" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="80" align="center">
+                  <template #default="{ $index }">
+                    <el-button link type="danger" @click="boxTierRows.splice($index, 1)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <el-button class="tier-add" icon="Plus" @click="addBoxTier">增加宝箱档位</el-button>
+            </div>
           </el-form-item>
           <el-form-item>
             <el-button v-hasPermi="['promotion:config:edit']" type="primary" :loading="box.saving" @click="saveBox">保存设置</el-button>
@@ -176,26 +200,54 @@
         <el-form-item label="任务名称" prop="title">
           <el-input v-model="form.title" maxlength="100" />
         </el-form-item>
+        <el-form-item label="任务描述" prop="content">
+          <el-input v-model="form.content" type="textarea" :rows="2" maxlength="512" show-word-limit />
+        </el-form-item>
         <el-form-item label="任务归属">
           <el-tag>{{ kindLabel(form.taskKind) }}</el-tag>
         </el-form-item>
-        <el-form-item label="任务目标">
-          <el-select v-model="form.targetType" filterable allow-create style="width: 220px">
-            <el-option label="累计充值" value="累计充值" />
-            <el-option label="累计打码" value="累计打码" />
-            <el-option label="累计有效投注" value="累计有效投注" />
-            <el-option label="每日打码" value="每日打码" />
-            <el-option label="登录" value="登录" />
+        <el-form-item label="任务目标" prop="targetType">
+          <el-select v-model="form.targetType" filterable style="width: 260px">
+            <el-option v-for="item in targetOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="目标值">
-          <el-input-number v-model="form.targetValue" :min="0" :controls="false" style="width: 220px" />
+        <el-form-item label="目标值" prop="targetValue">
+          <el-input-number v-model="form.targetValue" :min="1" :controls="false" style="width: 220px" />
         </el-form-item>
-        <el-form-item label="奖励金额(分)">
+        <el-form-item label="奖励金额">
           <el-input-number v-model="form.rewardAmount" :min="0" :controls="false" style="width: 220px" />
         </el-form-item>
-        <el-form-item label="奖励阶梯(JSON)">
-          <el-input v-model="form.tierJson" type="textarea" :rows="3" placeholder='如 [{"amount":10000,"reward":500}]' />
+        <el-form-item label="奖励阶梯">
+          <div class="tier-editor">
+            <el-table :data="tierRows" border size="small">
+              <el-table-column label="档位号" width="100">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.tierNo" :min="1" :max="99" :controls="false" />
+                </template>
+              </el-table-column>
+              <el-table-column label="门槛（累计）" min-width="140">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.threshold" :min="1" :controls="false" />
+                </template>
+              </el-table-column>
+              <el-table-column label="累计奖励" min-width="140">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.rewardAmount" :min="0" :controls="false" />
+                </template>
+              </el-table-column>
+              <el-table-column label="活跃度" width="120">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.extraPoint" :min="0" :controls="false" />
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="80" align="center">
+                <template #default="{ $index }">
+                  <el-button link type="danger" @click="tierRows.splice($index, 1)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-button class="tier-add" icon="Plus" @click="addTier">增加任务档位</el-button>
+          </div>
         </el-form-item>
         <el-form-item label="充值方式">
           <el-select v-model="channelValues" multiple clearable placeholder="不选=全选" style="width: 100%">
@@ -331,8 +383,42 @@ const validTime = ref<string[]>([]);
 const channelValues = ref<string[]>([]);
 const levelValues = ref<string[]>([]);
 const terminalValues = ref<string[]>([]);
+const tierRows = ref<Array<{ tierNo: number; threshold: number; rewardAmount: number; extraPoint: number }>>([]);
+const boxTierRows = ref<Array<{ tierNo: number; threshold: number; rewardAmount: number }>>([]);
 const rechargeChannels = ['扫码转账', 'USDT', '充值卡', '银行转账', 'Zalopay', '电子钱包', 'MoMo'];
 const levelOptions = ['默认层级', '首充玩家', '1000k', '10000k', '100000k', '10E', '50E', '100E', '刷子玩家', '套利玩家'];
+
+const TARGET_OPTIONS = {
+  newbie: [
+    { label: '注册', value: 'REGISTER' },
+    { label: '绑定手机', value: 'BIND_PHONE' },
+    { label: '实名认证 KYC', value: 'KYC_VERIFY' },
+    { label: '首次充值', value: 'FIRST_DEPOSIT' },
+    { label: '邀请好友', value: 'INVITE_FRIEND' },
+    { label: '首次进入游戏', value: 'FIRST_GAME' },
+    { label: '累计局数', value: 'GAME_ROUNDS' }
+  ],
+  daily: [
+    { label: '每日登录', value: 'DAILY_LOGIN' },
+    { label: '每日充值', value: 'DAILY_RECHARGE' },
+    { label: '每日有效局数', value: 'DAILY_GAME_ROUNDS' },
+    { label: '每日有效投注/打码', value: 'DAILY_VALID_BET' },
+    { label: '每日分享', value: 'DAILY_SHARE' },
+    { label: '每日邀请', value: 'DAILY_INVITE' }
+  ],
+  weekly: [
+    { label: '连续登录', value: 'WEEKLY_LOGIN_STREAK' },
+    { label: '每周任务达标天数', value: 'WEEKLY_DAILY_TASK_DAYS' }
+  ],
+  mystery: [
+    { label: '每日登录', value: 'DAILY_LOGIN' },
+    { label: '每日充值', value: 'DAILY_RECHARGE' },
+    { label: '每日有效局数', value: 'DAILY_GAME_ROUNDS' },
+    { label: '每日有效投注/打码', value: 'DAILY_VALID_BET' },
+    { label: '每日分享', value: 'DAILY_SHARE' },
+    { label: '每日邀请', value: 'DAILY_INVITE' }
+  ]
+} as const;
 
 const box = usePromoKvConfig('task-center', [
   { key: 'box_enabled', label: '活跃度宝箱开关', type: 'switch' },
@@ -344,6 +430,7 @@ const box = usePromoKvConfig('task-center', [
 ]);
 
 const isTaskTab = computed(() => TASK_TABS.includes(activeTab.value));
+const targetOptions = computed(() => TARGET_OPTIONS[(form.taskKind || activeTab.value) as keyof typeof TARGET_OPTIONS] ?? []);
 const resetHint = computed(() => {
   if (activeTab.value === 'daily') return '提示：每日任务 00:00 重置';
   if (activeTab.value === 'weekly') return '提示：每周任务 周一 00:00 重置';
@@ -351,11 +438,32 @@ const resetHint = computed(() => {
 });
 
 const rules = {
-  title: [{ required: true, message: '任务名称不能为空', trigger: 'blur' }]
+  title: [{ required: true, message: '任务名称不能为空', trigger: 'blur' }],
+  content: [{ required: true, message: '任务描述不能为空', trigger: 'blur' }],
+  targetType: [{ required: true, message: '请选择任务目标', trigger: 'change' }],
+  targetValue: [
+    { required: true, message: '目标值不能为空', trigger: 'change' },
+    { type: 'number', min: 1, message: '目标值必须大于0', trigger: 'change' }
+  ]
+};
+
+const TARGET_TYPE_ALIASES: Record<string, string> = {
+  累计充值: 'RECHARGE',
+  累计打码: 'BET_TOTAL',
+  累计有效投注: 'BET_TOTAL',
+  登录: 'DAILY_LOGIN',
+  每日登录: 'DAILY_LOGIN',
+  每日打码: 'DAILY_BET',
+  每日投注: 'DAILY_BET'
+};
+
+const normalizeTargetType = (value?: string) => {
+  const trimmed = (value ?? '').trim();
+  return TARGET_TYPE_ALIASES[trimmed] ?? trimmed.toUpperCase();
 };
 
 const fmtMoney = (value?: number) =>
-  value === undefined || value === null ? '-' : (Number(value) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  value === undefined || value === null ? '-' : Number(value).toLocaleString('en-US');
 
 const kindLabel = (kind?: string) =>
   ({ newbie: '新人福利', daily: '每日任务', weekly: '每周任务', mystery: '三日神秘任务' } as Record<string, string>)[kind ?? ''] ?? kind ?? '';
@@ -393,6 +501,7 @@ const handleTabChange = async () => {
   total.value = 0;
   if (activeTab.value === 'box') {
     await box.load();
+    boxTierRows.value = parseBoxTierRows(box.values.box_rule_json);
     return;
   }
   await loadRows();
@@ -418,6 +527,8 @@ const openForm = async (row?: PromoTaskVO) => {
   if (row) {
     const res = (await getPromoTask(row.id)) as { data?: PromoTaskVO };
     Object.assign(form, res.data ?? row);
+    form.targetType = normalizeTargetType(form.targetType);
+    tierRows.value = parseTierRows(form.tierJson);
     validTime.value = form.validStart && form.validEnd ? [form.validStart, form.validEnd] : [];
     channelValues.value = form.rechargeChannels ? form.rechargeChannels.split(',').filter(Boolean) : [];
     terminalValues.value = form.claimTerminal ? form.claimTerminal.split(',').filter(Boolean) : [];
@@ -429,8 +540,8 @@ const openForm = async (row?: PromoTaskVO) => {
       code: undefined,
       content: '',
       taskKind: activeTab.value,
-      targetType: '累计充值',
-      targetValue: 0,
+      targetType: targetOptions.value[0]?.value ?? 'DAILY_LOGIN',
+      targetValue: 1,
       rewardAmount: 0,
       extraRewardValue: 0,
       extraRewardDays: 0,
@@ -447,16 +558,62 @@ const openForm = async (row?: PromoTaskVO) => {
       claimTimeType: 'same_day',
       rewardTiming: 1
     });
+    tierRows.value = [];
   }
+};
+
+const parseTierRows = (raw?: string) => {
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    return Array.isArray(parsed)
+      ? parsed.map((item) => ({
+          tierNo: Number(item.tierNo ?? 0),
+          threshold: Number(item.threshold ?? 0),
+          rewardAmount: Number(item.rewardAmount ?? 0),
+          extraPoint: Number(item.extraPoint ?? 0)
+        })).filter((item) => item.tierNo > 0)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const parseBoxTierRows = (raw?: string) => {
+  try {
+    const parsed = JSON.parse(raw || '{}');
+    return Array.isArray(parsed.tiers)
+      ? parsed.tiers.map((item: Row) => ({
+          tierNo: Number(item.tierNo ?? 0),
+          threshold: Number(item.threshold ?? 0),
+          rewardAmount: Number(item.rewardAmount ?? 0)
+        })).filter((item: Row) => item.tierNo > 0)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const addTier = () => {
+  const next = Math.max(0, ...tierRows.value.map((item) => item.tierNo)) + 1;
+  tierRows.value.push({ tierNo: next, threshold: 1, rewardAmount: 0, extraPoint: 0 });
+};
+
+const addBoxTier = () => {
+  const next = Math.max(0, ...boxTierRows.value.map((item) => item.tierNo)) + 1;
+  boxTierRows.value.push({ tierNo: next, threshold: 1, rewardAmount: 0 });
 };
 
 const submitForm = async () => {
   await formRef.value.validate();
+  form.targetType = normalizeTargetType(form.targetType);
   form.validStart = validTime.value?.[0];
   form.validEnd = validTime.value?.[1];
   form.rechargeChannels = channelValues.value.join(',');
   form.claimTerminal = terminalValues.value.join(',');
   form.audienceParams = levelValues.value.join(',');
+  form.tierJson = JSON.stringify(
+    [...tierRows.value].sort((a, b) => a.tierNo - b.tierNo)
+  );
   await withSaving(async () => {
     await savePromoTask(form);
   });
@@ -479,9 +636,13 @@ const removeTask = async (row: PromoTaskVO) => {
 };
 
 const saveBox = async () => {
+  box.values.box_rule_json = JSON.stringify({
+    tiers: [...boxTierRows.value].sort((a, b) => a.tierNo - b.tierNo)
+  });
   await box.save();
   modal.msgSuccess('保存成功');
   await box.load();
+  boxTierRows.value = parseBoxTierRows(box.values.box_rule_json);
 };
 
 onMounted(async () => {
@@ -521,5 +682,13 @@ onMounted(async () => {
 .config-form {
   max-width: 900px;
   margin-top: 12px;
+}
+
+.tier-editor {
+  width: 100%;
+}
+
+.tier-add {
+  margin-top: 8px;
 }
 </style>

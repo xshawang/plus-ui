@@ -3,13 +3,31 @@
     <el-card shadow="hover" class="search-panel">
       <el-form :inline="true" class="query-form">
         <el-form-item label="会员ID">
-          <el-input v-model="queryParams.uid" placeholder="会员ID" clearable style="width: 150px" @keyup.enter="handleQuery" />
+          <el-input
+            v-model="queryParams.uid"
+            placeholder="会员ID"
+            clearable
+            style="width: 150px"
+            @keyup.enter="handleQuery"
+          />
         </el-form-item>
         <el-form-item label="会员账号">
-          <el-input v-model="queryParams.loginName" placeholder="会员账号" clearable style="width: 150px" @keyup.enter="handleQuery" />
+          <el-input
+            v-model="queryParams.loginName"
+            placeholder="会员账号"
+            clearable
+            style="width: 150px"
+            @keyup.enter="handleQuery"
+          />
         </el-form-item>
         <el-form-item label="设备号/指纹">
-          <el-input v-model="queryParams.deviceKeyword" placeholder="设备号或设备指纹" clearable style="width: 220px" @keyup.enter="handleQuery" />
+          <el-input
+            v-model="queryParams.deviceKeyword"
+            placeholder="设备号或设备指纹"
+            clearable
+            style="width: 220px"
+            @keyup.enter="handleQuery"
+          />
         </el-form-item>
         <el-form-item label="信任设备">
           <el-select v-model="queryParams.isTrustDevice" placeholder="全部" clearable style="width: 110px">
@@ -39,10 +57,32 @@
             <p>已选择 {{ selectedIds.length }} 台设备，共 {{ total }} 条</p>
           </div>
           <div class="toolbar-actions">
-            <el-button plain @click="showAllColumns = !showAllColumns">{{ showAllColumns ? '精简列' : '显示全部列' }}</el-button>
-            <el-button v-hasPermi="['member:device:edit']" plain :disabled="selectedIds.length === 0" @click="handleAction('TRUST')">批量信任</el-button>
-            <el-button v-hasPermi="['member:device:edit']" plain :disabled="selectedIds.length === 0" @click="handleAction('UNTRUST')">批量解除</el-button>
-            <el-button v-hasPermi="['member:device:edit']" type="danger" plain :disabled="selectedIds.length === 0" @click="handleAction('BLACKLIST')">
+            <el-button plain @click="showAllColumns = !showAllColumns">
+              {{ showAllColumns ? '精简列' : '显示全部列' }}
+            </el-button>
+            <el-button
+              v-hasPermi="['member:device:edit']"
+              plain
+              :disabled="selectedIds.length === 0"
+              @click="handleAction('TRUST')"
+            >
+              批量信任
+            </el-button>
+            <el-button
+              v-hasPermi="['member:device:edit']"
+              plain
+              :disabled="selectedIds.length === 0"
+              @click="handleAction('UNTRUST')"
+            >
+              批量解除
+            </el-button>
+            <el-button
+              v-hasPermi="['member:device:edit']"
+              type="danger"
+              plain
+              :disabled="selectedIds.length === 0"
+              @click="handleAction('BLACKLIST')"
+            >
               批量拉黑
             </el-button>
           </div>
@@ -52,14 +92,38 @@
         <el-table-column type="selection" width="45" />
         <el-table-column v-if="showAllColumns" label="最近登录时间" prop="lastLoginAt" align="center" width="180" />
         <el-table-column label="会员ID" prop="uid" align="center" width="170" show-overflow-tooltip />
-        <el-table-column v-if="showAllColumns" label="会员账号" prop="loginName" align="center" min-width="120" show-overflow-tooltip />
-        <el-table-column v-if="showAllColumns" label="设备号" prop="deviceId" align="center" min-width="180" show-overflow-tooltip />
-        <el-table-column label="设备指纹" prop="deviceFingerprint" align="center" min-width="200" show-overflow-tooltip />
+        <el-table-column
+          v-if="showAllColumns"
+          label="会员账号"
+          prop="loginName"
+          align="center"
+          min-width="120"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          v-if="showAllColumns"
+          label="设备号"
+          prop="deviceId"
+          align="center"
+          min-width="180"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          label="设备指纹"
+          prop="deviceFingerprint"
+          align="center"
+          min-width="200"
+          show-overflow-tooltip
+        />
         <el-table-column v-if="showAllColumns" label="客户端" align="center" min-width="130">
-          <template #default="{ row }">{{ row.clientType || '—' }} {{ row.appVersion ? '(' + row.appVersion + ')' : '' }}</template>
+          <template #default="{ row }">
+            {{ row.clientType || '—' }} {{ row.appVersion ? '(' + row.appVersion + ')' : '' }}
+          </template>
         </el-table-column>
         <el-table-column v-if="showAllColumns" label="浏览器" align="center" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.browser ? row.browser + ' ' + (row.browserVersion || '') : '—' }}</template>
+          <template #default="{ row }">
+            {{ row.browser ? row.browser + ' ' + (row.browserVersion || '') : '—' }}
+          </template>
         </el-table-column>
         <el-table-column v-if="showAllColumns" label="操作系统" align="center" min-width="130">
           <template #default="{ row }">{{ row.os || '—' }} {{ row.osVersion || '' }}</template>
@@ -82,9 +146,32 @@
         </el-table-column>
         <el-table-column label="操作" align="center" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.isTrustDevice !== 1" v-hasPermi="['member:device:edit']" link type="primary" @click="handleSingle('TRUST', row.id)">信任</el-button>
-            <el-button v-else v-hasPermi="['member:device:edit']" link type="info" @click="handleSingle('UNTRUST', row.id)">解除</el-button>
-            <el-button v-hasPermi="['member:device:edit']" link type="danger" @click="handleSingle('BLACKLIST', row.id)">拉黑</el-button>
+            <el-button
+              v-if="row.isTrustDevice !== 1"
+              v-hasPermi="['member:device:edit']"
+              link
+              type="primary"
+              @click="handleSingle('TRUST', row.id)"
+            >
+              信任
+            </el-button>
+            <el-button
+              v-else
+              v-hasPermi="['member:device:edit']"
+              link
+              type="info"
+              @click="handleSingle('UNTRUST', row.id)"
+            >
+              解除
+            </el-button>
+            <el-button
+              v-hasPermi="['member:device:edit']"
+              link
+              type="danger"
+              @click="handleSingle('BLACKLIST', row.id)"
+            >
+              拉黑
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -109,16 +196,16 @@
 
 <script setup name="MemberDevice" lang="ts">
 import { onMounted, reactive, ref, toRefs } from 'vue';
+import type { MemberDeviceQuery, MemberDeviceVO } from '@/api/member/device/types';
+import { actionMemberDevice, listMemberDevice } from '@/api/member/device';
 import { useLoading } from '@/hooks/async/useLoading';
 import modal from '@/plugins/modal';
-import { actionMemberDevice, listMemberDevice } from '@/api/member/device';
-import type { MemberDeviceQuery, MemberDeviceVO } from '@/api/member/device/types';
 
 type PageBody<T> = { rows?: T[]; total?: number };
 type DataBody<T> = { data?: T };
 
 const { loading, withLoading } = useLoading(true);
-const showAllColumns = ref(false);
+const showAllColumns = ref(true);
 const rows = ref<MemberDeviceVO[]>([]);
 const total = ref(0);
 const selectedIds = ref<number[]>([]);
@@ -165,7 +252,7 @@ const resetQuery = () => {
 };
 
 const handleSelectionChange = (selection: MemberDeviceVO[]) => {
-  selectedIds.value = selection.map((item) => item.id);
+  selectedIds.value = selection.map(item => item.id);
 };
 
 const actionLabel = (action: string) => {

@@ -96,7 +96,7 @@ defineOptions({ name: 'GameTemplate' });
 const props = defineProps<{ templateCode?: string; embedded?: boolean }>();
 const emit = defineEmits<{ (e: 'active-changed'): void }>();
 
-const CURRENCY = 'VND1000:1';
+const CURRENCY = 'VND1:1';
 const templates = ref<any[]>([]);
 const activeCode = ref(props.templateCode || 'hot_1');
 const loading = ref(false);

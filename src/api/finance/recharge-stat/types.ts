@@ -1,7 +1,7 @@
 /**
  * 充值统计与第三方统计（需求文档 2_财务/08）类型定义。
  *
- * 口径：payment_order.type = 1 AND status = 2（成功充值）；金额单位：分。
+ * 口径：payment_order.type = 1 AND status = 2（成功充值）；金额单位：VND。
  */
 export interface FinanceStatQuery {
   beginTime?: string;

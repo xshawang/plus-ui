@@ -601,7 +601,7 @@ const loadOptions = async () => {
     currencyOptions.value = [];
   }
   if (currencyOptions.value.length === 0) {
-    currencyOptions.value = [{ label: '越南(VND1000:1)', value: 'VND1000:1' }];
+    currencyOptions.value = [{ label: '越南(VND1:1)', value: 'VND1:1' }];
   }
   if (withdrawCategories.value.length === 0) {
     withdrawCategories.value = [

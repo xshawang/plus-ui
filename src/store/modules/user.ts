@@ -63,13 +63,20 @@ export const useUserStore = defineStore('user', () => {
     return Promise.reject(err);
   };
 
-  // 注销
-  const logout = async (): Promise<void> => {
-    await logoutApi();
+  const clearAuthState = () => {
     token.value = '';
     roles.value = [];
     permissions.value = [];
     removeToken();
+  };
+
+  // 注销
+  const logout = async (): Promise<void> => {
+    try {
+      await logoutApi();
+    } finally {
+      clearAuthState();
+    }
   };
 
   const setAvatar = (value: string) => {
@@ -86,6 +93,7 @@ export const useUserStore = defineStore('user', () => {
     login,
     getInfo,
     logout,
+    clearAuthState,
     setAvatar
   };
 });
