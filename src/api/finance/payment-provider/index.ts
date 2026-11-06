@@ -24,7 +24,6 @@ export interface ProviderAccountVO {
   providerCode?: string;
   platform?: string;
   currency?: string;
-  authMode?: string;
   apiUrl?: string;
   depositApiUrl?: string;
   payoutApiUrl?: string;

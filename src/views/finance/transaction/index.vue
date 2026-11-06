@@ -34,7 +34,7 @@
             <el-option
               v-for="item in selectableStatusOptions"
               :key="item"
-              :label="statusLabel(item)"
+              :label="activeTab === 'withdraw' ? withdrawStatusLabel(item) : statusLabel(item)"
               :value="item"
             />
           </el-select>
@@ -175,7 +175,7 @@
         </div>
       </template>
       <el-table v-loading="loading" border :data="rows" @row-dblclick="openDetailRow">
-        <el-table-column label="来源" width="120" align="center">
+        <el-table-column v-if="activeTab !== 'withdraw'" label="来源" width="120" align="center">
           <template #default="{ row }">
             <el-tag :type="sourceTagType(row.sourceType)">
               {{ activeTab === 'recharge' ? (row.targetCode || sourceLabel(row.sourceType)) : sourceLabel(row.sourceType) }}
@@ -184,7 +184,16 @@
         </el-table-column>
         <el-table-column label="订单号" prop="orderNo" min-width="190" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-link type="primary" :underline="false" @click="openDetail(row as FinanceTransactionVO)">{{ row.orderNo }}</el-link>
+            <span class="inline-copy-field">
+              <el-link type="primary" :underline="false" @click="openDetail(row as FinanceTransactionVO)">{{ row.orderNo }}</el-link>
+              <el-button
+                link
+                type="primary"
+                icon="CopyDocument"
+                title="复制订单号"
+                @click.stop="copyTransactionText(row.orderNo, '订单号')"
+              />
+            </span>
           </template>
         </el-table-column>
         <el-table-column v-if="activeTab === 'exchange'" label="发票号" prop="invoiceNo" min-width="150" show-overflow-tooltip />
@@ -193,16 +202,35 @@
         <el-table-column v-if="activeTab === 'exchange'" label="交易类型" prop="transactionType" width="150" show-overflow-tooltip />
         <el-table-column label="会员" min-width="170" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-link
-              v-if="row.uid"
-              type="primary"
-              :underline="false"
-              @click.stop="openMemberDetail(row.uid)"
-            >
-              {{ row.account || row.nickName || row.uid }}
-            </el-link>
+            <div v-if="row.uid" class="member-identity">
+              <div class="member-identity__name inline-copy-field">
+                <el-link
+                  type="primary"
+                  :underline="false"
+                  @click.stop="openMemberDetail(row.uid)"
+                >
+                  {{ row.account || row.nickName || row.uid }}
+                </el-link>
+                <el-button
+                  link
+                  type="primary"
+                  icon="CopyDocument"
+                  title="复制会员账号"
+                  @click.stop="copyTransactionText(row.account || row.nickName || row.uid, '会员账号')"
+                />
+              </div>
+              <div class="member-identity__uid inline-copy-field">
+                <span>{{ row.uid }}</span>
+                <el-button
+                  link
+                  type="primary"
+                  icon="CopyDocument"
+                  title="复制会员ID"
+                  @click.stop="copyTransactionText(row.uid, '会员ID')"
+                />
+              </div>
+            </div>
             <div v-else>-</div>
-            <div class="text-gray-400 text-sm">{{ row.uid }}</div>
           </template>
         </el-table-column>
         <el-table-column v-if="activeTab === 'withdraw'" label="会员标签 / 等级" min-width="210">
@@ -227,15 +255,36 @@
         </el-table-column>
         <el-table-column v-if="activeTab === 'withdraw'" label="审核策略" width="110" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.auditPolicySnapshot === 'AUTO_PAYOUT' ? 'success' : 'info'">
-              {{ row.auditPolicySnapshot === 'AUTO_PAYOUT' ? '免审核' : '每次审核' }}
+            <el-select
+              v-if="canEditAuditPolicy()"
+              :model-value="row.userAuditMode || 'EVERY_TIME'"
+              :disabled="policyUpdatingUids.includes(String(row.uid))"
+              size="small"
+              @change="(value) => handleAuditPolicyChange(row as FinanceTransactionVO, value)"
+            >
+              <el-option label="每次审核" value="EVERY_TIME" />
+              <el-option label="免审" value="AUTO_PAYOUT" />
+            </el-select>
+            <el-tag v-else :type="row.userAuditMode === 'AUTO_PAYOUT' ? 'success' : 'info'">
+              {{ row.userAuditMode === 'AUTO_PAYOUT' ? '免审' : '每次审核' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column v-if="activeTab === 'withdraw'" label="转账状态 / 失败次数" width="170" align="center">
+        <el-table-column label="状态" width="160" align="center">
           <template #default="{ row }">
-            <el-tag :type="transferStatusType(row.transferStatus)">{{ row.transferStatus || 'UNSUBMITTED' }}</el-tag>
-            <span class="ml-2">×{{ row.transferFailCount || 0 }}</span>
+            <el-tag :type="statusTagType(row.status)">
+              {{ activeTab === 'withdraw' ? withdrawStatusLabel(row.status) : statusLabel(row.status) }}
+            </el-tag>
+            <div
+              v-if="(activeTab === 'withdraw' ? isWithdrawCancelled(row.status) : row.failMsg) && row.failMsg"
+              class="transaction-failure"
+              :title="row.failMsg"
+            >
+              {{ row.failMsg }}
+            </div>
+            <div v-if="activeTab !== 'withdraw' && activeTab !== 'recharge'" class="text-gray-400 text-sm">
+              原值 {{ row.sourceStatus ?? '-' }}
+            </div>
           </template>
         </el-table-column>
         <el-table-column :label="targetColumnLabel" min-width="300">
@@ -247,7 +296,14 @@
               </div>
               <div v-if="row.targetCode" class="target-code">{{ row.targetCode }}</div>
               <div v-if="row.targetAccountName" class="withdraw-beneficiary-user">
-                户名：{{ row.targetAccountName }}
+                <span>户名：{{ row.targetAccountName }}</span>
+                <el-button
+                  link
+                  type="primary"
+                  icon="CopyDocument"
+                  title="复制户名"
+                  @click.stop="copyTransactionText(row.targetAccountName, '户名')"
+                />
               </div>
               <div v-if="targetValue(row as FinanceTransactionVO)" class="withdraw-beneficiary-account">
                 <code>{{ targetValue(row as FinanceTransactionVO) }}</code>
@@ -325,7 +381,12 @@
             </template>
           </template>
         </el-table-column>
-        <el-table-column v-if="activeTab !== 'recharge'" label="渠道 / 方式" min-width="150" show-overflow-tooltip>
+        <el-table-column
+          v-if="activeTab !== 'recharge' && activeTab !== 'withdraw'"
+          label="渠道 / 方式"
+          min-width="150"
+          show-overflow-tooltip
+        >
           <template #default="{ row }">
             <template v-if="row.sourceType === 'WITHDRAW'">
               <div>{{ withdrawTabLabel(row.withdrawTabCode) }}</div>
@@ -338,7 +399,7 @@
           </template>
         </el-table-column>
         <el-table-column
-          :label="activeTab === 'recharge' ? '供应商 / 商户编码' : '商户'"
+          :label="activeTab === 'recharge' || activeTab === 'withdraw' ? '供应商 / 商户编码' : '商户'"
           min-width="190"
           show-overflow-tooltip
         >
@@ -349,19 +410,19 @@
                 {{ row.merchantName }}
               </div>
             </template>
+            <template v-else-if="activeTab === 'withdraw'">
+              <div>{{ payoutProviderCode(row.providerCode) }} / {{ row.merchantCode || '-' }}</div>
+            </template>
             <span v-else>{{ row.merchantName || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="160" align="center">
+        <el-table-column v-if="activeTab === 'withdraw'" label="转账状态 / 失败原因" min-width="220" align="center">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">
-              {{ activeTab === 'withdraw' ? withdrawStatusLabel(row.status) : statusLabel(row.status) }}
+            <el-tag :type="transferStatusType(row.transferStatus)">
+              {{ transferStatusLabel(row.transferStatus) }}
             </el-tag>
-            <div v-if="row.failMsg" class="transaction-failure" :title="row.failMsg">
+            <div v-if="!isWithdrawCancelled(row.status) && row.failMsg" class="transaction-failure" :title="row.failMsg">
               {{ row.failMsg }}
-            </div>
-            <div v-if="activeTab !== 'withdraw' && activeTab !== 'recharge'" class="text-gray-400 text-sm">
-              原值 {{ row.sourceStatus ?? '-' }}
             </div>
           </template>
         </el-table-column>
@@ -470,7 +531,7 @@
         </el-table-column>
         <el-table-column
           label="操作"
-          :width="activeTab === 'withdraw' ? 310 : activeTab === 'recharge' ? 230 : 220"
+          :width="activeTab === 'withdraw' ? 360 : activeTab === 'recharge' ? 230 : 220"
           fixed="right"
           align="center"
         >
@@ -511,12 +572,21 @@
               <template v-if="activeTab === 'withdraw'">
                 <span v-hasPermi="['finance:transaction:edit']" class="withdraw-actions">
                   <el-button v-if="hasAction(row as FinanceTransactionVO, 'REMARK')" link type="primary" @click="handleAction(row as FinanceTransactionVO, 'REMARK')">备注</el-button>
-                  <el-button v-if="hasAction(row as FinanceTransactionVO, 'REJECT')" link type="danger" @click="handleAction(row as FinanceTransactionVO, 'REJECT')">驳回</el-button>
-                  <el-button v-if="hasAction(row as FinanceTransactionVO, 'AUDIT')" link type="success" @click="handleAction(row as FinanceTransactionVO, 'AUDIT')">审核</el-button>
+                  <el-button v-if="hasAction(row as FinanceTransactionVO, 'AUDIT')" link type="success" @click="handleAction(row as FinanceTransactionVO, 'AUDIT')">锁定</el-button>
+                  <el-button v-if="hasAction(row as FinanceTransactionVO, 'REJECT')" link type="danger" @click="handleAction(row as FinanceTransactionVO, 'REJECT')">强制退款</el-button>
                   <el-button v-if="hasAction(row as FinanceTransactionVO, 'CONFIRM')" link type="success" @click="handleAction(row as FinanceTransactionVO, 'CONFIRM')">确认</el-button>
                   <el-button v-if="hasAction(row as FinanceTransactionVO, 'PAY')" link type="warning" @click="handleAction(row as FinanceTransactionVO, 'PAY')">转账</el-button>
+                  <el-button
+                    v-if="hasAction(row as FinanceTransactionVO, 'QUERY_PAYOUT')"
+                    link
+                    type="primary"
+                    :loading="queryingOrderNo === row.orderNo"
+                    @click="handleAction(row as FinanceTransactionVO, 'QUERY_PAYOUT')"
+                  >
+                    查单
+                  </el-button>
                   <el-button v-if="hasAction(row as FinanceTransactionVO, 'RETRY')" link type="warning" @click="handleAction(row as FinanceTransactionVO, 'RETRY')">重试</el-button>
-                  <el-button v-if="hasAction(row as FinanceTransactionVO, 'REFUND_FAILED_PAYOUT')" link type="danger" @click="handleAction(row as FinanceTransactionVO, 'REFUND_FAILED_PAYOUT')">终止并退款</el-button>
+                  <el-button v-if="hasAction(row as FinanceTransactionVO, 'REFUND_FAILED_PAYOUT') && !hasAction(row as FinanceTransactionVO, 'REJECT')" link type="danger" @click="handleAction(row as FinanceTransactionVO, 'REFUND_FAILED_PAYOUT')">强制退款</el-button>
                 </span>
               </template>
               <el-dropdown
@@ -754,7 +824,7 @@
           <section class="tx-info-card">
             <div class="tx-info-card__header">
               <h3>订单核验</h3>
-              <span>成功、失败或处理中都先核对这里</span>
+              <span>成功、取消或处理中都先核对这里</span>
             </div>
             <div class="tx-field-list">
               <div class="tx-field">
@@ -799,7 +869,7 @@
                 <strong>{{ fmtTransactionTime(detail.transaction.updatedAt) }}</strong>
               </div>
               <div v-if="detail.transaction.failCode" class="tx-field tx-field--danger">
-                <span>失败类型</span>
+                <span>{{ detail.transaction.sourceType === 'WITHDRAW' ? '取消原因码' : '失败类型' }}</span>
                 <strong>{{ detail.transaction.failCode }}</strong>
               </div>
             </div>
@@ -956,7 +1026,12 @@
           <div v-else class="tx-empty-inline">暂无状态事件</div>
         </section>
 
-        <section class="tx-notification-card">
+        <WithdrawalTracePanel
+          v-if="detail.transaction.sourceType === 'WITHDRAW'"
+          :attempts="detail.payoutAttempts"
+          :notifications="detail.notifications"
+        />
+        <section v-else class="tx-notification-card">
           <div class="tx-info-card__header">
             <div>
               <h3>通知与回调</h3>
@@ -1061,6 +1136,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ArrowDown } from '@element-plus/icons-vue';
 import modal from '@/plugins/modal';
 import { formatMoney } from '@/utils/money';
+import { checkPermi } from '@/utils/permission';
 import {
   createFinanceOrderExportTask,
   financeTransactionAction,
@@ -1072,7 +1148,9 @@ import {
   replayFinanceNotification,
   retryFinanceNotification
 } from '@/api/finance/transaction';
+import { saveWithdrawAuditPolicy } from '@/api/finance/payment-provider';
 import { exportCsv, type CsvColumn } from '../components/csvExport';
+import WithdrawalTracePanel from './components/WithdrawalTracePanel.vue';
 import type {
   FinanceOrderEvent,
   FinanceNotificationQuery,
@@ -1146,6 +1224,8 @@ const creditSubmitting = ref(false);
 const creditOrder = ref<FinanceTransactionVO>();
 const creditPassword = ref('');
 const queryingOrderNo = ref('');
+const policyUpdatingUids = ref<string[]>([]);
+const canEditAuditPolicy = () => checkPermi(['finance:withdrawadmin:edit']);
 const usesTodayRange = (tab: FinanceTransactionTab) => tab === 'recharge' || tab === 'withdraw';
 const dateRange = ref<[string, string]>(
   usesTodayRange(activeTab.value) ? rechargeTodayRange() : undefined
@@ -1188,7 +1268,7 @@ const statusOptions = computed(() => options.statuses.length ? options.statuses 
 ]);
 const selectableStatusOptions = computed(() =>
   activeTab.value === 'withdraw'
-    ? statusOptions.value.filter((status) => status !== 'AUDITING')
+    ? ['AUDITED', 'SUCCESS', 'CANCELLED']
     : statusOptions.value
 );
 const fallbackWithdrawTabs = [
@@ -1221,6 +1301,7 @@ const detailStatusTone = computed(() => {
   const status = detail.value?.transaction.status;
   if (status === 'SUCCESS') return 'success';
   if (status === 'FAILED' || status === 'REJECTED') return 'danger';
+  if (status === 'CANCELLED') return 'info';
   if (status === 'PENDING' || status === 'AUDITING' || status === 'AUDITED' || status === 'PROCESSING') return 'warning';
   return 'info';
 });
@@ -1257,6 +1338,9 @@ const detailOutcomeTitle = computed(() => {
   const transaction = detail.value?.transaction;
   if (!transaction) return '';
   if (transaction.status === 'SUCCESS') return isRechargeDetail.value ? '充值已完成并入账' : '交易已完成';
+  if (isWithdrawCancelled(transaction.status) && transaction.sourceType === 'WITHDRAW') {
+    return '提现订单已取消，冻结金额已退回';
+  }
   if (transaction.status === 'FAILED') return '订单处理失败';
   if (transaction.status === 'REJECTED') return '订单已驳回';
   if (transaction.status === 'CANCELLED') return '订单已取消';
@@ -1269,6 +1353,12 @@ const detailOutcomeDescription = computed(() => {
   if (transaction.status === 'SUCCESS') {
     const finished = transaction.finishedAt ? `，完成于 ${fmtTransactionTime(transaction.finishedAt)}` : '';
     return `${platformCreditDisplay.value} 已入账${finished}`;
+  }
+  if (isWithdrawCancelled(transaction.status) && transaction.sourceType === 'WITHDRAW') {
+    const reason = transaction.failMsg || transaction.failCode;
+    return reason
+      ? `冻结金额已退回可用余额；取消原因：${reason}`
+      : '冻结金额已退回可用余额';
   }
   if (transaction.status === 'FAILED' || transaction.status === 'REJECTED') {
     return transaction.failCode
@@ -1394,6 +1484,36 @@ const loadTransactions = async () => {
   }
 };
 
+/**
+ * 从提现单直接调整该会员的审核策略。
+ *
+ * 为什么同步更新同 UID 的当前页行：列展示的是会员当前策略而不是历史订单快照，
+ * 同页多笔订单必须立即呈现同一个值；保存失败时保持原值。
+ */
+const handleAuditPolicyChange = async (row: FinanceTransactionVO, auditMode: string) => {
+  const uid = Number(row.uid);
+  if (!uid || !['EVERY_TIME', 'AUTO_PAYOUT'].includes(auditMode)) return;
+  const uidKey = String(uid);
+  if (policyUpdatingUids.value.includes(uidKey)) return;
+  policyUpdatingUids.value = [...policyUpdatingUids.value, uidKey];
+  try {
+    const response = await saveWithdrawAuditPolicy({
+      uid,
+      auditMode,
+      reason: '提现订单列表调整会员审核策略'
+    });
+    const savedMode = response.data?.auditMode || auditMode;
+    rows.value.forEach((item) => {
+      if (Number(item.uid) === uid) item.userAuditMode = savedMode;
+    });
+    modal.msgSuccess(auditMode === 'AUTO_PAYOUT' ? '已设为免审' : '已设为每次审核');
+  } catch {
+    modal.msgError('审核策略保存失败');
+  } finally {
+    policyUpdatingUids.value = policyUpdatingUids.value.filter((value) => value !== uidKey);
+  }
+};
+
 const loadNotifications = async () => {
   notificationLoading.value = true;
   try {
@@ -1496,8 +1616,11 @@ const openMemberDetail = (uid?: string) => {
   router.push({ path: '/member/detail', query: { uid } });
 };
 
-const hasAction = (row: FinanceTransactionVO, action: string) =>
-  Boolean(row.availableActions?.includes(action));
+const hasAction = (row: FinanceTransactionVO, action: string) => {
+  const payoutActions = ['PAY', 'RETRY', 'QUERY_PAYOUT', 'NO_AUDIT_PAY'];
+  if (row.status === 'AUDITING' && payoutActions.includes(action)) return false;
+  return Boolean(row.availableActions?.includes(action));
+};
 
 /**
  * Element Plus MessageBox.prompt 返回 { value, action }。
@@ -1533,6 +1656,50 @@ const handleAction = async (row: FinanceTransactionVO, action: string) => {
     }
     return;
   }
+  if (action === 'QUERY_PAYOUT') {
+    try {
+      await modal.confirm(
+        `确认向原代付供应商查询提现订单“${row.orderNo}”？明确成功的订单将扣除冻结余额并更新为出款成功，明确失败将解冻退款并取消订单。`
+      );
+    } catch {
+      return;
+    }
+    queryingOrderNo.value = row.orderNo;
+    try {
+      const res = await financeTransactionAction({
+        sourceType: row.sourceType,
+        orderNo: row.orderNo,
+        action
+      });
+      modal.msgSuccess(String(res.data?.message || '查单完成'));
+      await loadTransactions();
+    } finally {
+      queryingOrderNo.value = '';
+    }
+    return;
+  }
+  // 转账按提现单已绑定的业务路由和银行直接发起，不弹出备注、供应商、通道或二次确认。
+  if (action === 'PAY') {
+    await financeTransactionAction({
+      sourceType: row.sourceType,
+      orderNo: row.orderNo,
+      action
+    });
+    modal.msgSuccess('转账请求已提交');
+    await loadTransactions();
+    return;
+  }
+  // 审核和重试按后台默认策略直接处理；重试沿用提现单已绑定的供应商与通道。
+  if (action === 'AUDIT' || action === 'RETRY') {
+    await financeTransactionAction({
+      sourceType: row.sourceType,
+      orderNo: row.orderNo,
+      action
+    });
+    modal.msgSuccess(action === 'AUDIT' ? '锁定成功' : '重试已提交');
+    await loadTransactions();
+    return;
+  }
   if (action === 'CREDIT') {
     creditOrder.value = row;
     creditPassword.value = '';
@@ -1540,38 +1707,23 @@ const handleAction = async (row: FinanceTransactionVO, action: string) => {
     return;
   }
   let remark = '';
-  let params: Record<string, unknown> | undefined;
-  if (['REMARK', 'REJECT', 'AUDIT', 'CONFIRM', 'PAY', 'RETRY', 'REFUND_FAILED_PAYOUT'].includes(action)) {
+  if (['REMARK', 'REJECT', 'CONFIRM', 'REFUND_FAILED_PAYOUT'].includes(action)) {
     const label = action === 'REMARK'
       ? '请输入备注'
       : action === 'REJECT'
-        ? '请输入驳回原因'
+        ? '请输入强制退款原因'
         : `${actionLabel(action)}（可填写备注）`;
     const input = await promptTransactionText(label);
     if (input === null) return;
     if (action === 'REJECT' && !input) {
-      modal.msgWarning('请输入驳回原因');
+      modal.msgWarning('请输入强制退款原因');
       return;
     }
     remark = input;
   }
-  if (action === 'PAY' || action === 'RETRY') {
-    const merchant = await promptTransactionText('可指定代付商户编码（留空使用默认）');
-    if (merchant === null) return;
-    if (merchant) params = { ...params, payMerchantCode: merchant };
-    const provider = await promptTransactionText('可指定供应商编码，如 ASIAPAY（留空按权重自动选路）');
-    if (provider === null) return;
-    if (provider) params = { ...params, providerCode: provider };
-    const channel = await promptTransactionText('可指定供应商通道编码（留空按权重自动选路）');
-    if (channel === null) return;
-    if (channel) params = { ...params, providerChannelCode: channel };
-  }
-  if (['REJECT', 'AUDIT', 'CONFIRM', 'PAY', 'RETRY', 'REFUND_FAILED_PAYOUT'].includes(action)) {
+  if (['REJECT', 'CONFIRM', 'REFUND_FAILED_PAYOUT'].includes(action)) {
     try {
-      const warning = action === 'RETRY' && row.transferStatus === 'UNKNOWN'
-        ? '供应商状态未能最终确认，原代付仍可能延迟成功；确认切换并承担重复转账复核风险？'
-        : `确认执行「${actionLabel(action)}」？`;
-      await modal.confirm(warning);
+      await modal.confirm(`确认执行「${actionLabel(action)}」？`);
     } catch {
       return;
     }
@@ -1580,8 +1732,7 @@ const handleAction = async (row: FinanceTransactionVO, action: string) => {
     sourceType: row.sourceType,
     orderNo: row.orderNo,
     action,
-    remark: remark || undefined,
-    params
+    remark: remark || undefined
   });
   modal.msgSuccess('操作成功');
   await loadTransactions();
@@ -1646,6 +1797,10 @@ const merchantDisplay = (row: FinanceTransactionVO) => {
   const provider = providerDisplay(row.providerCode);
   const merchant = (row.merchantCode || row.merchantName)?.trim() || '';
   return [provider === '-' ? '' : provider, merchant].filter(Boolean).join(' / ') || '-';
+};
+const payoutProviderCode = (code?: string) => {
+  const normalized = code?.trim().toUpperCase() || '';
+  return ['XJPAY', 'CLUB', 'ASIAPAY', 'DABAOPAY'].includes(normalized) ? normalized : '-';
 };
 const providerDisplay = (code?: string) => ({
   ASIAPAY: 'AsiaPay',
@@ -1719,9 +1874,9 @@ const eventTypeLabel = (value?: string) => ({
   CREDIT: '订单入账',
   CREDIT_FAILED: '入账失败',
   QUERY_ORDER: '手动查单',
-  AUDIT: '审核通过',
+  AUDIT: '锁定',
   CONFIRM: '人工确认到账',
-  REJECT: '订单驳回',
+  REJECT: '强制退款',
   PAY: '发起出款',
   RETRY: '重试处理',
   RETRY_NOTIFY: '重试通知',
@@ -2111,16 +2266,30 @@ const statusLabel = (value?: string) => ({
 
 const withdrawStatusLabel = (value?: string) => ({
   AUDITING: '待审核',
-  AUDITED: '已审核',
-  PROCESSING: '处理中',
-  SUCCESS: '出款成功',
-  FAILED: '出款失败',
-  CANCELLED: '已取消'
+  AUDITED: '待处理',
+  PROCESSING: '待处理',
+  SUCCESS: '成功',
+  FAILED: '取消',
+  REJECTED: '取消',
+  CANCELLED: '取消'
 }[value || ''] || value || '-');
+
+const isWithdrawCancelled = (value?: string) =>
+  ['FAILED', 'REJECTED', 'CANCELLED'].includes(value || '');
+
+const transferStatusLabel = (value?: string) => ({
+  UNSUBMITTED: '待转账',
+  SUBMITTING: '提交中',
+  PROCESSING: '处理中',
+  UNKNOWN: '结果待确认',
+  FAILED: '失败',
+  SUCCESS: '成功'
+}[value || ''] || value || '待转账');
 
 const statusTagType = (value?: string) => {
   if (value === 'SUCCESS') return 'success';
   if (value === 'FAILED' || value === 'REJECTED') return 'danger';
+  if (value === 'CANCELLED') return 'info';
   if (value === 'PENDING' || value === 'AUDITING' || value === 'AUDITED') return 'warning';
   if (value === 'PROCESSING') return 'primary';
   return 'info';
@@ -2144,11 +2313,11 @@ const directionLabel = (value?: string) => ({
 }[value || ''] || value || '-');
 
 const actionLabel = (value: string) => ({
-  QUERY_ORDER: '手动查单',
-  AUDIT: '审核', CONFIRM: '确认到账', REJECT: '驳回', PAY: '转账', NO_AUDIT_PAY: '免审出款',
+  QUERY_ORDER: '手动查单', QUERY_PAYOUT: '查单',
+  AUDIT: '锁定', CONFIRM: '确认到账', REJECT: '强制退款', PAY: '转账', NO_AUDIT_PAY: '免审出款',
   RETRY: '重试', RE_PAY: '重试', TRANSFER_TO_RECHARGE: '提现转充值', LOCK: '锁定', UNLOCK: '解锁',
   REMARK: '备注', RETRY_NOTIFY: '重试通知', IGNORE_NOTIFY: '忽略通知', CREDIT: '入账',
-  REFUND_FAILED_PAYOUT: '终止提现并退款'
+  REFUND_FAILED_PAYOUT: '强制退款'
 }[value] || value);
 
 const transferStatusType = (value?: string) => {
@@ -2221,8 +2390,37 @@ onMounted(async () => {
 }
 
 .withdraw-beneficiary-user {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   margin-top: 4px;
   color: var(--el-text-color-regular);
+  font-size: 12px;
+}
+
+.inline-copy-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+}
+
+.inline-copy-field .el-button,
+.withdraw-beneficiary-user .el-button {
+  margin-left: 0;
+  padding: 0 2px;
+}
+
+.member-identity__name,
+.member-identity__uid {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.member-identity__uid {
+  margin-top: 2px;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
 }
 

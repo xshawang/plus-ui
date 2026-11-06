@@ -271,7 +271,6 @@
           <el-col :span="12"><el-form-item label="供应商编码"><el-select v-model="accountForm.providerCode" filterable style="width: 100%"><el-option v-for="item in providers" :key="item.providerCode" :label="`${item.providerCode} / ${item.providerName}`" :value="item.providerCode" /></el-select></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="商户编码"><el-input v-model="accountForm.merchantCode" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="商户名称"><el-input v-model="accountForm.merchantName" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="签名方式"><el-select v-model="accountForm.authMode" style="width: 100%"><el-option label="MD5" value="MD5" /><el-option label="RSA" value="RSA" /><el-option label="HMAC-SHA256" value="HMAC_SHA256" /></el-select></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="平台"><el-input v-model="accountForm.platform" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="结算币种"><el-select v-model="accountForm.currency" style="width: 100%"><el-option label="VND" value="VND" /></el-select></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="状态"><el-switch v-model="accountForm.status" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" /></el-form-item></el-col>
@@ -704,7 +703,6 @@ const openAccount = async (row?: ProviderAccountVO) => {
     providerCode: row.providerCode,
     merchantCode: row.merchantCode,
     merchantName: row.merchantName,
-    authMode: row.authMode,
     platform: row.platform,
     currency: row.currency,
     status: row.status,
@@ -723,7 +721,6 @@ const openAccount = async (row?: ProviderAccountVO) => {
     providerCode: firstProvider?.providerCode,
     platform: 'go88',
     currency: 'VND',
-    authMode: 'MD5',
     depositNotifyUrl: '',
     payoutNotifyUrl: '',
     requestTimeoutMs: 30000,
@@ -767,7 +764,6 @@ const saveAccount = async () => {
     providerCode: provider.providerCode,
     merchantCode: accountForm.merchantCode.trim(),
     merchantName: accountForm.merchantName.trim(),
-    authMode: accountForm.authMode,
     platform: accountForm.platform,
     currency: accountForm.currency,
     status: accountForm.status,

@@ -74,6 +74,7 @@ export interface FinanceTransactionVO {
   transferStatus?: string;
   transferFailCount?: number;
   auditPolicySnapshot?: string;
+  userAuditMode?: string;
   memberTagsSnapshot?: string;
   status?: string;
   sourceStatus?: string;
@@ -162,6 +163,32 @@ export interface FinanceOrderEvent {
   createdAt?: string;
 }
 
+export interface FinancePayoutAttempt {
+  attemptId: number;
+  withdrawOrderNo?: string;
+  attemptNo?: number;
+  providerId?: number | string;
+  providerCode?: string;
+  merchantId?: number | string;
+  merchantCode?: string;
+  providerChannelId?: number | string;
+  providerChannelCode?: string;
+  providerRequestNo?: string;
+  providerOrderNo?: string;
+  providerAmount?: number;
+  providerAmountUnit?: string;
+  transferStatus?: string;
+  failCode?: string;
+  failMessage?: string;
+  lastQueryAt?: string;
+  queryCount?: number;
+  submitAt?: string;
+  completedAt?: string;
+  operatorId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface FinanceTransactionNotification {
   notificationId: number;
   sourceType?: string;
@@ -170,11 +197,16 @@ export interface FinanceTransactionNotification {
   providerCode?: string;
   routeId?: number | string;
   merchantId?: number | string;
+  attemptId?: number | string;
   direction?: string;
   eventType?: string;
   idempotencyKey?: string;
   signOk?: number;
   httpStatus?: number;
+  requestUrl?: string;
+  requestMethod?: string;
+  transportOk?: number;
+  durationMs?: number;
   resultCode?: string;
   resultMsg?: string;
   payloadJson?: string;
@@ -195,6 +227,7 @@ export interface FinanceTransactionDetail {
   transaction: FinanceTransactionVO;
   request?: FinanceOrderRequestSnapshot;
   events?: FinanceOrderEvent[];
+  payoutAttempts?: FinancePayoutAttempt[];
   notifications?: FinanceTransactionNotification[];
 }
 
