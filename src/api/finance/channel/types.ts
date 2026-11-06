@@ -116,6 +116,44 @@ export interface FinanceChannelRouteVO {
   p2pDepositAccountNo?: string;
   p2pDepositAccountName?: string;
   p2pDepositContent?: string;
+  /** 列表洞察（withStats=true）：三方候选、加权成本费率(%)、今日/近30日成功率 */
+  candidates?: FinanceChannelCandidateVO[];
+  costFeeRate?: number | null;
+  todayOrderCount?: number;
+  todaySuccessCount?: number;
+  todaySuccessRate?: number | null;
+  d30OrderCount?: number;
+  d30SuccessCount?: number;
+  d30SuccessRate?: number | null;
+}
+
+/** 子通道下的三方候选摘要（infra 只读汇总，写操作仍走 payment-provider/route-candidates） */
+export interface FinanceChannelCandidateVO {
+  candidateId: number;
+  routeId: number;
+  providerChannelId: number;
+  providerChannelCode?: string;
+  providerPayType?: string;
+  providerId?: number;
+  providerCode?: string;
+  providerName?: string;
+  merchantId?: number;
+  merchantName?: string;
+  merchantFeeRate?: number | null;
+  amountMin?: number;
+  amountMax?: number;
+  weightBp?: number;
+  priorityNo?: number;
+  enabled?: number;
+  autoDisabledUntil?: string;
+  remark?: string;
+  usable?: boolean;
+  todayOrderCount?: number;
+  todaySuccessCount?: number;
+  todaySuccessRate?: number | null;
+  d30OrderCount?: number;
+  d30SuccessCount?: number;
+  d30SuccessRate?: number | null;
 }
 
 export interface FinanceChannelGroupForm {

@@ -91,6 +91,19 @@
             />
           </template>
         </el-table-column>
+        <template v-if="insight">
+          <el-table-column label="成本费率" width="86" align="center">
+            <template #default="{ row }">
+              {{ insightOf(row.candidateId)?.merchantFeeRate != null ? `${Number(insightOf(row.candidateId)?.merchantFeeRate).toFixed(2)}%` : '—' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="今日成功率" width="104" align="center">
+            <template #default="{ row }">{{ rateText(insightOf(row.candidateId)?.todaySuccessRate, insightOf(row.candidateId)?.todayOrderCount) }}</template>
+          </el-table-column>
+          <el-table-column label="近30日成功率" width="110" align="center">
+            <template #default="{ row }">{{ rateText(insightOf(row.candidateId)?.d30SuccessRate, insightOf(row.candidateId)?.d30OrderCount) }}</template>
+          </el-table-column>
+        </template>
         <el-table-column label="自动摘流至" prop="autoDisabledUntil" min-width="145" show-overflow-tooltip />
         <el-table-column label="启用" width="68" align="center">
           <template #default="{ row }">
@@ -126,6 +139,7 @@ import {
   listRouteCandidates,
   saveRouteCandidate
 } from '@/api/finance/payment-provider';
+import type { FinanceChannelCandidateVO } from '@/api/finance/channel/types';
 import type {
   PaymentProviderVO,
   ProviderChannelVO,
@@ -141,14 +155,21 @@ const props = withDefaults(defineProps<{
   bankCode?: string;
   platform?: string;
   currency?: string;
+  /** 充值大类页传入的候选洞察（成本费率/成功率），提现页不传则不显示这三列 */
+  insight?: FinanceChannelCandidateVO[];
 }>(), {
   businessRefId: undefined,
   businessLabel: '',
   merchantId: undefined,
   bankCode: '',
   platform: 'go88',
-  currency: 'VND'
+  currency: 'VND',
+  insight: undefined
 });
+
+const insightOf = (candidateId: number) => props.insight?.find((item) => item.candidateId === candidateId);
+const rateText = (rate?: number | null, total?: number) =>
+  rate == null || !total ? '—' : `${Number(rate).toFixed(2)}%（${total} 笔）`;
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
