@@ -11,6 +11,10 @@ export interface FinanceChannelGroupVO {
   linkGroupCode?: string;
   sortNo?: number;
   status?: number;
+  /** 充值黑名单开关：1=命中标签的玩家不可见、不可下单 */
+  blacklistEnable?: number;
+  /** 黑名单会员标签编码，逗号分隔（member_tag.tag_code） */
+  blacklistTagCode?: string;
   remark?: string;
   operatorId?: string;
   createdAt?: string;
@@ -161,6 +165,8 @@ export interface FinanceChannelGroupForm {
   linkGroupCode?: string;
   sortNo?: number;
   status?: number;
+  blacklistEnable?: number;
+  blacklistTagCode?: string;
   remark?: string;
 }
 

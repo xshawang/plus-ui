@@ -16,6 +16,9 @@
           <el-icon v-else class="group-icon-default" :size="20"><component :is="defaultIcon(row.group)" /></el-icon>
           <div class="group-name">{{ row.group.groupName }}</div>
           <el-tag size="small" type="info">{{ row.group.groupCode }}</el-tag>
+          <el-tooltip v-if="row.group.blacklistEnable === 1" :content="'黑名单会员标签：' + (row.group.blacklistTagCode || '—')">
+            <el-tag size="small" type="danger" effect="plain">黑名单</el-tag>
+          </el-tooltip>
           <div v-hasPermi="['finance:channel:edit']" class="ops">
             <el-tooltip :content="groupMoveTip" :disabled="!groupMoveTip">
               <span>

@@ -291,7 +291,7 @@ const syncP2pTabStatus = async (status: number) => {
 };
 const handleGroupSwitch = async (group: FinanceChannelGroupVO, value: number) => {
   if (value === 0) {
-    await modal.confirm(`确认停用大类「${group.groupName}」？玩家收银台将隐藏整个大类，子通道自身开关不变。`);
+    await modal.confirm(`确认停用大类「${group.groupName}」？玩家收银台将隐藏整个大类，子通道自身开关不变；若该客户端页签下的大类全部停用，页签本身也会被隐藏。`);
   }
   if (isP2pGroup(group) && group.groupId <= 0) {
     await saveChannelGroup({ groupCode: P2P_GROUP_CODE, groupName: group.groupName, groupType: P2P_GROUP_TYPE, sortNo: group.sortNo, status: value });

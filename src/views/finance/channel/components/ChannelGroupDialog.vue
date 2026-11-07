@@ -22,6 +22,29 @@
         <el-switch v-model="form.status" :active-value="1" :inactive-value="0" />
         <span class="field-hint ml-2">停用后玩家收银台隐藏整个大类，子通道自身开关不变</span>
       </el-form-item>
+      <el-form-item label="充值黑名单">
+        <div class="stack">
+          <div>
+            <el-switch v-model="form.blacklistEnable" :active-value="1" :inactive-value="0" :disabled="isP2p" />
+            <span class="field-hint ml-2">命中所选会员标签的玩家，该大类下所有通道不显示、也不能下单</span>
+          </div>
+          <el-select
+            v-if="form.blacklistEnable === 1"
+            v-model="blacklistTags"
+            multiple
+            filterable
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择会员标签（可多选）"
+            class="w-full"
+            :loading="tagLoading"
+          >
+            <el-option v-for="t in tagOptions" :key="t.tagCode" :label="`${t.tagName}（${t.tagCode}）`" :value="t.tagCode" />
+          </el-select>
+          <span v-if="isP2p" class="field-hint">P2P 大类走独立渠道表，不支持充值黑名单</span>
+          <span v-else class="field-hint">配置变更最多 1 分钟内对玩家生效；标签选项来自“会员标签”，需有 member:tag:list 权限</span>
+        </div>
+      </el-form-item>
       <el-form-item label="备注">
         <el-input v-model="form.remark" type="textarea" :rows="2" />
       </el-form-item>
@@ -35,10 +58,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import type { FormInstance, FormRules } from 'element-plus';
 import modal from '@/plugins/modal';
 import { saveChannelGroup } from '@/api/finance/channel';
+import { listMemberTagOptions } from '@/api/member/tag';
 import type { FinanceChannelGroupForm, FinanceChannelGroupVO } from '@/api/finance/channel/types';
 import { groupTypeOptions } from '../channel-utils';
 
@@ -49,6 +73,43 @@ const visible = defineModel<boolean>('visible', { required: true });
 const formRef = ref<FormInstance>();
 const submitting = ref(false);
 const form = reactive<FinanceChannelGroupForm>({});
+
+/** P2P 大类（type=6）不支持充值黑名单 */
+const P2P_TYPE = 6;
+const isP2p = computed(() => form.groupType === P2P_TYPE);
+
+const blacklistTags = ref<string[]>([]);
+const tagOptions = ref<{ tagCode: string; tagName: string }[]>([]);
+const tagLoading = ref(false);
+
+const splitCodes = (raw?: string) =>
+  (raw ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+/** 取启用中的会员标签；无权限或失败时只保留已选编码，不阻塞弹窗。 */
+const loadTagOptions = async () => {
+  tagLoading.value = true;
+  try {
+    const res = await listMemberTagOptions();
+    tagOptions.value = (res.data ?? [])
+      .filter((t) => t.tagCode)
+      .map((t) => ({ tagCode: t.tagCode, tagName: t.tagName || t.tagCode }));
+  } catch {
+    tagOptions.value = [];
+  } finally {
+    // 已保存但已停用/无权限看到的编码，仍以原编码显示，避免保存时被悄悄丢掉
+    for (const code of blacklistTags.value) {
+      if (!tagOptions.value.some((t) => t.tagCode === code)) tagOptions.value.push({ tagCode: code, tagName: code });
+    }
+    tagLoading.value = false;
+  }
+};
+
+watch(isP2p, (p2p) => {
+  if (p2p) form.blacklistEnable = 0;
+});
 
 const rules: FormRules = {
   groupCode: [
@@ -71,16 +132,25 @@ watch(visible, (open) => {
     linkGroupCode: g?.linkGroupCode ?? '',
     sortNo: g?.sortNo ?? props.nextSortNo ?? 0,
     status: g?.status ?? 1,
+    blacklistEnable: g?.blacklistEnable ?? 0,
     remark: g?.remark ?? ''
   });
+  blacklistTags.value = splitCodes(g?.blacklistTagCode);
+  void loadTagOptions();
   formRef.value?.clearValidate();
 });
 
 const submit = async () => {
   const valid = await formRef.value?.validate().catch(() => false);
   if (!valid) return;
+  if (form.blacklistEnable === 1 && blacklistTags.value.length === 0) {
+    modal.msgError('开启充值黑名单时，请至少选择一个会员标签');
+    return;
+  }
   submitting.value = true;
   try {
+    // 关闭时也带上当前标签，后端原样保存，下次开启不用重选
+    form.blacklistTagCode = blacklistTags.value.join(',');
     await saveChannelGroup({ ...form });
     modal.msgSuccess('保存成功');
     visible.value = false;
