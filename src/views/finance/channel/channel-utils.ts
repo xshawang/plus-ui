@@ -105,7 +105,7 @@ export const inferMethodType = (route: FinanceChannelRouteVO) => {
 
 export const emptyRouteForm = (): FinanceChannelRouteForm => ({
   routeId: undefined, groupId: undefined, routeCode: '', channelName: '', subSort: 0, merchantId: undefined,
-  currency: 'VND', amountMin: 0, amountMax: 0, recommendAmounts: '', channelRemark: '', status: 1,
+  currency: 'VND', amountMin: 0, amountMax: 0, recommendAmounts: '', feeRate: 0, channelRemark: '', status: 1,
   platform: 'go88', direction: 1, methodType: 'BANKS', clientCode: '', clientSubCode: '', dailyLimit: 0,
   maintenanceCode: '', addressV1Enabled: 1, addressV3Enabled: 1, channelIcon: '', openTimeStart: '00:00',
   openTimeEnd: '23:59', bankCode: '', bankName: '', smartpayCode: '', account: '', receiveNumber: '',
@@ -135,7 +135,8 @@ export const newRouteForm = (group: FinanceChannelGroupVO): FinanceChannelRouteF
 
 /**
  * 列表行 → 编辑表单。
- * 不再回填 successRate / feeRate / mergeFlag / blacklistEnable：这些字段改版后不由后台写入。
+ * 不再回填 successRate / mergeFlag / blacklistEnable：这些字段改版后不由后台写入。
+ * feeRate 是手填的“仅供参考”值（不参与任何计算），照常回填与保存。
  */
 export const routeToForm = (route: FinanceChannelRouteVO): FinanceChannelRouteForm => ({
   ...emptyRouteForm(),
@@ -161,13 +162,12 @@ export const routeToForm = (route: FinanceChannelRouteVO): FinanceChannelRouteFo
   priorityNo: route.priorityNo ?? route.subSort ?? 0,
   p2pMakerDisplayName: route.p2pMakerDisplayName ?? route.channelName,
   successRate: undefined,
-  feeRate: undefined,
   mergeFlag: undefined,
   blacklistEnable: undefined,
   frontEnable: undefined
 });
 
-const OMIT_KEYS = new Set(['candidates', 'costFeeRate', 'todayOrderCount', 'todaySuccessCount', 'todaySuccessRate',
+const OMIT_KEYS = new Set(['candidates', 'todayOrderCount', 'todaySuccessCount', 'todaySuccessRate',
   'd30OrderCount', 'd30SuccessCount', 'd30SuccessRate', 'merchantName', 'providerAmountMin', 'providerAmountMax',
   'providerRouteCount', 'operatorId', 'createdAt', 'updatedAt', 'platformKey', 'platformUrl']);
 

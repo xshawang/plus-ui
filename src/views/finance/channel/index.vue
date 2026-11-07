@@ -66,7 +66,6 @@
           @edit-group="openGroupDialog"
           @edit-route="openRouteDialog"
           @add-route="openNewRouteDialog"
-          @provider="openProviderRoutes"
           @delete-route="handleDeleteRoute"
           @switch-route="handleRouteSwitch"
           @switch-group="handleGroupSwitch"
@@ -75,7 +74,8 @@
         />
       </div>
       <div class="hint mt-2">
-        成功率口径：窗口内充值单，不含创建不足 15 分钟的待支付单；样本少于 30 笔不着色。点费率/成功率列头只在大类内排序，不改配置顺序。
+        成功率口径：分母只统计非初始状态的充值单（处理中/成功/失败/已取消，不含待支付），分子为成功；样本少于 30 笔不着色。
+        通道费率为手填的参考值，不参与任何计算。三方通道由系统自动匹配，增减与启停在「支付渠道中心」维护。点费率/成功率列头只在大类内排序，不改配置顺序。
       </div>
     </el-card>
 
@@ -84,19 +84,8 @@
       v-model:visible="routeDialog"
       :groups="groups"
       :initial="routeInitial"
-      :cost-fee-rate="routeCostFee"
       :p2p-original="p2pOriginal"
       @saved="getGroups"
-    />
-    <ProviderRouteBindingDrawer
-      v-model="providerDrawer"
-      scene="DEPOSIT"
-      :business-ref-id="providerRoute?.routeId"
-      :business-label="providerRoute ? `${providerRoute.routeCode} / ${providerRoute.channelName}` : ''"
-      :platform="providerRoute?.platform || 'go88'"
-      :currency="providerRoute?.currency || 'VND'"
-      :insight="providerRoute?.candidates"
-      @update:model-value="(open: boolean) => !open && getGroups()"
     />
   </div>
 </template>
@@ -105,7 +94,6 @@
 import { computed, reactive, ref } from 'vue';
 import { ElMessageBox } from 'element-plus';
 import modal from '@/plugins/modal';
-import ProviderRouteBindingDrawer from '@/views/finance/components/ProviderRouteBindingDrawer.vue';
 import {
   changeChannelGroupStatus, changeChannelRouteSwitch, deleteChannelRoute, listChannelGroups,
   reorderChannelGroups, reorderChannelRoutes, saveChannelGroup, updateChannelRouteRemark
@@ -171,6 +159,7 @@ const routeMatches = (route: FinanceChannelRouteVO) => {
 };
 
 const sortValue = (route: FinanceChannelRouteVO) => Number((route as any)[sortState.value.prop] ?? -1);
+// 排序列：feeRate（手填参考值）、todaySuccessRate、d30SuccessRate，均只在大类内按显示值排序
 
 const viewGroups = computed<ViewGroup[]>(() => groups.value
   .map((group) => {
@@ -341,11 +330,9 @@ const onGroupSaved = async (form: FinanceChannelGroupForm) => {
 
 const routeDialog = ref(false);
 const routeInitial = ref<FinanceChannelRouteForm>();
-const routeCostFee = ref<number | null>();
 const p2pOriginal = ref<WithdrawChannelProfileVO>();
 const openRouteDialog = (route: FinanceChannelRouteVO) => {
   routeInitial.value = routeToForm(route);
-  routeCostFee.value = route.costFeeRate ?? null;
   p2pOriginal.value = route.methodType === 'P2P'
     ? p2pProfiles.value.find((p) => p.withdrawChannelId === route.withdrawChannelId)
     : undefined;
@@ -353,16 +340,8 @@ const openRouteDialog = (route: FinanceChannelRouteVO) => {
 };
 const openNewRouteDialog = (group: FinanceChannelGroupVO) => {
   routeInitial.value = newRouteForm(group);
-  routeCostFee.value = null;
   p2pOriginal.value = undefined;
   routeDialog.value = true;
-};
-
-const providerDrawer = ref(false);
-const providerRoute = ref<FinanceChannelRouteVO>();
-const openProviderRoutes = (route: FinanceChannelRouteVO) => {
-  providerRoute.value = route;
-  providerDrawer.value = true;
 };
 
 getGroups();

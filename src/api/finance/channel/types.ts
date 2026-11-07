@@ -116,9 +116,8 @@ export interface FinanceChannelRouteVO {
   p2pDepositAccountNo?: string;
   p2pDepositAccountName?: string;
   p2pDepositContent?: string;
-  /** 列表洞察（withStats=true）：三方候选、加权成本费率(%)、今日/近30日成功率 */
+  /** 列表洞察（withStats=true）：只读的三方候选摘要、今日/近30日成功率。feeRate 是手填的“仅供参考”值，不在此计算 */
   candidates?: FinanceChannelCandidateVO[];
-  costFeeRate?: number | null;
   todayOrderCount?: number;
   todaySuccessCount?: number;
   todaySuccessRate?: number | null;
@@ -127,7 +126,7 @@ export interface FinanceChannelRouteVO {
   d30SuccessRate?: number | null;
 }
 
-/** 子通道下的三方候选摘要（infra 只读汇总，写操作仍走 payment-provider/route-candidates） */
+/** 子通道下的三方候选摘要（infra 只读汇总；三方通道的增减与启停在「支付渠道中心」维护） */
 export interface FinanceChannelCandidateVO {
   candidateId: number;
   routeId: number;
@@ -139,11 +138,8 @@ export interface FinanceChannelCandidateVO {
   providerName?: string;
   merchantId?: number;
   merchantName?: string;
-  merchantFeeRate?: number | null;
   amountMin?: number;
   amountMax?: number;
-  weightBp?: number;
-  priorityNo?: number;
   enabled?: number;
   autoDisabledUntil?: string;
   remark?: string;

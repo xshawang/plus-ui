@@ -1,5 +1,6 @@
 <template>
   <el-dialog v-model="visible" :title="form.routeId || form.withdrawChannelId ? '修改子通道' : '新增子通道'" width="920px" append-to-body>
+    <!-- 三方通道由系统自动匹配，本弹窗不配置供应商、权重或优先级 -->
     <el-form ref="formRef" :model="form" :rules="rules" label-width="140px">
       <el-row :gutter="12">
         <el-col :span="24"><el-divider content-position="left">基础信息</el-divider></el-col>
@@ -78,9 +79,9 @@
           <el-form-item label="每日限额"><el-input-number v-model="form.dailyLimit" :min="0" controls-position="right" class="w-full" /></el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="通道费率(%)">
-            <el-input :model-value="costFeeText" disabled />
-            <span class="field-hint">由可用三方候选的商户费率按权重加权，只读</span>
+          <el-form-item label="通道费率(%)" prop="feeRate">
+            <el-input-number v-model="form.feeRate" :min="0" :max="100" :precision="4" controls-position="right" class="w-full" />
+            <span class="field-hint">手填，仅供参考；不参与结算、选路、排序权重和任何报表</span>
           </el-form-item>
         </el-col>
         <el-col :span="12">
@@ -110,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import type { FormInstance, FormRules } from 'element-plus';
 import modal from '@/plugins/modal';
 import { saveChannelRoute } from '@/api/finance/channel';
@@ -124,8 +125,6 @@ const props = defineProps<{
   groups: FinanceChannelGroupVO[];
   /** 打开时要编辑的表单初值（新增时由父组件按大类生成） */
   initial?: FinanceChannelRouteForm;
-  /** 只读展示：该子通道当前的加权成本费率 */
-  costFeeRate?: number | null;
   /** P2P 子通道对应的原提现渠道档案（保存时保留未在本页编辑的字段） */
   p2pOriginal?: WithdrawChannelProfileVO;
 }>();
@@ -142,8 +141,6 @@ watch(visible, (open) => {
   Object.assign(form, emptyRouteForm(), props.initial ?? {});
   formRef.value?.clearValidate();
 });
-
-const costFeeText = computed(() => (props.costFeeRate == null ? '无可用三方候选' : `${Number(props.costFeeRate).toFixed(4)}`));
 
 const isQuickPay = () => form.methodType === 'QUICK_PAY';
 const requiredForQuickPay = (message: string) => (_rule: unknown, value: unknown, callback: (error?: Error) => void) => {

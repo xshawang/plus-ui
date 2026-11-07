@@ -45,7 +45,7 @@
             <el-button v-hasPermi="['finance:channel:edit']" link type="primary" size="small" @click="emit('add-route', row.group)">新增子通道</el-button>
           </template>
         </div>
-        <span v-else-if="row.kind === 'cand'" class="muted">P{{ row.cand.priorityNo ?? 0 }}</span>
+        <span v-else-if="row.kind === 'cand'" class="muted">—</span>
         <el-tooltip v-else :content="routeMoveTip(row.group)" :disabled="!routeMoveTip(row.group)">
           <div v-hasPermi="['finance:channel:edit']" class="ops">
             <el-button link type="primary" size="small" :disabled="!!routeMoveTip(row.group) || row.routeIndex === 0" @click="emit('move-route', row.group, row.route, -1)">上移</el-button>
@@ -68,16 +68,14 @@
             <el-tooltip v-if="abnormalReason(row.route)" :content="abnormalReason(row.route)"><el-tag size="small" type="danger">异常</el-tag></el-tooltip>
           </div>
         </template>
-        <div v-else-if="row.kind === 'cand'" class="weight-line">
-          <span class="muted">↳</span>
-          <el-progress :percentage="share(row)" :stroke-width="6" :show-text="false" class="weight-bar" />
-          <span>{{ share(row) }}%</span>
+        <div v-else-if="row.kind === 'cand'" class="cand-name">
+          <span class="muted">↳ 三方通道</span>
         </div>
       </template>
     </el-table-column>
 
-    <el-table-column label="三方路由" min-width="190" align="center">
-      <template #header>三方路由<div class="sub-head">原「通道所属商户」</div></template>
+    <el-table-column label="三方匹配" min-width="190" align="center">
+      <template #header>三方匹配<div class="sub-head">只读 · 系统自动匹配</div></template>
       <template #default="{ row }">
         <template v-if="row.kind === 'route'">
           <div v-if="(row.route.candidates || []).length" class="chips">
@@ -89,10 +87,12 @@
               :type="c.usable ? 'primary' : 'info'"
               :class="{ off: !c.usable }"
               class="chip"
-              @click="emit('provider', row.route)"
             >
-              {{ c.providerName }} · {{ c.providerChannelCode }}<template v-if="c.usable"> {{ candidateShare(row.route, c) }}%</template>
+              {{ c.providerName }} · {{ c.providerChannelCode }}
             </el-tag>
+            <el-tooltip content="三方通道的增减与启停在「支付渠道中心」维护；本页只读">
+              <span class="muted">可用 {{ usableCandidates(row.route).length }} / {{ row.route.candidates.length }} 家</span>
+            </el-tooltip>
           </div>
           <template v-else>
             <el-tag size="small" :type="selfSourceLabel(row.route) === '未绑定三方' ? 'warning' : 'info'">{{ selfSourceLabel(row.route) }}</el-tag>
@@ -150,15 +150,15 @@
       </template>
     </el-table-column>
 
-    <el-table-column label="通道费率" prop="costFeeRate" width="96" align="center" sortable="custom">
+    <el-table-column label="通道费率" prop="feeRate" width="96" align="center" sortable="custom">
+      <template #header>通道费率<div class="sub-head">仅供参考</div></template>
       <template #default="{ row }">
         <template v-if="row.kind === 'route'">
-          <el-tooltip v-if="row.route.costFeeRate != null" content="可用三方候选的商户费率按权重加权">
-            <span>{{ Number(row.route.costFeeRate).toFixed(2) }}%</span>
+          <el-tooltip content="手填的参考值，不参与结算、选路、排序权重和任何报表">
+            <span v-if="Number(row.route.feeRate) > 0">{{ Number(row.route.feeRate).toFixed(2) }}%</span>
+            <span v-else class="muted">—</span>
           </el-tooltip>
-          <span v-else class="muted">—</span>
         </template>
-        <span v-else-if="row.kind === 'cand'">{{ row.cand.merchantFeeRate != null ? `${Number(row.cand.merchantFeeRate).toFixed(2)}%` : '—' }}</span>
       </template>
     </el-table-column>
 
@@ -197,22 +197,19 @@
     <el-table-column label="停/启用" width="80" align="center">
       <template #default="{ row }">
         <el-switch v-if="row.kind === 'route'" :model-value="row.route.status" :active-value="1" :inactive-value="0" inline-prompt active-text="开" inactive-text="关" @change="(v: any) => emit('switch-route', row.group, row.route, Number(v))" />
-        <el-tooltip v-else-if="row.kind === 'cand'" content="候选开关在“三方路由”中维护">
-          <el-switch :model-value="row.cand.enabled" :active-value="1" :inactive-value="0" inline-prompt active-text="开" inactive-text="关" disabled />
-        </el-tooltip>
+        <el-tag v-else-if="row.kind === 'cand'" size="small" :type="candStatus(row.cand).type">{{ candStatus(row.cand).text }}</el-tag>
       </template>
     </el-table-column>
 
-    <el-table-column label="操作" width="150" align="center">
+    <el-table-column label="操作" width="120" align="center">
       <template #default="{ row }">
         <template v-if="row.kind === 'route'">
           <el-button v-hasPermi="['finance:channel:edit']" link type="primary" size="small" @click="emit('edit-route', row.route)">修改</el-button>
-          <template v-if="row.route.methodType !== 'P2P'">
-            <el-button v-hasPermi="['finance:channel:provider']" link type="success" size="small" @click="emit('provider', row.route)">三方路由</el-button>
-            <el-button v-hasPermi="['finance:channel:edit']" link type="danger" size="small" @click="emit('delete-route', row.route)">删除</el-button>
-          </template>
+          <el-button v-if="row.route.methodType !== 'P2P'" v-hasPermi="['finance:channel:edit']" link type="danger" size="small" @click="emit('delete-route', row.route)">删除</el-button>
         </template>
-        <el-button v-else-if="row.kind === 'cand'" v-hasPermi="['finance:channel:provider']" link type="primary" size="small" @click="emit('provider', row.route)">调权重</el-button>
+        <el-tooltip v-else-if="row.kind === 'cand'" content="三方通道的增减与启停在「支付渠道中心」维护">
+          <span class="muted">只读</span>
+        </el-tooltip>
       </template>
     </el-table-column>
 
@@ -273,7 +270,6 @@ const emit = defineEmits<{
   'edit-group': [group: FinanceChannelGroupVO];
   'edit-route': [route: FinanceChannelRouteVO];
   'add-route': [group: FinanceChannelGroupVO];
-  provider: [route: FinanceChannelRouteVO];
   'delete-route': [route: FinanceChannelRouteVO];
   'switch-route': [group: FinanceChannelGroupVO, route: FinanceChannelRouteVO, value: number];
   'switch-group': [group: FinanceChannelGroupVO, value: number];
@@ -331,15 +327,11 @@ const rowClassOf = (row: Row) => [
   row.kind === 'route' && row.route?.status !== 1 ? 'off-row' : ''
 ].join(' ');
 
-const totalUsableWeight = (route: FinanceChannelRouteVO) =>
-  usableCandidates(route).reduce((sum, c) => sum + Number(c.weightBp || 0), 0);
-const candidateShare = (route: FinanceChannelRouteVO, cand: FinanceChannelCandidateVO) => {
-  const total = totalUsableWeight(route);
-  return total > 0 && cand.usable ? Math.round((Number(cand.weightBp || 0) * 100) / total) : 0;
-};
-const share = (value: unknown) => {
-  const row = value as Row;
-  return row.route && row.cand ? candidateShare(row.route, row.cand) : 0;
+/** 三方通道状态（只读）：停用 / 自动摘流 / 参与匹配 / 不可用（上游供应商或商户停用，或权重为 0） */
+const candStatus = (cand: FinanceChannelCandidateVO): { text: string; type: 'success' | 'warning' | 'info' } => {
+  if (cand.enabled !== 1) return { text: '已停用', type: 'info' };
+  if (autoOff(cand)) return { text: '自动摘流', type: 'warning' };
+  return cand.usable ? { text: '参与匹配', type: 'success' } : { text: '不可用', type: 'info' };
 };
 
 const autoOff = (cand: FinanceChannelCandidateVO) =>
@@ -392,10 +384,8 @@ const commitRemark = (route: FinanceChannelRouteVO) => {
 .chev.open { transform: rotate(90deg); }
 .tags { display: flex; gap: 4px; justify-content: center; margin-top: 2px; }
 .chips { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.chip { cursor: pointer; }
 .chip.off { text-decoration: line-through; }
-.weight-line { display: flex; align-items: center; gap: 6px; justify-content: flex-start; padding-left: 12px; }
-.weight-bar { width: 64px; }
+.cand-name { text-align: left; padding-left: 12px; }
 .muted { color: var(--el-text-color-secondary); font-size: 12px; }
 .primary { color: var(--el-color-primary); }
 .warn { color: var(--el-color-warning); font-size: 12px; }
