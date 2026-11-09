@@ -1,6 +1,13 @@
 <template>
   <el-dialog :model-value="visible" title="新增代理" width="560px" append-to-body destroy-on-close @update:model-value="close">
     <el-form ref="formRef" :model="form" :rules="rules" label-width="140px">
+      <el-form-item label="代理类型" prop="agentType">
+        <el-radio-group v-model="form.agentType">
+          <el-radio :value="1">人人代理（只拿直属）</el-radio>
+          <el-radio :value="2">专业代理（无限极差）</el-radio>
+        </el-radio-group>
+        <div class="type-tip">创建后不可转换；有上级时必须与上级同一类型</div>
+      </el-form-item>
       <el-form-item label="上级代理">
         <el-radio-group v-model="form.hasParent" @change="onParentToggle">
           <el-radio :value="false">无上级</el-radio>
@@ -102,6 +109,7 @@ const form = reactive<AgentAddForm>({
 });
 
 const rules: FormRules = {
+  agentType: [{ required: true, message: '请选择代理类型', trigger: 'change' }],
   currency: [{ required: true, message: '请选择代理币种', trigger: 'change' }],
   loginName: [
     { required: true, message: '请输入代理账号', trigger: 'blur' },
@@ -126,6 +134,7 @@ const resetForm = () => {
     return preferred ?? options[0];
   };
   form.hasParent = false;
+  form.agentType = 1;
   form.parentAgentId = undefined;
   form.currency = String(defaultOf(props.options.currencies)?.value ?? 'VND1:1');
   form.loginName = '';
@@ -197,3 +206,12 @@ const submit = async () => {
   }
 };
 </script>
+
+<style scoped>
+.type-tip {
+  color: #909399;
+  font-size: 12px;
+  line-height: 18px;
+  width: 100%;
+}
+</style>

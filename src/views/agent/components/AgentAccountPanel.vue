@@ -30,6 +30,16 @@
       </el-table-column>
     </template>
 
+    <el-table-column label="代理类型" align="center" width="100">
+      <template #default="scope">
+        <el-tag :type="Number(scope.row.lineType) === 2 ? 'warning' : 'info'" size="small">
+          {{ Number(scope.row.lineType) === 2 ? '专业代理' : '人人代理' }}
+        </el-tag>
+      </template>
+    </el-table-column>
+    <el-table-column label="等级" align="center" width="70">
+      <template #default="scope">LV{{ scope.row.levelNo ?? 1 }}</template>
+    </el-table-column>
     <el-table-column label="代理方式" prop="agentWayText" align="center" width="110" />
     <el-table-column v-if="tab !== 'top'" label="上级代理" prop="parentLoginName" align="center" min-width="130" show-overflow-tooltip />
     <el-table-column v-if="tab !== 'top'" label="顶层代理" prop="topLoginName" align="center" min-width="130" show-overflow-tooltip />

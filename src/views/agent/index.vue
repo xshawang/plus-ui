@@ -105,6 +105,17 @@
             </el-form-item>
           </template>
           <el-form-item>
+            <el-select v-model="query.agentType" placeholder="全部代理类型" clearable style="width: 140px">
+              <el-option label="人人代理" :value="1" />
+              <el-option label="专业代理" :value="2" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-select v-model="query.levelNo" placeholder="全部等级" clearable style="width: 120px">
+              <el-option v-for="n in 20" :key="n" :label="`LV${n}`" :value="n" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
             <el-select v-model="query.withdrawMethod" placeholder="全部提现方式" clearable style="width: 170px">
               <el-option v-for="item in options.withdrawMethods" :key="item.value" :label="item.label" :value="Number(item.value)" />
             </el-select>
