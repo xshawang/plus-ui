@@ -6,13 +6,13 @@
           <AgentReportTable code="settle" date-label="结算日期" :show-accounts="false" :columns="settleCols" />
         </el-tab-pane>
         <el-tab-pane label="代理总明细" name="detail" lazy>
-          <AgentReportTable code="detail" date-label="结算日期" drill="orderNo" :columns="detailCols" @drill="openOrder" />
+          <AgentReportTable code="detail" date-label="结算日期" drill="orderNo" :columns="detailCols" show-line-type @drill="openOrder" />
         </el-tab-pane>
         <el-tab-pane label="会员直属明细" name="member-direct" lazy>
-          <AgentReportTable code="member-direct" date-label="结算日期" :columns="memberCols(false)" />
+          <AgentReportTable code="member-direct" date-label="结算日期" :columns="memberCols(false)" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="会员其他明细" name="member-other" lazy>
-          <AgentReportTable code="member-other" date-label="结算日期" :columns="memberCols(true)" />
+          <AgentReportTable code="member-other" date-label="结算日期" :columns="memberCols(true)" show-line-type />
         </el-tab-pane>
       </el-tabs>
     </el-card>

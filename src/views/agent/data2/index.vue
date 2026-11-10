@@ -3,34 +3,34 @@
     <el-card shadow="hover">
       <el-tabs v-model="tab">
         <el-tab-pane label="代理模式报表" name="mode" lazy>
-          <AgentReportTable code="mode" :show-accounts="false" :columns="modeCols" />
+          <AgentReportTable code="mode" :show-accounts="false" :columns="modeCols" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="顶层代理报表" name="top" lazy>
-          <AgentReportTable code="top" :columns="topCols" />
+          <AgentReportTable code="top" :columns="topCols" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="代理数据报表" name="data" lazy>
-          <AgentReportTable code="data" show-scope :columns="dataCols" />
+          <AgentReportTable code="data" show-scope :columns="dataCols" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="代理个人报表" name="personal" lazy>
-          <AgentReportTable code="personal" :columns="personalCols" />
+          <AgentReportTable code="personal" :columns="personalCols" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="下级投注" name="sub-bet" lazy>
-          <AgentReportTable v-if="ready" code="sub-bet" show-scope :columns="pivotCols('validBet', 'betUsers', '有效投注', '人次')" />
+          <AgentReportTable v-if="ready" code="sub-bet" show-scope :columns="pivotCols('validBet', 'betUsers', '有效投注', '人次')" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="下级输赢" name="sub-winloss" lazy>
-          <AgentReportTable v-if="ready" code="sub-winloss" show-scope :columns="pivotCols('winLoss', 'betCount', '输赢', '注单数')" />
+          <AgentReportTable v-if="ready" code="sub-winloss" show-scope :columns="pivotCols('winLoss', 'betCount', '输赢', '注单数')" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="下级财务" name="sub-finance" lazy>
-          <AgentReportTable code="sub-finance" show-scope :columns="financeCols" />
+          <AgentReportTable code="sub-finance" show-scope :columns="financeCols" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="下级领取" name="sub-claim" lazy>
-          <AgentReportTable code="sub-claim" show-scope :columns="claimCols" />
+          <AgentReportTable code="sub-claim" show-scope :columns="claimCols" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="下级充值留存" name="retain-1" lazy>
-          <AgentReportTable code="retain" date-label="批次日期" :params="{ retType: 1 }" :columns="retain" />
+          <AgentReportTable code="retain" date-label="批次日期" :params="{ retType: 1 }" :columns="retain" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="下级投注留存" name="retain-2" lazy>
-          <AgentReportTable code="retain" date-label="批次日期" :params="{ retType: 2 }" :columns="retain" />
+          <AgentReportTable code="retain" date-label="批次日期" :params="{ retType: 2 }" :columns="retain" show-line-type />
         </el-tab-pane>
       </el-tabs>
     </el-card>

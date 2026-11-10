@@ -3,10 +3,10 @@
     <el-card shadow="hover">
       <el-tabs v-model="tab">
         <el-tab-pane label="直属数据" name="direct" lazy>
-          <AgentReportTable code="data1-direct" :columns="cols" />
+          <AgentReportTable code="data1-direct" :columns="cols" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="其他数据" name="other" lazy>
-          <AgentReportTable code="data1-other" :columns="cols" />
+          <AgentReportTable code="data1-other" :columns="cols" show-line-type />
         </el-tab-pane>
       </el-tabs>
     </el-card>

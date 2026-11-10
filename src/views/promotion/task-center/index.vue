@@ -5,7 +5,7 @@
         <div class="toolbar-shell">
           <div class="table-heading">
             <h3>任务中心</h3>
-            <p>新人福利 / 每日任务 / 每周任务；配置统一落 quest_config，客户端按任务类型读取。</p>
+            <p>新人福利 / 每日任务 / 每周任务 / 三日神秘任务；配置统一落 quest_config，并管理活跃度宝箱与会员活跃度。</p>
           </div>
         </div>
       </template>
@@ -14,6 +14,10 @@
         <el-tab-pane label="新人福利" name="newbie" />
         <el-tab-pane label="每日任务" name="daily" />
         <el-tab-pane label="每周任务" name="weekly" />
+        <el-tab-pane label="三日神秘任务" name="mystery" />
+        <el-tab-pane label="活跃度宝箱" name="box" />
+        <el-tab-pane label="活跃度记录" name="pointLog" />
+        <el-tab-pane label="剩余活跃度" name="pointSummary" />
       </el-tabs>
 
       <!-- 任务配置类页签 -->
@@ -392,6 +396,7 @@ const TARGET_OPTIONS = {
   newbie: [
     { label: '注册', value: 'REGISTER' },
     { label: '绑定手机', value: 'BIND_PHONE' },
+    { label: '绑定邮箱', value: 'BIND_EMAIL' },
     { label: '实名认证 KYC', value: 'KYC_VERIFY' },
     { label: '首次充值', value: 'FIRST_DEPOSIT' },
     { label: '邀请好友', value: 'INVITE_FRIEND' },
@@ -403,6 +408,7 @@ const TARGET_OPTIONS = {
     { label: '每日充值', value: 'DAILY_RECHARGE' },
     { label: '每日有效局数', value: 'DAILY_GAME_ROUNDS' },
     { label: '每日有效投注/打码', value: 'DAILY_VALID_BET' },
+    { label: '每日投注', value: 'DAILY_BET' },
     { label: '每日分享', value: 'DAILY_SHARE' },
     { label: '每日邀请', value: 'DAILY_INVITE' }
   ],
@@ -434,6 +440,7 @@ const targetOptions = computed(() => TARGET_OPTIONS[(form.taskKind || activeTab.
 const resetHint = computed(() => {
   if (activeTab.value === 'daily') return '提示：每日任务 00:00 重置';
   if (activeTab.value === 'weekly') return '提示：每周任务 周一 00:00 重置';
+  if (activeTab.value === 'mystery') return '提示：三日神秘任务按每日进度刷新，任务周期由生效时间控制';
   return '';
 });
 

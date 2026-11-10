@@ -802,6 +802,10 @@
                 <span>失败类型</span>
                 <strong>{{ detail.transaction.failCode }}</strong>
               </div>
+              <div v-if="detail.transaction.failMsg" class="tx-field tx-field--danger">
+                <span>失败原因</span>
+                <strong>{{ detail.transaction.failMsg }}</strong>
+              </div>
             </div>
           </section>
 

@@ -23,7 +23,6 @@ export interface PaymentLimitTierVO {
   tierName: string;
   limitValue: number;
   sortOrder?: number;
-  status?: number;
   updatedAt?: string;
 }
 

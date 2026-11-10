@@ -40,6 +40,11 @@ export interface PromoActivityVO {
   closeType?: number;
   sortOrder?: number;
   frontStyle?: string;
+  activityCode?: string;
+  paramsJson?: string;
+  ruleVersion?: number;
+  timeZone?: string;
+  budgetAmount?: number;
   operatorId?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -67,6 +72,20 @@ export interface PromoActivityForm {
   status?: number;
   sortOrder?: number;
   frontStyle?: string;
+  activityCode?: string;
+  paramsJson?: string;
+  ruleVersion?: number;
+  timeZone?: string;
+  budgetAmount?: number;
+}
+
+export interface ActivityRuleDescriptor {
+  code: string;
+  titleZh: string;
+  titleVi: string;
+  entryMode: string;
+  defaultParams: Record<string, unknown>;
+  ruleSchema: Record<string, unknown>;
 }
 
 export interface PromoCategoryVO {

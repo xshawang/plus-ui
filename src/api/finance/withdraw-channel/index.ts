@@ -10,7 +10,10 @@ import type {
   WithdrawCryptoPlatformForm,
   WithdrawCryptoPlatformVO,
   WithdrawTabForm,
-  WithdrawTabVO
+  WithdrawTabVO,
+  WithdrawChannelRowForm,
+  WithdrawChannelRowVO,
+  WithdrawChannelMatchOptionVO
 } from './types';
 
 /** 财务管理 → 提现通道管理；权限 finance:withdrawchannel:list|edit。 */
@@ -50,3 +53,41 @@ export const saveWithdrawCryptoPlatforms = (
   data: WithdrawCryptoPlatformForm[]
 ): AxiosPromise<WithdrawCryptoPlatformVO[]> =>
   request({ url: '/infra/finance/withdraw-channel/crypto-platforms', method: 'put', data });
+
+/** 提现大类与通道三表收口后的平铺供应商匹配行。 */
+export const listWithdrawChannelRows = (params?: {
+  tabCode?: string;
+  status?: number;
+}): AxiosPromise<WithdrawChannelRowVO[]> =>
+  request({ url: '/infra/finance/withdraw-channel/rows', method: 'get', params });
+
+export const saveWithdrawChannelRow = (data: WithdrawChannelRowForm): AxiosPromise<string> =>
+  request({ url: '/infra/finance/withdraw-channel/rows', method: 'post', data });
+
+export const changeWithdrawChannelRowStatus = (
+  withdrawChannelId: number | string,
+  matchKey: string,
+  status: number
+): AxiosPromise<void> =>
+  request({
+    url: `/infra/finance/withdraw-channel/rows/${withdrawChannelId}/${encodeURIComponent(matchKey)}/status/${status}`,
+    method: 'put'
+  });
+
+export const reorderWithdrawChannelRows = (
+  withdrawChannelId: number | string,
+  matchKeys: string[],
+  expectedVersion?: number | string
+): AxiosPromise<void> =>
+  request({
+    url: `/infra/finance/withdraw-channel/rows/${withdrawChannelId}/reorder`,
+    method: 'put',
+    data: { matchKeys, expectedVersion }
+  });
+
+export const listWithdrawChannelMatchOptions = (params: {
+  tabCode: string;
+  merchantId?: number | string;
+  currency?: string;
+}): AxiosPromise<WithdrawChannelMatchOptionVO[]> =>
+  request({ url: '/infra/finance/withdraw-channel/match-options', method: 'get', params });

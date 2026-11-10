@@ -5,7 +5,9 @@ import type {
   FinanceChannelGroupVO,
   FinanceChannelQuery,
   FinanceChannelRouteForm,
-  FinanceChannelRouteVO
+  FinanceChannelRouteVO,
+  DepositChannelRowForm,
+  DepositChannelRowVO
 } from './types';
 
 /**
@@ -50,3 +52,35 @@ export const changeChannelRouteSwitch = (routeId: number, field: string, value: 
 
 export const deleteChannelRoute = (routeId: number): AxiosPromise<number> =>
   request({ url: `/infra/finance/channel/route/${routeId}`, method: 'delete' });
+
+/** 三表收口后的充值匹配行。 */
+export const listDepositChannelRows = (params?: {
+  direction?: number;
+  groupId?: number;
+  status?: number;
+}): AxiosPromise<DepositChannelRowVO[]> =>
+  request({ url: '/infra/finance/payment-provider/deposit-rows', method: 'get', params });
+
+export const saveDepositChannelRow = (data: DepositChannelRowForm): AxiosPromise<string> =>
+  request({ url: '/infra/finance/payment-provider/deposit-rows', method: 'post', data });
+
+export const changeDepositChannelRowStatus = (
+  routeId: number,
+  matchKey: string,
+  status: number
+): AxiosPromise<void> =>
+  request({
+    url: `/infra/finance/payment-provider/deposit-rows/${routeId}/${encodeURIComponent(matchKey)}/status/${status}`,
+    method: 'put'
+  });
+
+export const reorderDepositChannelRows = (
+  routeId: number,
+  matchKeys: string[],
+  expectedVersion?: number
+): AxiosPromise<void> =>
+  request({
+    url: `/infra/finance/payment-provider/deposit-rows/${routeId}/reorder`,
+    method: 'put',
+    data: { matchKeys, expectedVersion }
+  });

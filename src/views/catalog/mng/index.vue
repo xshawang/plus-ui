@@ -236,13 +236,36 @@
             </div>
           </template>
 
+          <div class="mb-3 flex flex-wrap items-center gap-3">
+            <el-input
+              v-model="configQuery"
+              clearable
+              prefix-icon="Search"
+              placeholder="搜索配置键 / 属性说明"
+              style="width: 320px"
+            />
+            <el-select v-model="configTypeFilter" clearable placeholder="全部类型" style="width: 150px">
+              <el-option v-for="type in configValueTypes" :key="type" :label="type" :value="type" />
+            </el-select>
+            <el-tag type="success">说明 {{ describedConfigCount }}/{{ items.length }}</el-tag>
+            <span class="text-gray-400 text-sm">
+              显示 {{ filteredConfigItems.length }} / {{ items.length }}
+            </span>
+          </div>
+
           <!-- <div class="mb-3 flex flex-wrap items-center gap-4 text-sm">
             <el-tag :type="info.exists ? 'success' : 'danger'">{{ info.exists ? '文件存在' : '文件不存在' }}</el-tag>
             <span>大小：{{ info.size ?? '-' }}</span>
             <span>库内配置项：{{ items.length }}</span>
           </div> -->
 
-          <el-table v-loading="configLoading" border class="data-table" :data="items" max-height="600">
+          <el-table
+            v-loading="configLoading"
+            border
+            class="data-table"
+            :data="filteredConfigItems"
+            max-height="600"
+          >
             <el-table-column label="键" align="left" prop="configKey" min-width="220" show-overflow-tooltip>
               <template #default="{ row }">
                 <span class="font-mono">{{ row.configKey }}</span>
@@ -309,7 +332,7 @@
 </template>
 
 <script setup name="CatalogMng" lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import type { ClientConfigInfo, ClientConfigItem } from '@/api/catalog/client-config/types';
 import type { GameCatalogForm, GameCatalogQuery, GameCatalogVO } from '@/api/catalog/game/types';
 import {
@@ -479,8 +502,25 @@ const items = ref<ClientConfigItem[]>([]);
 const syncing = ref(false);
 const savingFile = ref(false);
 const configLoading = ref(false);
+const configQuery = ref('');
+const configTypeFilter = ref('');
 const configDialog = reactive<{ visible: boolean; row: ClientConfigItem | null }>({ visible: false, row: null });
 const configText = reactive<{ description: string; value: string }>({ description: '', value: '' });
+const configValueTypes = computed(() =>
+  [...new Set(items.value.map((item) => item.valueType).filter(Boolean))].toSorted()
+);
+const describedConfigCount = computed(() =>
+  items.value.filter((item) => String(item.description || '').trim()).length
+);
+const filteredConfigItems = computed(() => {
+  const keyword = configQuery.value.trim().toLowerCase();
+  return items.value.filter((item) => {
+    if (configTypeFilter.value && item.valueType !== configTypeFilter.value) return false;
+    if (!keyword) return true;
+    return [item.configKey, item.description, item.valueType]
+      .some((value) => String(value || '').toLowerCase().includes(keyword));
+  });
+});
 
 const loadConfigInfo = async () => {
   const res = await getClientConfigInfo();

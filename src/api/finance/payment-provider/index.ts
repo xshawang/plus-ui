@@ -22,6 +22,13 @@ export interface ProviderAccountVO {
   merchantType: number;
   providerId?: number | string;
   providerCode?: string;
+  providerName?: string;
+  adapterCode?: string;
+  supportDeposit?: number;
+  supportPayout?: number;
+  supportReverse?: number;
+  providerStatus?: number;
+  providerSortNo?: number;
   platform?: string;
   currency?: string;
   authMode?: string;
@@ -213,15 +220,24 @@ export const changePaymentProviderStatus = (providerId: number, status: number):
     method: 'put'
   });
 
-export const listProviderAccounts = (providerId?: number): AxiosPromise<ProviderAccountVO[]> =>
+export const listProviderAccounts = (
+  providerId?: number,
+  reveal = true
+): AxiosPromise<ProviderAccountVO[]> =>
   request({
     url: '/infra/finance/payment-provider/accounts',
     method: 'get',
-    params: { providerId, reveal: true }
+    params: { providerId, reveal }
   });
 
 export const saveProviderAccount = (data: Partial<ProviderAccountVO>): AxiosPromise<number> =>
   request({ url: '/infra/finance/payment-provider/accounts', method: 'post', data });
+
+export const deleteProviderAccount = (merchantId: number | string): AxiosPromise<number> =>
+  request({
+    url: `/infra/finance/payment-provider/accounts/${merchantId}`,
+    method: 'delete'
+  });
 
 export const testProviderAccount = (merchantId: number | string): AxiosPromise<Record<string, unknown>> =>
   request({

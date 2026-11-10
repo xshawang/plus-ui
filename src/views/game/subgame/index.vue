@@ -132,7 +132,6 @@ const query = reactive<any>({
   pageNum: 1,
   pageSize: 10,
   gameType: 1,
-  currency: CURRENCY,
   providerCode: (route.query.providerCode as string) || undefined
 });
 

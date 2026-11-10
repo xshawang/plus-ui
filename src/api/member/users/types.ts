@@ -92,6 +92,7 @@ export interface MemberUserVO {
   /** 代理链：邀请人 / 上级代理 / 顶层代理 */
   inviteUid?: number;
   inviteName?: string;
+  inviteCode?: string;
   parentAgentUid?: number;
   parentAgentName?: string;
   topAgentUid?: number;

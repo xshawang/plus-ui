@@ -23,6 +23,12 @@
       <el-form-item v-if="showAccounts !== false">
         <el-input v-model="accounts" placeholder="代理账号（支持批量，逗号或空格分隔）" clearable style="width: 260px" @keyup.enter="search" />
       </el-form-item>
+      <el-form-item v-if="showLineType">
+        <el-select v-model="lineType" placeholder="全部代理类型" clearable style="width: 150px">
+          <el-option label="人人代理" :value="1" />
+          <el-option label="专业代理" :value="2" />
+        </el-select>
+      </el-form-item>
       <slot name="filters" :params="extra" />
       <el-form-item>
         <el-button type="primary" icon="Search" @click="search">搜索</el-button>
@@ -89,6 +95,8 @@ const props = defineProps<{
   dateLabel?: string;
   showScope?: boolean;
   showAccounts?: boolean;
+  /** 是否展示代理线筛选；要求底层 SQL 已带 agent_account 别名 a */
+  showLineType?: boolean;
   drill?: string;
   params?: Record<string, any>;
 }>();
@@ -105,6 +113,7 @@ const defaultRange = (): [string, string] => [day(-7), day(-1)];
 const range = ref<[string, string]>(defaultRange());
 const scope = ref(5);
 const accounts = ref('');
+const lineType = ref<number | undefined>();
 const extra = ref<Record<string, any>>({});
 const rows = ref<any[]>([]);
 const total = ref(0);
@@ -120,6 +129,7 @@ const buildParams = () => ({
   beginDate: range.value?.[0],
   endDate: range.value?.[1],
   accounts: accounts.value || undefined,
+  lineType: props.showLineType ? lineType.value : undefined,
   scope: props.showScope ? scope.value : undefined,
   ...sort.value,
   ...props.params,
@@ -150,6 +160,7 @@ const reset = () => {
   range.value = defaultRange();
   scope.value = 5;
   accounts.value = '';
+  lineType.value = undefined;
   extra.value = {};
   sort.value = {};
   search();

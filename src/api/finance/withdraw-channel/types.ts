@@ -186,3 +186,114 @@ export interface WithdrawClientManifest {
   unsupportedControls: string[];
   publishedToClientConfig?: boolean;
 }
+
+export interface WithdrawChannelRowVO {
+  withdrawChannelId: number | string;
+  tabCode: string;
+  tabName: string;
+  tabStatus: number;
+  channelCode: string;
+  channelName: string;
+  platform: string;
+  payoutMode: string;
+  clientCode: string;
+  clientSubCode: string;
+  currency: string;
+  settlementCurrency: string;
+  rateFrom?: number | string;
+  rateTo?: number | string;
+  clientPrice?: number | string;
+  amountMin?: number | string;
+  amountMax?: number | string;
+  dailyLimit?: number | string;
+  maintenanceCode?: string;
+  openTimeStart?: string;
+  openTimeEnd?: string;
+  feeRate?: number | string;
+  channelSortNo?: number;
+  configVersion?: number | string;
+  matchKey: string;
+  providerChannelId?: number | string;
+  merchantId?: number | string;
+  merchantCode?: string;
+  merchantName?: string;
+  merchantStatus?: string;
+  providerId?: number | string;
+  providerCode?: string;
+  providerName?: string;
+  adapterCode?: string;
+  providerChannelCode?: string;
+  providerPayType?: string;
+  bankCode?: string;
+  bankName?: string;
+  amountUnit?: string;
+  amountScale?: number;
+  matchAmountMin?: number | string;
+  matchAmountMax?: number | string;
+  sortNo?: number;
+  enabled?: number;
+  extraJson?: string;
+  remark?: string;
+  display?: Record<string, any>;
+}
+
+export interface WithdrawChannelRowForm {
+  withdrawChannelId?: number | string;
+  tabCode: string;
+  matchKey?: string;
+  expectedVersion?: number | string;
+  channelCode?: string;
+  channelName?: string;
+  platform?: string;
+  payoutMode?: string;
+  clientCode: string;
+  clientSubCode?: string;
+  currency: string;
+  settlementCurrency: string;
+  rateFrom?: number;
+  rateTo?: number;
+  clientPrice?: number;
+  amountMin: number;
+  amountMax: number;
+  dailyLimit: number;
+  maintenanceCode?: string;
+  openTimeStart?: string;
+  openTimeEnd?: string;
+  feeRate?: number;
+  sortNo: number;
+  enabled: number;
+  merchantId?: number | string;
+  providerCode?: string;
+  providerName?: string;
+  adapterCode?: string;
+  providerChannelCode?: string;
+  providerPayType?: string;
+  bankCode?: string;
+  bankName?: string;
+  amountUnit?: string;
+  amountScale?: number;
+  extraJson?: string;
+  remark?: string;
+  display: Record<string, any>;
+}
+
+export interface WithdrawChannelMatchOptionVO {
+  providerId?: number | string;
+  providerCode?: string;
+  providerName?: string;
+  adapterCode?: string;
+  merchantId?: number | string;
+  merchantCode?: string;
+  merchantName?: string;
+  providerChannelCode?: string;
+  providerPayType?: string;
+  bankCode?: string;
+  bankName?: string;
+  currency?: string;
+  amountUnit?: string;
+  amountScale?: number;
+  amountMin?: number | string;
+  amountMax?: number | string;
+  enabled?: number;
+  extraJson?: string;
+}

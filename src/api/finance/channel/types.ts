@@ -270,3 +270,64 @@ export interface FinanceChannelQuery {
   direction?: number;
   methodType?: string;
 }
+
+/** 三表收口后的平铺充值匹配行。 */
+export interface DepositChannelRowVO {
+  routeId: number;
+  groupId: number;
+  groupCode: string;
+  groupName: string;
+  groupStatus: number;
+  methodType: string;
+  clientCode: string;
+  clientName: string;
+  merchantId?: number;
+  merchantCode?: string;
+  merchantName?: string;
+  merchantStatus?: string;
+  providerCode?: string;
+  providerName?: string;
+  adapterCode?: string;
+  providerChannelCode?: string;
+  providerPayType?: string;
+  bankCode?: string;
+  bankName?: string;
+  currency?: string;
+  amountUnit?: string;
+  amountScale?: number;
+  amountMin?: number;
+  amountMax?: number;
+  feeRate?: number;
+  sortNo?: number;
+  enabled?: number;
+  remark?: string;
+  matchKey?: string;
+  configVersion?: number;
+  display?: Record<string, any>;
+}
+
+export interface DepositChannelRowForm {
+  direction?: number;
+  groupId?: number;
+  routeId?: number;
+  matchKey?: string;
+  merchantId?: number | string;
+  providerCode?: string;
+  providerName?: string;
+  adapterCode?: string;
+  providerChannelCode?: string;
+  providerPayType?: string;
+  bankCode?: string;
+  bankName?: string;
+  currency?: string;
+  amountUnit?: string;
+  amountScale?: number;
+  amountMin?: number;
+  amountMax?: number;
+  feeRate?: number;
+  sortNo?: number;
+  enabled?: number;
+  remark?: string;
+  expectedVersion?: number;
+  display?: Record<string, any>;
+}
