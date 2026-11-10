@@ -131,6 +131,8 @@ export interface AgentAddForm {
   parentAgentId?: number | string;
   currency: string;
   loginName: string;
+  /** 关联已有会员 UID；留空时创建独立代理并生成专属归因码 */
+  memberUid?: string;
   loginPassword: string;
   payPassword?: string;
   modeId?: number;

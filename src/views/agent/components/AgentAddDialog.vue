@@ -36,6 +36,9 @@
       <el-form-item label="代理账号" prop="loginName">
         <el-input v-model="form.loginName" placeholder="请输入代理账号（4~32 位字母数字）" maxlength="32" />
       </el-form-item>
+      <el-form-item label="关联会员UID(选填)">
+        <el-input v-model="form.memberUid" placeholder="已有会员转代理时填写；留空创建独立代理专属邀请码" maxlength="20" />
+      </el-form-item>
       <el-form-item label="登录密码" prop="loginPassword">
         <el-input v-model="form.loginPassword" type="password" show-password placeholder="8~32 位，需包含字母与数字" maxlength="32" />
       </el-form-item>
@@ -104,6 +107,7 @@ const form = reactive<AgentAddForm>({
   hasParent: false,
   currency: '',
   loginName: '',
+  memberUid: '',
   loginPassword: '',
   payPassword: ''
 });
@@ -138,6 +142,7 @@ const resetForm = () => {
   form.parentAgentId = undefined;
   form.currency = String(defaultOf(props.options.currencies)?.value ?? 'VND1:1');
   form.loginName = '';
+  form.memberUid = '';
   form.loginPassword = '';
   form.payPassword = '';
   form.modeId = Number(defaultOf(props.options.modes)?.value ?? 0) || undefined;

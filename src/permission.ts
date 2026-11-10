@@ -56,6 +56,12 @@ router.beforeEach(async (to, from) => {
               router.addRoute(route); // 动态添加可访问路由表
             }
           });
+          if (useUserStore().agentId && (to.path === '/' || to.path === '/index')) {
+            return {
+              path: '/agent/index',
+              replace: true
+            };
+          }
           // hack方法 确保addRoutes已完成
           return {
             path: to.path,

@@ -2,7 +2,7 @@
   <div class="p-2 app-container">
     <el-card shadow="hover">
       <el-tabs v-model="tab">
-        <el-tab-pane label="代理总结算" name="settle" lazy>
+        <el-tab-pane v-if="!isAgent" label="代理总结算" name="settle" lazy>
           <AgentReportTable code="settle" date-label="结算日期" :show-accounts="false" :columns="settleCols" />
         </el-tab-pane>
         <el-tab-pane label="代理总明细" name="detail" lazy>
@@ -11,7 +11,7 @@
         <el-tab-pane label="会员直属明细" name="member-direct" lazy>
           <AgentReportTable code="member-direct" date-label="结算日期" :columns="memberCols(false)" show-line-type />
         </el-tab-pane>
-        <el-tab-pane label="会员其他明细" name="member-other" lazy>
+        <el-tab-pane v-if="!isHumanLower" label="会员其他明细" name="member-other" lazy>
           <AgentReportTable code="member-other" date-label="结算日期" :columns="memberCols(true)" show-line-type />
         </el-tab-pane>
       </el-tabs>
@@ -35,17 +35,23 @@
 </template>
 
 <script setup name="AgentReport" lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import AgentReportTable from '../components/AgentReportTable.vue';
 import { listReport } from '@/api/agent/refactor';
 import { BATCH_STATUS_MAP, LINE_MAP, ORDER_STATUS_MAP, PERIOD_MAP } from '../components/reportColumns';
 import type { ReportCol } from '../components/reportColumns';
+import { useUserStore } from '@/store/modules/user';
 
 /**
  * 代理报表（方案 §12）：总结算（结算日×模式×周期）、总明细（结算日×代理，订单下钻到大类业绩）、
  * 会员直属/其他明细（结算日×会员×受益代理，来源 = 佣金明细）。
  */
-const tab = ref('settle');
+const userStore = useUserStore();
+const isAgent = computed(() => Boolean(userStore.agentId));
+const isHumanLower = computed(
+  () => isAgent.value && !userStore.agentTop && Number(userStore.agentType) === 1
+);
+const tab = ref(isAgent.value ? 'detail' : 'settle');
 const orderVisible = ref(false);
 const orderLoading = ref(false);
 const orderNo = ref('');

@@ -8,7 +8,7 @@
     :data="rows"
     @selection-change="(selection: AnyRow[]) => emit('selection-change', selection)"
   >
-    <el-table-column type="selection" reserve-selection width="46" align="center" />
+    <el-table-column v-if="!agentView || canManageDirect" type="selection" reserve-selection width="46" align="center" />
     <el-table-column label="币种" prop="currency" align="center" width="120" show-overflow-tooltip />
 
     <template v-if="tab === 'top'">
@@ -53,7 +53,7 @@
       <el-table-column label="下级总数" prop="subTotal" align="center" width="100" />
       <el-table-column label="下级层数" prop="subLayerCount" align="center" width="100" />
     </template>
-    <el-table-column v-else label="其他数" prop="otherCount" align="center" width="90" />
+    <el-table-column v-else-if="!hideOtherCount" label="其他数" prop="otherCount" align="center" width="90" />
 
     <el-table-column label="累计佣金" align="center" width="120">
       <template #default="scope">{{ formatMoney(scope.row.totalCommission) }}</template>
@@ -81,7 +81,7 @@
     </el-table-column>
     <el-table-column v-if="tab !== 'top'" label="访问量" prop="visitCount" align="center" width="90" />
 
-    <el-table-column v-if="tab !== 'top'" label="新下级绑定" align="center" width="120">
+    <el-table-column v-if="tab !== 'top' && !agentView" label="新下级绑定" align="center" width="120">
       <template #default="scope">
         <el-switch
           v-model="scope.row.bindNewSub"
@@ -95,15 +95,19 @@
     <el-table-column label="操作" align="center" width="180" fixed="right">
       <template #default="scope">
         <el-button link type="primary" @click="emit('row-action', { action: 'detail', row: scope.row })">详情</el-button>
-        <el-dropdown v-hasPermi="['agent:account:edit']" @command="(command: string) => emit('row-action', { action: command, row: scope.row })">
+        <el-dropdown
+          v-if="!agentView || canManageDirect"
+          v-hasPermi="['agent:account:edit']"
+          @command="(command: string) => emit('row-action', { action: command, row: scope.row })"
+        >
           <el-button link type="primary">更多操作<el-icon><ArrowDown /></el-icon></el-button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="parent">修改上级</el-dropdown-item>
-              <el-dropdown-item command="withdrawMethod">修改提现方式</el-dropdown-item>
+              <el-dropdown-item v-if="!agentView" command="parent">修改上级</el-dropdown-item>
+              <el-dropdown-item v-if="!agentView" command="withdrawMethod">修改提现方式</el-dropdown-item>
               <el-dropdown-item command="layer">修改直属层级</el-dropdown-item>
               <el-dropdown-item command="label">修改直属标签</el-dropdown-item>
-              <el-dropdown-item v-if="tab === 'top'" command="mode" divided>修改代理模式</el-dropdown-item>
+              <el-dropdown-item v-if="!agentView && tab === 'top'" command="mode" divided>修改代理模式</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -126,6 +130,9 @@ defineProps<{
   /** all=所有代理 top=顶层代理 */
   tab: string;
   options: AgentOptionsVO;
+  agentView?: boolean;
+  canManageDirect?: boolean;
+  hideOtherCount?: boolean;
 }>();
 
 const emit = defineEmits<{

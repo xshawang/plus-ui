@@ -532,7 +532,7 @@ const statusText = (row: PromoActivityVO) => {
 const statusTag = (status?: number) => (status === 1 ? 'success' : status === 0 ? 'info' : 'warning');
 
 const fmtMoney = (value?: number) =>
-  value === undefined || value === null ? '-' : (Number(value) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  value === undefined || value === null ? '-' : Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
 const canEditCategory = (row: PromoCategoryVO) => row.categoryType !== 1;
 

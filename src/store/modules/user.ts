@@ -16,6 +16,9 @@ export const useUserStore = defineStore('user', () => {
   const avatar = ref('');
   const roles = ref<Array<string>>([]); // 用户角色编码集合 → 判断路由权限
   const permissions = ref<Array<string>>([]); // 用户权限编码集合 → 判断按钮权限
+  const agentId = ref<string | number>('');
+  const agentType = ref<number>();
+  const agentTop = ref(false);
 
   /**
    * 登录
@@ -58,6 +61,9 @@ export const useUserStore = defineStore('user', () => {
       nickname.value = user.nickName;
       avatar.value = profile;
       userId.value = user.userId;
+      agentId.value = data.agentId ?? '';
+      agentType.value = data.agentType;
+      agentTop.value = Boolean(data.agentTop);
       return Promise.resolve();
     }
     return Promise.reject(err);
@@ -68,6 +74,9 @@ export const useUserStore = defineStore('user', () => {
     roles.value = [];
     permissions.value = [];
     removeToken();
+    agentId.value = '';
+    agentType.value = undefined;
+    agentTop.value = false;
   };
 
   // 注销
@@ -90,6 +99,9 @@ export const useUserStore = defineStore('user', () => {
     avatar,
     roles,
     permissions,
+    agentId,
+    agentType,
+    agentTop,
     login,
     getInfo,
     logout,

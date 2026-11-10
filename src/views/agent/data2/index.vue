@@ -2,10 +2,10 @@
   <div class="p-2 app-container">
     <el-card shadow="hover">
       <el-tabs v-model="tab">
-        <el-tab-pane label="代理模式报表" name="mode" lazy>
+        <el-tab-pane v-if="!isAgent" label="代理模式报表" name="mode" lazy>
           <AgentReportTable code="mode" :show-accounts="false" :columns="modeCols" show-line-type />
         </el-tab-pane>
-        <el-tab-pane label="顶层代理报表" name="top" lazy>
+        <el-tab-pane v-if="!isAgent" label="顶层代理报表" name="top" lazy>
           <AgentReportTable code="top" :columns="topCols" show-line-type />
         </el-tab-pane>
         <el-tab-pane label="代理数据报表" name="data" lazy>
@@ -38,7 +38,7 @@
 </template>
 
 <script setup name="AgentData2" lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import AgentReportTable from '../components/AgentReportTable.vue';
 import { getReportMeta } from '@/api/agent/refactor';
 import {
@@ -53,12 +53,15 @@ import {
   retainCols
 } from '../components/reportColumns';
 import type { ReportCol } from '../components/reportColumns';
+import { useUserStore } from '@/store/modules/user';
 
 /**
  * 代理数据2（方案 §12）：模式 / 顶层 / 代理数据 / 个人 / 下级投注·输赢（按返佣大类透视）/ 下级财务 / 下级领取（14 项归 6 类）/ 留存。
  * 区间内人数类指标为逐日相加的“人次”；留存为批次口径，留存任务（P2）上线前为空表。
  */
-const tab = ref('mode');
+const userStore = useUserStore();
+const isAgent = computed(() => Boolean(userStore.agentId));
+const tab = ref(isAgent.value ? 'data' : 'mode');
 const ready = ref(false);
 const categories = ref<Array<{ categoryCode: number | string; categoryName: string }>>([]);
 

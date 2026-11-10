@@ -270,7 +270,7 @@ const query = reactive<PromoReportQuery & { pageNum: number; pageSize: number }>
   pageSize: 10
 });
 
-const fmtMoney = (value?: number) => (value === undefined || value === null ? '-' : (Number(value) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 }));
+const fmtMoney = (value?: number) => (value === undefined || value === null ? '-' : Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 }));
 
 const statusText = (status?: number) =>
   ({ 0: '待申请', 1: '待审核', 2: '待领取', 3: '已领取', 4: '被拒绝', 5: '已过期', 6: '不符合条件', 7: '派发失败' } as Record<number, string>)[status ?? -1] ?? '未知';
