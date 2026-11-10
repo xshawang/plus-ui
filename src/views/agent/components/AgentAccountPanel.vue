@@ -146,8 +146,8 @@ const emit = defineEmits<{
 
 const tableRef = ref();
 
-/** 金额按「分 → 元」展示（与钱包/佣金口径一致） */
-const formatMoney = (value?: number) => (Number(value ?? 0) / 100).toFixed(2);
+/** 代理数据按接口原值展示，不在前端做金额倍率换算。 */
+const formatMoney = (value?: number) => String(value ?? 0);
 
 const copy = async (text: string) => {
   try {

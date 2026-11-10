@@ -29,9 +29,9 @@
             <el-form-item label="稽核倍数（0=无需稽核）">
               <el-input-number v-model="pub.auditMultiple" :min="0" :precision="2" :step="0.5" />
             </el-form-item>
-            <el-form-item label="有效会员：周期有效投注 ≥（元）"><el-input-number v-model="pub.validBetMin" :min="0" :controls="false" /></el-form-item>
-            <el-form-item label="有效会员：周期充值 ≥（元）"><el-input-number v-model="pub.validDepositMin" :min="0" :controls="false" /></el-form-item>
-            <el-form-item label="直属单会员返佣上限（元，0不限）">
+            <el-form-item label="有效会员：周期有效投注 ≥"><el-input-number v-model="pub.validBetMin" :min="0" :controls="false" /></el-form-item>
+            <el-form-item label="有效会员：周期充值 ≥"><el-input-number v-model="pub.validDepositMin" :min="0" :controls="false" /></el-form-item>
+            <el-form-item label="直属单会员返佣上限（0不限）">
               日 <el-input-number v-model="pub.capDay" :min="0" :controls="false" style="width: 110px" /> 周
               <el-input-number v-model="pub.capWeek" :min="0" :controls="false" style="width: 110px" /> 月
               <el-input-number v-model="pub.capMonth" :min="0" :controls="false" style="width: 110px" />
@@ -77,7 +77,7 @@
                 <el-radio :value="2">自动领取</el-radio>
               </el-radio-group>
             </el-form-item>
-            <el-form-item label="最低领取金额（元）"><el-input-number v-model="other.claimMin" :min="0" :controls="false" /></el-form-item>
+            <el-form-item label="最低领取金额"><el-input-number v-model="other.claimMin" :min="0" :controls="false" /></el-form-item>
             <el-form-item label="未领取过期天数（0不过期）"><el-input-number v-model="other.expireDays" :min="0" /></el-form-item>
             <el-form-item label="过期处理">
               <el-radio-group v-model="other.expireAction">
@@ -85,9 +85,9 @@
                 <el-radio :value="2">自动领取</el-radio>
               </el-radio-group>
             </el-form-item>
-            <el-form-item label="单张应发 ≥ 进入待审核（元，0不审）"><el-input-number v-model="other.auditThreshold" :min="0" :controls="false" /></el-form-item>
+            <el-form-item label="单张应发 ≥ 进入待审核（0不审）"><el-input-number v-model="other.auditThreshold" :min="0" :controls="false" /></el-form-item>
             <el-form-item label="首次出单需审核"><el-switch v-model="other.firstOrderAudit" :active-value="1" :inactive-value="0" /></el-form-item>
-            <el-form-item label="单代理单日佣金告警（元）"><el-input-number v-model="other.dailyAlertAmount" :min="0" :controls="false" /></el-form-item>
+            <el-form-item label="单代理单日佣金告警"><el-input-number v-model="other.dailyAlertAmount" :min="0" :controls="false" /></el-form-item>
             <el-form-item label="代理本人业绩计入自己"><el-switch v-model="other.selfPerfInclude" :active-value="1" :inactive-value="0" /></el-form-item>
             <el-form-item label="同设备/同IP下级不计有效人数"><el-switch v-model="other.sameDeviceExclude" :active-value="1" :inactive-value="0" /></el-form-item>
             <el-form-item label="风控标记账号">
@@ -97,7 +97,7 @@
               </el-radio-group>
             </el-form-item>
             <el-form-item label="申请专业代理：VIP ≥"><el-input-number v-model="other.applyVipMin" :min="0" /></el-form-item>
-            <el-form-item label="申请专业代理：累计充值 ≥（元）"><el-input-number v-model="other.applyDepositMin" :min="0" :controls="false" /></el-form-item>
+            <el-form-item label="申请专业代理：累计充值 ≥"><el-input-number v-model="other.applyDepositMin" :min="0" :controls="false" /></el-form-item>
             <el-form-item label="被拒后冷却天数"><el-input-number v-model="other.applyCooldownDays" :min="0" /></el-form-item>
             <el-form-item label="冻结期间佣金">
               <el-radio-group v-model="other.freezeMode">
@@ -194,7 +194,7 @@ import {
 } from '@/api/agent/refactor';
 
 /**
- * 代理设置（方案 §4.8、§9.1、§9.2、§11.1、§4.1）。金额字段库内为分，页面按元编辑。
+ * 代理设置（方案 §4.8、§9.1、§9.2、§11.1、§4.1）。金额字段按接口原值编辑。
  */
 const MONEY: Record<string, string[]> = {
   public: ['validBetMin', 'validDepositMin', 'capDay', 'capWeek', 'capMonth'],
@@ -212,16 +212,16 @@ const displays = ref<any[]>([]);
 const categories = ref<any[]>([]);
 const maps = ref<any[]>([]);
 
-const toYuan = (kind: string, data: Record<string, any>) => {
+const toRawValues = (kind: string, data: Record<string, any>) => {
   const out = { ...data };
-  MONEY[kind].forEach((k) => (out[k] = Number(out[k] ?? 0) / 100));
+  MONEY[kind].forEach((k) => (out[k] = Number(out[k] ?? 0)));
   ['auditMultiple'].forEach((k) => out[k] !== undefined && (out[k] = Number(out[k])));
   return out;
 };
 
 const load = async (kind: 'public' | 'sub' | 'other') => {
   const res: any = await getAgentConfig(kind);
-  const data = toYuan(kind, res?.data ?? {});
+  const data = toRawValues(kind, res?.data ?? {});
   if (kind === 'public') {
     pub.value = data;
   } else if (kind === 'sub') {
@@ -235,7 +235,6 @@ const load = async (kind: 'public' | 'sub' | 'other') => {
 const save = async (kind: 'public' | 'sub' | 'other') => {
   const src = kind === 'public' ? pub.value : kind === 'sub' ? sub.value : other.value;
   const body: Record<string, any> = { ...src };
-  MONEY[kind].forEach((k) => (body[k] = Math.round(Number(body[k] ?? 0) * 100)));
   if (kind === 'sub') {
     body.proCreateTypes = proTypes.value.join(',');
   }

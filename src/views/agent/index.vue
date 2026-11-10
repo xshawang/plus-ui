@@ -708,7 +708,7 @@ const handleExport = async () => {
   }
 };
 
-const formatMoney = (value?: number) => ((Number(value ?? 0) / 100).toFixed(2));
+const formatMoney = (value?: number) => String(value ?? 0);
 
 onMounted(async () => {
   setDefaultRange();

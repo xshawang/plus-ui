@@ -120,7 +120,7 @@ const claimCols: ReportCol[] = [
         noSum: true,
         format: (r: any) => {
           const c = r.claims?.[k];
-          return c ? `${(Number(c.amount) / 100).toFixed(2)}（${c.count}）` : '0.00（0）';
+          return c ? `${c.amount}（${c.count}）` : '0（0）';
         }
       }) as ReportCol
   )
@@ -140,7 +140,7 @@ const pivotCols = (metric: string, count: string, metricName: string, countName:
         prop: `${metric}${c.categoryCode}`,
         kind: 'text',
         noSum: true,
-        format: (r: any) => `${(Number(r[`${metric}${c.categoryCode}`] ?? 0) / 100).toFixed(2)}（${r[`${count}${c.categoryCode}`] ?? 0}）`
+        format: (r: any) => `${r[`${metric}${c.categoryCode}`] ?? 0}（${r[`${count}${c.categoryCode}`] ?? 0}）`
       }) as ReportCol
   )
 ];

@@ -22,15 +22,15 @@
           <el-table-column label="有效人数 ≥（0 不限）" align="center">
             <template #default="{ row }"><el-input-number v-model="row.minValidMembers" :min="0" :controls="false" /></template>
           </el-table-column>
-          <el-table-column label="有效投注 ≥（元）" align="center">
-            <template #default="{ row }"><el-input-number v-model="row.perfYuan" :min="0" :precision="2" :controls="false" /></template>
+          <el-table-column label="有效投注 ≥" align="center">
+            <template #default="{ row }"><el-input-number v-model="row.perfYuan" :min="0" :controls="false" /></template>
           </el-table-column>
           <el-table-column label="返佣比例 %" align="center">
             <template #default="{ row }"><el-input-number v-model="row.rate" :min="0" :max="100" :precision="4" :controls="false" /></template>
           </el-table-column>
-          <el-table-column label="返佣金额（元）" align="center">
+          <el-table-column label="返佣金额" align="center">
             <template #default="{ row }">
-              <span v-if="c.calcType === 1">{{ ((Number(row.perfYuan || 0) * Number(row.rate || 0)) / 100).toFixed(2) }}</span>
+              <span v-if="c.calcType === 1">{{ (Number(row.perfYuan || 0) * Number(row.rate || 0)) / 100 }}</span>
               <el-input-number v-else v-model="row.amountYuan" :min="0" :precision="2" :controls="false" />
             </template>
           </el-table-column>
@@ -52,7 +52,7 @@
           <el-table-column label="本期首充人数 ≥" align="center">
             <template #default="{ row }"><el-input-number v-model="row.minCount" :min="1" :controls="false" /></template>
           </el-table-column>
-          <el-table-column label="奖励金额（元）" align="center">
+          <el-table-column label="奖励金额" align="center">
             <template #default="{ row }"><el-input-number v-model="row.amountYuan" :min="0" :precision="2" :controls="false" /></template>
           </el-table-column>
           <el-table-column label="操作" width="110" align="center">
@@ -76,7 +76,7 @@ import { ref, watch } from 'vue';
 import modal from '@/plugins/modal';
 import { copyModeTiers, getFirstDepositTiers, getModeTiers, saveFirstDepositTiers, saveModeTiers } from '@/api/agent/refactor';
 
-/** 返佣设置：每个大类一张阶梯（门槛与金额页面用元、库内为分；比例为百分数），多奖励模式另有首充人头阶梯 */
+/** 返佣设置：每个大类一张阶梯（门槛与金额均按接口原值；比例为百分数），多奖励模式另有首充人头阶梯 */
 const props = defineProps<{ visible: boolean; modeId?: string; modeName?: string; withFirstDeposit?: boolean }>();
 const emit = defineEmits<{ 'update:visible': [v: boolean] }>();
 
@@ -97,24 +97,24 @@ const load = async () => {
     calcType: Number(c.calcType ?? 1),
     tiers: (c.tiers?.length ? c.tiers : [{ minValidMembers: 0, minPerf: 0, rate: 0, amount: 0 }]).map((t: any) => ({
       minValidMembers: Number(t.minValidMembers ?? 0),
-      perfYuan: Number(t.minPerf ?? 0) / 100,
+      perfYuan: Number(t.minPerf ?? 0),
       rate: Number(t.rate ?? 0),
-      amountYuan: Number(t.amount ?? 0) / 100
+      amountYuan: Number(t.amount ?? 0)
     }))
   }));
   active.value = cats.value.length ? String(cats.value[0].categoryCode) : '';
   if (props.withFirstDeposit) {
     const r: any = await getFirstDepositTiers(props.modeId);
-    fd.value = (r?.data ?? []).map((t: any) => ({ minCount: Number(t.minCount), amountYuan: Number(t.amount ?? 0) / 100 }));
+    fd.value = (r?.data ?? []).map((t: any) => ({ minCount: Number(t.minCount), amountYuan: Number(t.amount ?? 0) }));
   }
 };
 
 const rowsOf = (c: any) =>
   c.tiers.map((t: any) => ({
     minValidMembers: t.minValidMembers ?? 0,
-    minPerf: Math.round(Number(t.perfYuan ?? 0) * 100),
+    minPerf: t.perfYuan,
     rate: t.rate ?? 0,
-    amount: Math.round(Number(t.amountYuan ?? 0) * 100)
+    amount: t.amountYuan
   }));
 
 const save = async (c: any) => {
@@ -134,7 +134,7 @@ const copy = async (c: any) => {
 const saveFd = async () => {
   await saveFirstDepositTiers(
     props.modeId as string,
-    fd.value.map((t) => ({ minCount: t.minCount, amount: Math.round(Number(t.amountYuan ?? 0) * 100) }))
+    fd.value.map((t) => ({ minCount: t.minCount, amount: t.amountYuan }))
   );
   modal.msgSuccess('首充阶梯已保存');
   load();

@@ -5,7 +5,7 @@
       <el-descriptions-item label="真实姓名">{{ detail.realName || '—' }}</el-descriptions-item>
       <el-descriptions-item label="申请代理模式">{{ detail.modeName || '—' }}</el-descriptions-item>
       <el-descriptions-item label="累计邀请人数">{{ detail.inviteCount ?? 0 }}</el-descriptions-item>
-      <el-descriptions-item label="押金">{{ (Number(detail.depositAmount ?? 0) / 100).toFixed(2) }}</el-descriptions-item>
+      <el-descriptions-item label="押金">{{ detail.depositAmount ?? 0 }}</el-descriptions-item>
       <el-descriptions-item label="本次操作范围">共 {{ applyIds.length }} 条申请</el-descriptions-item>
     </el-descriptions>
 

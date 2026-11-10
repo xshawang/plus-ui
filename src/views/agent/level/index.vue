@@ -21,7 +21,7 @@
             <span v-else>{{ row.iconUrl || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="晋级条件(累计佣金,元)" align="center" min-width="180">
+        <el-table-column label="晋级条件(累计佣金)" align="center" min-width="180">
           <template #default="{ row }">
             <el-input-number v-if="editing === row.levelNo" v-model="form.amountYuan" :min="0" :precision="2" :controls="false" />
             <span v-else>{{ money(row.upgradeAmount) }}</span>
@@ -55,7 +55,7 @@
     <el-dialog v-model="addVisible" title="新增等级" width="400px" append-to-body>
       <el-form label-width="130px">
         <el-form-item label="等级名称"><el-input v-model="addForm.levelName" placeholder="默认 LV序号" /></el-form-item>
-        <el-form-item label="晋级条件(元)">
+        <el-form-item label="晋级条件">
           <el-input-number v-model="addForm.amountYuan" :min="0" :precision="2" :controls="false" style="width: 180px" />
         </el-form-item>
       </el-form>
@@ -80,7 +80,7 @@ const form = reactive<{ levelName?: string; iconUrl?: string; amountYuan?: numbe
 const addVisible = ref(false);
 const addForm = reactive<{ levelName?: string; amountYuan?: number }>({});
 
-const money = (v: any) => (Number(v ?? 0) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2 });
+const money = (v: any) => String(v ?? 0);
 
 const load = async () => {
   loading.value = true;
@@ -96,7 +96,7 @@ const edit = (row: any) => {
   editing.value = row.levelNo;
   form.levelName = row.levelName;
   form.iconUrl = row.iconUrl;
-  form.amountYuan = Number(row.upgradeAmount ?? 0) / 100;
+  form.amountYuan = Number(row.upgradeAmount ?? 0);
 };
 
 const save = async (row: any) => {
@@ -104,7 +104,7 @@ const save = async (row: any) => {
     levelNo: row.levelNo,
     levelName: form.levelName,
     iconUrl: form.iconUrl ?? '',
-    upgradeAmount: Math.round(Number(form.amountYuan ?? 0) * 100)
+    upgradeAmount: form.amountYuan
   });
   modal.msgSuccess('已保存');
   editing.value = null;
@@ -122,7 +122,7 @@ const submitAdd = async () => {
     modal.msgWarning('请填写晋级条件');
     return;
   }
-  await addLevel({ levelName: addForm.levelName, upgradeAmount: Math.round(addForm.amountYuan * 100) });
+  await addLevel({ levelName: addForm.levelName, upgradeAmount: addForm.amountYuan });
   modal.msgSuccess('已新增');
   addVisible.value = false;
   load();

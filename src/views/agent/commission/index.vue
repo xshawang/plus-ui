@@ -36,9 +36,9 @@
             <el-option label="修改前" value="beforeAmount" />
             <el-option label="应发" value="settleCommission" />
           </el-select>
-          <el-input-number v-model="minYuan" :min="0" :controls="false" placeholder="最小(元)" style="width: 100px; margin-left: 4px" />
+          <el-input-number v-model="minYuan" :min="0" :controls="false" placeholder="最小值" style="width: 100px; margin-left: 4px" />
           <span class="mx-1">-</span>
-          <el-input-number v-model="maxYuan" :min="0" :controls="false" placeholder="最大(元)" style="width: 100px" />
+          <el-input-number v-model="maxYuan" :min="0" :controls="false" placeholder="最大值" style="width: 100px" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="search">搜索</el-button>
@@ -122,7 +122,7 @@
       <el-form label-width="100px">
         <el-form-item label="订单号">{{ adjustRow?.orderNo }}</el-form-item>
         <el-form-item label="当前实发">{{ money(adjustRow?.actualCommission) }}</el-form-item>
-        <el-form-item label="调整后(元)">
+        <el-form-item label="调整后">
           <el-input-number v-model="adjustYuan" :min="0" :precision="2" :controls="false" style="width: 200px" />
         </el-form-item>
         <el-form-item label="备注" required>
@@ -190,7 +190,7 @@ import { LINE_MAP, ORDER_STATUS_MAP, PERIOD_MAP } from '../components/reportColu
 
 /**
  * 佣金管理（方案 §7.4）：6 个状态页签；待审核可通过/拒绝，待领取可撤回，待审核/待领取可调整；
- * 订单号下钻到全部来源明细（直属/极差/首充/截断/调整/冲回）。金额输入为元，提交前换算为分。
+ * 订单号下钻到全部来源明细（直属/极差/首充/截断/调整/冲回）。代理金额按接口原值展示和提交。
  */
 const tabs = [
   { label: '待审核', value: '1' },
@@ -233,7 +233,7 @@ const adjustRemark = ref('');
 const detailVisible = ref(false);
 const detail = ref<any>(null);
 
-const money = (v: any) => (Number(v ?? 0) / 100).toFixed(2);
+const money = (v: any) => String(v ?? 0);
 const pct = (v: any) => (v === null || v === undefined ? '—' : `${Number(v).toFixed(4)}%`);
 const statusType = (s: any) => (({ 1: 'warning', 2: 'primary', 3: 'success', 4: 'danger', 5: 'info', 6: 'info' }) as any)[Number(s)];
 
@@ -242,8 +242,8 @@ const params = () => ({
   status: status.value,
   beginDate: range.value?.[0],
   endDate: range.value?.[1],
-  minAmount: minYuan.value === undefined || minYuan.value === null ? undefined : Math.round(minYuan.value * 100),
-  maxAmount: maxYuan.value === undefined || maxYuan.value === null ? undefined : Math.round(maxYuan.value * 100)
+  minAmount: minYuan.value === undefined || minYuan.value === null ? undefined : minYuan.value,
+  maxAmount: maxYuan.value === undefined || maxYuan.value === null ? undefined : maxYuan.value
 });
 
 const load = async () => {
@@ -318,7 +318,7 @@ const op = async (kind: 'audit' | 'reject' | 'revoke') => {
 
 const openAdjust = (row: any) => {
   adjustRow.value = row;
-  adjustYuan.value = Number(row.actualCommission ?? 0) / 100;
+  adjustYuan.value = Number(row.actualCommission ?? 0);
   adjustRemark.value = '';
   adjustVisible.value = true;
 };
@@ -328,7 +328,7 @@ const submitAdjust = async () => {
     modal.msgWarning('请填写备注');
     return;
   }
-  await adjustCommission(String(adjustRow.value.orderNo), Math.round(adjustYuan.value * 100), adjustRemark.value.trim());
+  await adjustCommission(String(adjustRow.value.orderNo), adjustYuan.value, adjustRemark.value.trim());
   modal.msgSuccess('调整成功');
   adjustVisible.value = false;
   load();

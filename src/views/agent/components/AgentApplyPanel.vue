@@ -71,8 +71,8 @@ const emit = defineEmits<{
 
 const tableRef = ref();
 
-/** 金额按「分 → 元」展示 */
-const formatMoney = (value?: number) => (Number(value ?? 0) / 100).toFixed(2);
+/** 金额按接口原值展示。 */
+const formatMoney = (value?: number) => String(value ?? 0);
 
 /** 供父组件实现「全选当前页」 */
 defineExpose({

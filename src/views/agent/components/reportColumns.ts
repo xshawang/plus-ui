@@ -1,6 +1,6 @@
 /**
- * 代理报表列定义（方案 §12）。金额为分；人数类跨天相加为“人次”。
- * kind：money 金额(分→元) / num 数值 / pct 百分比 / rate 返佣比例 / text 文本 / map 字典映射。
+ * 代理报表列定义（方案 §12）。金额与投注按接口原值展示；人数类跨天相加为“人次”。
+ * kind：money 接口原值金额 / num 数值 / pct 百分比 / rate 返佣比例 / text 文本 / map 字典映射。
  */
 export interface ReportCol {
   label: string;

@@ -110,7 +110,7 @@
             <el-checkbox :value="2">首充人头奖励</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
-        <el-form-item v-if="dimList.includes(2)" label="首充计入门槛（元）">
+        <el-form-item v-if="dimList.includes(2)" label="首充计入门槛">
           <el-input-number v-model="form.minFirstDepositYuan" :min="0" :controls="false" />
         </el-form-item>
         <el-form-item label="超出部分额外返佣">
@@ -188,7 +188,7 @@ const openEdit = (row?: any) => {
     extraRebateEnable: Number(r.extraRebateEnable ?? 0),
     extraRebateRatio: Number(r.extraRebateRatio ?? 0),
     customDays: r.customDays ? Number(r.customDays) : undefined,
-    minFirstDepositYuan: Number(r.minFirstDeposit ?? 10000) / 100
+    minFirstDepositYuan: Number(r.minFirstDeposit ?? 10000)
   };
   const n = Number(r.rewardDims ?? 1);
   dimList.value = [n & 1 ? 1 : 0, n & 2 ? 2 : 0].filter(Boolean);
@@ -212,7 +212,7 @@ const submit = async () => {
     calcDepth: f.lineScope === 1 ? 1 : f.calcDepth,
     perfScope: f.perfScope,
     rewardDims: dimList.value.reduce((a, b) => a | b, 0) || 1,
-    minFirstDeposit: Math.round(Number(f.minFirstDepositYuan ?? 100) * 100),
+    minFirstDeposit: f.minFirstDepositYuan,
     extraRebateEnable: f.extraRebateEnable,
     extraRebateRatio: f.extraRebateRatio,
     remark: f.remark ?? ''

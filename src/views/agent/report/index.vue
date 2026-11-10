@@ -57,7 +57,7 @@ const orderLoading = ref(false);
 const orderNo = ref('');
 const orderRows = ref<any[]>([]);
 
-const money = (v: any) => (Number(v ?? 0) / 100).toFixed(2);
+const money = (v: any) => String(v ?? 0);
 
 const settleCols: ReportCol[] = [
   { label: '结算日期', prop: 'settleDate', kind: 'text' },

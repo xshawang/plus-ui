@@ -85,7 +85,7 @@ import type { ReportCol } from './reportColumns';
 
 /**
  * 代理报表通用表格：日期区间 + 账号批量 + 范围（直属/其他/全部下级）+ 分页 + 当前页小计 + 全量总计 + 导出。
- * 列 kind：money 金额(分→元) / num 数值 / pct 百分比(0~100) / rate 返佣比例 / text 文本 / map 字典映射。
+ * 列 kind：money 接口原值金额 / num 数值 / pct 百分比(0~100) / rate 返佣比例 / text 文本 / map 字典映射。
  * 配色：对平台有利为红、不利为绿（winLoss 为会员视角，负数=平台盈利=红）。
  */
 
@@ -197,7 +197,7 @@ const fmt = (col: ReportCol, v: any) => {
   }
   switch (col.kind) {
     case 'money':
-      return (Number(v) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return String(v);
     case 'pct':
       return `${Number(v).toFixed(2)}%`;
     case 'rate':
