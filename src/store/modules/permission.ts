@@ -67,7 +67,9 @@ export const usePermissionStore = defineStore('permission', () => {
       router.addRoute(route);
     });
     setRoutes(rewriteRoutes);
-    const baseRoutes = useUserStore().agentId ? constantRoutes.filter((route) => route.path !== '') : constantRoutes;
+    const baseRoutes = useUserStore().agentId
+      ? constantRoutes.filter(route => route.path !== '' && route.path !== '/')
+      : constantRoutes;
     setSidebarRouters(baseRoutes.concat(sidebarRoutes));
     setDefaultRoutes(sidebarRoutes);
     setTopbarRoutes(defaultRoutes);

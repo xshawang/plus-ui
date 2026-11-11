@@ -14,10 +14,12 @@
 <script setup lang="ts">
 import { RouteLocationMatched } from 'vue-router';
 import { usePermissionStore } from '@/store/modules/permission';
+import { useUserStore } from '@/store/modules/user';
 
 const route = useRoute();
 const router = useRouter();
 const permissionStore = usePermissionStore();
+const userStore = useUserStore();
 const levelList = ref<RouteLocationMatched[]>([]);
 
 const getBreadcrumb = () => {
@@ -35,8 +37,13 @@ const getBreadcrumb = () => {
   } else {
     matched = route.matched.filter(item => item.meta && item.meta.title);
   }
-  // 判断是否为首页
-  if (!isDashboard(matched[0])) {
+  // 代理账号的默认首页是独立经营看板；面包屑不能继续指向平台 /index。
+  if (userStore.agentId) {
+    const onAgentHome = route.path === '/agent/home';
+    if (!onAgentHome) {
+      matched = [{ path: '/agent/home', meta: { title: '代理首页' } }].concat(matched);
+    }
+  } else if (!isDashboard(matched[0])) {
     matched = [{ path: '/index', meta: { title: '首页' } }].concat(matched);
   }
   levelList.value = matched.filter(item => item.meta && item.meta.title && item.meta.breadcrumb !== false);

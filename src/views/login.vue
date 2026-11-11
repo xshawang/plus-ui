@@ -203,7 +203,8 @@ const handleLogin = () => {
       loginForm.value.grantType = loginMode.value === 'agent' ? 'agent_password' : 'password';
       const [err] = await to(userStore.login(loginForm.value));
       if (!err) {
-        const redirectUrl = redirect.value || '/';
+        const targetIsDefaultHome = !redirect.value || redirect.value === '/' || redirect.value === '/index';
+        const redirectUrl = loginMode.value === 'agent' && targetIsDefaultHome ? '/agent/home' : redirect.value || '/';
         await router.push(redirectUrl);
         loading.value = false;
       } else {
