@@ -464,7 +464,7 @@ const setting = usePromoKvConfig('lottery-box', [
 const probabilitySum = computed(() => prizeRows.value.reduce((sum, item) => sum + Number(item.probability ?? 0), 0));
 
 const fmtMoney = (value?: number) =>
-  value === undefined || value === null ? '-' : (Number(value) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  value === undefined || value === null ? '-' : Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
 const costTypeText = (type?: number) => ({ 1: '免费', 2: '金币', 3: '幸运值' } as Record<number, string>)[type ?? -1] ?? '未知';
 

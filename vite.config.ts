@@ -34,6 +34,12 @@ export default defineConfig(({ mode, command }) => {
       // 域族（前导点表示同时匹配该域及其子域），局域网 IP（192.168.1.67）本就属于放行范围。
       allowedHosts: ['.g318.com'],
       proxy: {
+        // 支付中心管理面直接命中 payment，避免 infra proxy 多一跳及两套鉴权串联。
+        [env.VITE_APP_BASE_API + '/infra/finance/payment-provider']: {
+          target: 'http://127.0.0.1:9204',
+          changeOrigin: true,
+          rewrite: path => path.replace(new RegExp('^' + env.VITE_APP_BASE_API), '')
+        },
         // infra 管理面（/infra、/catalog）直连本地 go88-service-infra，去掉 /dev-api 前缀
         [env.VITE_APP_BASE_API + '/infra']: {
           target: 'http://127.0.0.1:9202',

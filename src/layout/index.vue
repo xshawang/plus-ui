@@ -17,11 +17,13 @@
 import { NavTypeEnum } from '@/enums/NavTypeEnum';
 import { useAppStore } from '@/store/modules/app';
 import { useSettingsStore } from '@/store/modules/settings';
+import { useUserStore } from '@/store/modules/user';
 import { initMessageBox, initPush } from '@/utils/push';
 import { AppMain, Navbar, Settings, TagsView } from './components';
 import SideBar from './components/Sidebar/index.vue';
 
 const settingsStore = useSettingsStore();
+const userStore = useUserStore();
 const theme = computed(() => settingsStore.theme);
 const sidebar = computed(() => useAppStore().sidebar);
 const device = computed(() => useAppStore().device);
@@ -61,6 +63,10 @@ watch(
 const settingRef = ref<InstanceType<typeof Settings>>();
 
 onMounted(async () => {
+  // 代理账号没有平台站内信权限，跳过消息拉取和 SSE，避免代理首页被 403 提示打断。
+  if (userStore.agentId) {
+    return;
+  }
   try {
     // FIX: 2026-09-28 站内信聚合接口（GET /resource/message/box）当前后端未实现（go88-resource 仅提供
     // /oss、/oss/config、/email、/sms，go88-api-resource 也只暴露 publishMessage/publishAll），

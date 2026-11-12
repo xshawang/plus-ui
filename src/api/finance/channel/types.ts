@@ -11,6 +11,10 @@ export interface FinanceChannelGroupVO {
   linkGroupCode?: string;
   sortNo?: number;
   status?: number;
+  /** 充值黑名单开关：1=命中标签的玩家不可见、不可下单 */
+  blacklistEnable?: number;
+  /** 黑名单会员标签编码，逗号分隔（member_tag.tag_code） */
+  blacklistTagCode?: string;
   remark?: string;
   operatorId?: string;
   createdAt?: string;
@@ -116,6 +120,40 @@ export interface FinanceChannelRouteVO {
   p2pDepositAccountNo?: string;
   p2pDepositAccountName?: string;
   p2pDepositContent?: string;
+  /** 列表洞察（withStats=true）：只读的三方候选摘要、今日/近30日成功率。feeRate 是手填的“仅供参考”值，不在此计算 */
+  candidates?: FinanceChannelCandidateVO[];
+  todayOrderCount?: number;
+  todaySuccessCount?: number;
+  todaySuccessRate?: number | null;
+  d30OrderCount?: number;
+  d30SuccessCount?: number;
+  d30SuccessRate?: number | null;
+}
+
+/** 子通道下的三方候选摘要（infra 只读汇总；三方通道的增减与启停在「支付渠道中心」维护） */
+export interface FinanceChannelCandidateVO {
+  candidateId: number;
+  routeId: number;
+  providerChannelId: number;
+  providerChannelCode?: string;
+  providerPayType?: string;
+  providerId?: number;
+  providerCode?: string;
+  providerName?: string;
+  merchantId?: number;
+  merchantName?: string;
+  amountMin?: number;
+  amountMax?: number;
+  enabled?: number;
+  autoDisabledUntil?: string;
+  remark?: string;
+  usable?: boolean;
+  todayOrderCount?: number;
+  todaySuccessCount?: number;
+  todaySuccessRate?: number | null;
+  d30OrderCount?: number;
+  d30SuccessCount?: number;
+  d30SuccessRate?: number | null;
 }
 
 export interface FinanceChannelGroupForm {
@@ -127,6 +165,8 @@ export interface FinanceChannelGroupForm {
   linkGroupCode?: string;
   sortNo?: number;
   status?: number;
+  blacklistEnable?: number;
+  blacklistTagCode?: string;
   remark?: string;
 }
 
@@ -229,4 +269,65 @@ export interface FinanceChannelQuery {
   platform?: string;
   direction?: number;
   methodType?: string;
+}
+
+/** 三表收口后的平铺充值匹配行。 */
+export interface DepositChannelRowVO {
+  routeId: number;
+  groupId: number;
+  groupCode: string;
+  groupName: string;
+  groupStatus: number;
+  methodType: string;
+  clientCode: string;
+  clientName: string;
+  merchantId?: number;
+  merchantCode?: string;
+  merchantName?: string;
+  merchantStatus?: string;
+  providerCode?: string;
+  providerName?: string;
+  adapterCode?: string;
+  providerChannelCode?: string;
+  providerPayType?: string;
+  bankCode?: string;
+  bankName?: string;
+  currency?: string;
+  amountUnit?: string;
+  amountScale?: number;
+  amountMin?: number;
+  amountMax?: number;
+  feeRate?: number;
+  sortNo?: number;
+  enabled?: number;
+  remark?: string;
+  matchKey?: string;
+  configVersion?: number;
+  display?: Record<string, any>;
+}
+
+export interface DepositChannelRowForm {
+  direction?: number;
+  groupId?: number;
+  routeId?: number;
+  matchKey?: string;
+  merchantId?: number | string;
+  providerCode?: string;
+  providerName?: string;
+  adapterCode?: string;
+  providerChannelCode?: string;
+  providerPayType?: string;
+  bankCode?: string;
+  bankName?: string;
+  currency?: string;
+  amountUnit?: string;
+  amountScale?: number;
+  amountMin?: number;
+  amountMax?: number;
+  feeRate?: number;
+  sortNo?: number;
+  enabled?: number;
+  remark?: string;
+  expectedVersion?: number;
+  display?: Record<string, any>;
 }

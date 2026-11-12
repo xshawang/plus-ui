@@ -8,6 +8,11 @@ export interface UserInfo {
   user: UserVO;
   roles: string[];
   permissions: string[];
+  /** 代理后台身份；普通管理员为空 */
+  agentId?: string | number;
+  /** 1 人人代理，2 专业代理 */
+  agentType?: number;
+  agentTop?: boolean;
 }
 
 /**

@@ -22,11 +22,6 @@
             <template #default="{ row }">{{ Number(row.limitValue) < 0 ? '不限' : formatMoney(row.limitValue) }}</template>
           </el-table-column>
           <el-table-column label="排序" prop="sortOrder" width="90" align="center" />
-          <el-table-column label="状态" width="100" align="center">
-            <template #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
-            </template>
-          </el-table-column>
           <el-table-column label="更新时间" prop="updatedAt" width="170" />
           <el-table-column label="操作" width="90" align="center" fixed="right">
             <template #default="{ row }">
@@ -45,9 +40,6 @@
         </el-form-item>
         <el-form-item label="lcw 值">
           <el-input-number v-model="limitForm.limitValue" :min="-1" :precision="0" controls-position="right" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="limitForm.status" :active-value="1" :inactive-value="0" />
         </el-form-item>
       </el-form>
       <template #footer>

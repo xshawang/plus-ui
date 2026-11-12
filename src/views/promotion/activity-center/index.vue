@@ -15,9 +15,19 @@
         <el-tab-pane label="已关闭活动" name="closed" />
         <el-tab-pane label="优惠统计" name="statistic" />
         <el-tab-pane label="分类管理" name="category" />
+        <el-tab-pane label="礼包码" name="gift-code" />
+        <el-tab-pane label="活动效果" name="effect" />
       </el-tabs>
 
-      <template v-if="activeTab === 'category'">
+      <template v-if="activeTab === 'gift-code'">
+        <GiftCodePanel />
+      </template>
+
+      <template v-else-if="activeTab === 'effect'">
+        <ActivityEffectPanel />
+      </template>
+
+      <template v-else-if="activeTab === 'category'">
         <div class="toolbar-line">
           <el-button v-hasPermi="['promotion:category:edit']" type="primary" icon="Plus" @click="openCategoryDialog()">新增分类</el-button>
         </div>
@@ -293,9 +303,29 @@
           </el-select>
         </el-form-item>
         <el-form-item label="活动类型">
-          <el-select v-model="form.activityTypeCode" filterable allow-create placeholder="可选择或自定义" style="width: 280px">
+          <el-select v-model="form.activityTypeCode" filterable allow-create placeholder="可选择或自定义" style="width: 280px" @change="handleActivityTypeChange">
             <el-option v-for="item in typeOptions" :key="item" :label="item" :value="item" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="活动稳定编码">
+          <el-input v-model="form.activityCode" maxlength="64" placeholder="留空自动生成；标准活动请勿随意修改" />
+        </el-form-item>
+        <el-form-item label="规则版本">
+          <el-input-number v-model="form.ruleVersion" :min="1" :controls="false" style="width: 160px" />
+        </el-form-item>
+        <el-form-item label="业务时区">
+          <el-select v-model="form.timeZone" style="width: 240px">
+            <el-option label="越南 GMT+7" value="Asia/Ho_Chi_Minh" />
+            <el-option label="中国 GMT+8" value="Asia/Shanghai" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="活动总预算">
+          <el-input-number v-model="form.budgetAmount" :min="0" :controls="false" style="width: 200px" />
+          <span class="field-tip">0=不限制</span>
+        </el-form-item>
+        <el-form-item label="玩法规则(JSON)">
+          <el-input v-model="form.paramsJson" type="textarea" :rows="10" placeholder="选择活动类型后自动带出推荐规则" />
+          <div class="field-tip">支持首充档位、签到、救援金、幸运注单、红包、排行榜、随机奖励和礼包码。</div>
         </el-form-item>
         <el-form-item label="活动币种">
           <el-select v-model="form.currency" style="width: 200px">
@@ -418,8 +448,11 @@ import {
   updatePromoCategory
 } from '@/api/promotion/activity';
 import type { PromoActivityForm, PromoActivityQuery, PromoActivityVO, PromoCategoryForm, PromoCategoryVO } from '@/api/promotion/activity/types';
+import type { ActivityRuleDescriptor } from '@/api/promotion/activity/types';
 import { getPromoStatistic } from '@/api/promotion/report';
 import { usePromoKvConfig } from '@/views/promotion/components/usePromoKvConfig';
+import GiftCodePanel from './components/GiftCodePanel.vue';
+import ActivityEffectPanel from './components/ActivityEffectPanel.vue';
 
 /**
  * 活动中心页（需求文档 01：活动列表 / 已关闭活动 / 优惠统计 / 分类管理 + 活动设置）。
@@ -447,6 +480,7 @@ const levelOptions = ref<string[]>([]);
 const vipOptions = ref<string[]>([]);
 const terminalOptions = ref<string[]>([]);
 const conditionOptions = ref<string[]>([]);
+const ruleDescriptors = ref<ActivityRuleDescriptor[]>([]);
 
 const query = reactive<PromoActivityQuery & { pageNum: number; pageSize: number }>({ pageNum: 1, pageSize: 10, scope: 'active' });
 const statQuery = reactive<{ activityId?: number }>({});
@@ -456,7 +490,10 @@ const statTotal = reactive<Row>({ claimedUsers: 0, claimTimes: 0, joinableUsers:
 
 const formRef = ref();
 const dialog = reactive({ visible: false, title: '' });
-const form = reactive<PromoActivityForm>({ instanceName: '', currency: 'ALL', status: 0, auditMultiple: 0, frontStyle: 'LIST' });
+const form = reactive<PromoActivityForm>({
+  instanceName: '', currency: 'ALL', status: 0, auditMultiple: 0, frontStyle: 'LIST',
+  timeZone: 'Asia/Ho_Chi_Minh', budgetAmount: 0, paramsJson: '{}'
+});
 const activityTime = ref<string[]>([]);
 const displayTime = ref<string[]>([]);
 const joinLevelValues = ref<string[]>([]);
@@ -495,7 +532,7 @@ const statusText = (row: PromoActivityVO) => {
 const statusTag = (status?: number) => (status === 1 ? 'success' : status === 0 ? 'info' : 'warning');
 
 const fmtMoney = (value?: number) =>
-  value === undefined || value === null ? '-' : (Number(value) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  value === undefined || value === null ? '-' : Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
 const canEditCategory = (row: PromoCategoryVO) => row.categoryType !== 1;
 
@@ -507,6 +544,15 @@ const loadOptions = async () => {
   vipOptions.value = data.vipLevels ?? [];
   terminalOptions.value = data.terminals ?? [];
   conditionOptions.value = data.conditions ?? [];
+  ruleDescriptors.value = (data.activityRuleDescriptors as ActivityRuleDescriptor[]) ?? [];
+  typeOptions.value = Array.from(new Set([...(typeOptions.value ?? []), ...ruleDescriptors.value.map((item) => item.code)]));
+};
+
+const handleActivityTypeChange = (code: string) => {
+  const descriptor = ruleDescriptors.value.find((item) => item.code === code);
+  if (!descriptor) return;
+  form.paramsJson = JSON.stringify(descriptor.defaultParams, null, 2);
+  form.ruleVersion = form.instanceId ? form.ruleVersion : 1;
 };
 
 const loadCategories = async () => {
@@ -554,6 +600,9 @@ const resetStatistic = () => {
 };
 
 const handleTabChange = () => {
+  if (activeTab.value === 'gift-code' || activeTab.value === 'effect') {
+    return;
+  }
   if (activeTab.value === 'statistic') {
     loadStatistic();
     return;
@@ -634,7 +683,12 @@ const openActivityDialog = async (row?: PromoActivityVO) => {
       floatImage: '',
       dispatchMode: '玩家自领',
       status: 0,
-      frontStyle: 'LIST'
+      frontStyle: 'LIST',
+      activityCode: '',
+      paramsJson: '{}',
+      ruleVersion: 1,
+      timeZone: 'Asia/Ho_Chi_Minh',
+      budgetAmount: 0
     });
   }
 };
@@ -670,6 +724,10 @@ const openDetail = async (row?: PromoActivityVO) => {
       <div>活动ID：${detail.instanceId}</div>
       <div>活动名称：${detail.instanceName ?? ''}</div>
       <div>活动类型：${detail.activityTypeCode || '-'}</div>
+      <div>活动编码：${detail.activityCode || '-'}</div>
+      <div>规则版本：${detail.ruleVersion || 1}</div>
+      <div>业务时区：${detail.timeZone || 'Asia/Ho_Chi_Minh'}</div>
+      <div>活动预算：${detail.budgetAmount || 0}</div>
       <div>活动条件：${detail.conditionCode || '-'}</div>
       <div>参与层级：${detail.joinLevels || '不限制'}</div>
       <div>参与VIP：${detail.joinVipLevels || '不限制'}</div>
@@ -793,5 +851,11 @@ onMounted(async () => {
   margin-top: 8px;
   color: #606266;
   font-size: 13px;
+}
+
+.field-tip {
+  margin-left: 8px;
+  color: #909399;
+  font-size: 12px;
 }
 </style>

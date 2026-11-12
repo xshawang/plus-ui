@@ -30,6 +30,11 @@
           <lang-select />
         </div>
 
+        <el-radio-group v-model="loginMode" size="large" class="login-mode">
+          <el-radio-button value="admin">后台登录</el-radio-button>
+          <el-radio-button value="agent">代理登录</el-radio-button>
+        </el-radio-group>
+
         <el-form-item prop="username">
           <el-input
             v-model="loginForm.username"
@@ -139,8 +144,10 @@ const loginForm = ref<LoginData>({
   password: '',
   rememberMe: false,
   code: '',
-  uuid: ''
+  uuid: '',
+  grantType: 'password'
 } as LoginData);
+const loginMode = ref<'admin' | 'agent'>('admin');
 
 const loginRules: ElFormRules = {
   username: [
@@ -193,9 +200,11 @@ const handleLogin = () => {
         localStorage.removeItem('rememberMe');
       }
       localStorage.removeItem('password');
+      loginForm.value.grantType = loginMode.value === 'agent' ? 'agent_password' : 'password';
       const [err] = await to(userStore.login(loginForm.value));
       if (!err) {
-        const redirectUrl = redirect.value || '/';
+        const targetIsDefaultHome = !redirect.value || redirect.value === '/' || redirect.value === '/index';
+        const redirectUrl = loginMode.value === 'agent' && targetIsDefaultHome ? '/agent/home' : redirect.value || '/';
         await router.push(redirectUrl);
         loading.value = false;
       } else {
@@ -228,7 +237,8 @@ const getLoginData = () => {
   loginForm.value = {
     username: username === null ? String(loginForm.value.username) : username,
     password: username === null ? String(loginForm.value.password) : '',
-    rememberMe: rememberMe === 'true'
+    rememberMe: rememberMe === 'true',
+    grantType: loginMode.value === 'agent' ? 'agent_password' : 'password'
   } as LoginData;
 };
 
@@ -408,6 +418,17 @@ onMounted(() => {
 
 .login-form .el-input {
   height: 48px;
+}
+
+.login-mode {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 22px;
+
+  :deep(.el-radio-button__inner) {
+    width: 100%;
+  }
 }
 
 .login-form .input-icon {

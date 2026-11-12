@@ -99,7 +99,7 @@
         <el-table-column label="操作" align="center" width="210" fixed="right">
           <template #default="{ row }">
             <el-button v-hasPermi="['promotion:grant:audit']" link type="primary" @click="oneKeyAudit(row)">一键审核</el-button>
-            <el-button link type="primary" @click="drillActivity(row)">查看明细</el-button>
+            <el-button link type="primary" @click="drillActivity(row)">查看全部明细</el-button>
           </template>
         </el-table-column>
         <el-table-column label="操作人" prop="operatorId" align="center" width="120" />
@@ -215,7 +215,7 @@
             <el-option label="幸运值" :value="4" />
           </el-select>
         </el-form-item>
-        <el-form-item label="奖励金额(分)" prop="rewardAmount">
+        <el-form-item label="奖励金额" prop="rewardAmount">
           <el-input-number v-model="dispatchForm.rewardAmount" :min="0" :controls="false" style="width: 220px" />
         </el-form-item>
         <el-form-item label="会员币种" prop="currency">
@@ -278,17 +278,17 @@
       </el-form>
       <el-table v-loading="limitDialog.loading" border :data="limitRows">
         <el-table-column label="币种" prop="currency" align="center" width="110" />
-        <el-table-column label="单笔奖金限额(分,0=不限)" align="center" width="200">
+        <el-table-column label="单笔奖金限额(0=不限)" align="center" width="200">
           <template #default="{ row }">
             <el-input-number v-model="row.singleMaxAmount" :min="0" :controls="false" style="width: 160px" />
           </template>
         </el-table-column>
-        <el-table-column label="单活动总限额(分,0=不限)" align="center" width="210">
+        <el-table-column label="单活动总限额(0=不限)" align="center" width="210">
           <template #default="{ row }">
             <el-input-number v-model="row.activityTotalMaxAmount" :min="0" :controls="false" style="width: 170px" />
           </template>
         </el-table-column>
-        <el-table-column label="大额审核门槛(分)" align="center" width="180">
+        <el-table-column label="大额审核门槛" align="center" width="180">
           <template #default="{ row }">
             <el-input-number v-model="row.bigAmountThreshold" :min="0" :controls="false" style="width: 150px" />
           </template>
@@ -467,7 +467,7 @@ const fulfillRules = {
 const grantSetting = reactive({ disburseEnabled: 1, maxBatchAccounts: 200 });
 
 const fmtMoney = (value?: number) =>
-  value === undefined || value === null ? '-' : (Number(value) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  value === undefined || value === null ? '-' : Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
 const rewardTypeText = (type?: number) =>
   ({ 1: '金币', 2: '奖金', 3: '实物', 4: '幸运值', 5: '兑换码' } as Record<number, string>)[type ?? -1] ?? '未知';
@@ -536,7 +536,9 @@ const handleReset = () => {
 };
 
 const drillActivity = (row: Row) => {
-  activeTab.value = 'audit';
+  // FIX: 聚合行统计的是该优惠全部状态；跳到 audit 只查 status=1，
+  // 会把已领取/已审核记录全部过滤掉。此处进入全部记录，确保 3/3 可追溯。2026-11-10 Codex
+  activeTab.value = 'all';
   query.activityId = Number(row.activityId);
   query.pageNum = 1;
   loadRows();

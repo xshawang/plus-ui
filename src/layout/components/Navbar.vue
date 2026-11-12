@@ -31,7 +31,7 @@
           </div>
         </el-tooltip>
         <!-- 消息 -->
-        <el-tooltip :content="$t('navbar.message')" effect="dark" placement="bottom">
+        <el-tooltip v-if="!userStore.agentId" :content="$t('navbar.message')" effect="dark" placement="bottom">
           <div>
             <el-popover placement="bottom" trigger="click" transition="el-zoom-in-top" :width="300" :persistent="false">
               <template #reference>

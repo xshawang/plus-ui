@@ -4,8 +4,6 @@
       <el-tabs v-model="activeTab">
         <el-tab-pane label="综合排名" name="ranking" />
         <el-tab-pane label="供应商与账号" name="accounts" />
-        <el-tab-pane label="收付能力" name="channels" />
-        <el-tab-pane label="流量分配" name="routing" />
         <el-tab-pane label="IP 白名单" name="allowlist" />
         <el-tab-pane label="会员审核策略" name="policy" />
       </el-tabs>
@@ -79,7 +77,7 @@
         </div>
         <el-table v-loading="loading" border :data="accounts">
           <el-table-column label="供应商" width="110">
-            <template #default="{ row }">{{ providerName(row.providerId) }}</template>
+            <template #default="{ row }">{{ row.providerName || providerName(row.providerId) }}</template>
           </el-table-column>
           <el-table-column label="商户编码" prop="merchantCode" min-width="140" />
           <el-table-column label="商户号" prop="apiKey" min-width="160" show-overflow-tooltip />
@@ -92,10 +90,11 @@
               <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" fixed="right" width="150">
+          <el-table-column label="操作" fixed="right" width="210">
             <template #default="{ row }">
               <el-button v-hasPermi="['finance:merchant:edit']" link type="success" @click="testAccount(row as ProviderAccountVO)">测试</el-button>
               <el-button v-hasPermi="['finance:merchant:edit']" link type="primary" @click="openAccount(row as ProviderAccountVO)">编辑</el-button>
+              <el-button v-hasPermi="['finance:merchant:edit']" link type="danger" @click="removeAccount(row as ProviderAccountVO)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -268,7 +267,16 @@
       <el-form :model="accountForm" label-width="140px">
         <el-row :gutter="12">
           <el-col :span="24"><el-divider content-position="left">基础信息</el-divider></el-col>
-          <el-col :span="12"><el-form-item label="供应商编码"><el-select v-model="accountForm.providerCode" filterable style="width: 100%"><el-option v-for="item in providers" :key="item.providerCode" :label="`${item.providerCode} / ${item.providerName}`" :value="item.providerCode" /></el-select></el-form-item></el-col>
+          <el-col :span="12">
+            <el-form-item label="供应商编码">
+              <el-input
+                v-model="accountForm.providerCode"
+                maxlength="32"
+                show-word-limit
+                placeholder="请输入供应商编码（与供应商名称一致）"
+              />
+            </el-form-item>
+          </el-col>
           <el-col :span="12"><el-form-item label="商户编码"><el-input v-model="accountForm.merchantCode" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="商户名称"><el-input v-model="accountForm.merchantName" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="平台"><el-input v-model="accountForm.platform" /></el-form-item></el-col>
@@ -294,115 +302,6 @@
           <el-col :span="24"><el-form-item label="代付回调地址"><el-input v-model="accountForm.payoutNotifyUrl" placeholder="https://paycb.g318.com/api/payment/{provider}/{accountCode}/payout" /></el-form-item></el-col>
         </el-row>
       </el-form>
-
-      <el-divider content-position="left">代收通道（客户端编码固定，供应商编码可编辑）</el-divider>
-      <el-table :data="depositChannelRows" border size="small" max-height="260">
-        <el-table-column label="启用" width="70" align="center">
-          <template #default="{ row }"><el-checkbox :model-value="row.enabled === 1" @change="(value: boolean) => setChannelEnabled(row as ProviderChannelBindingVO, value)" /></template>
-        </el-table-column>
-        <el-table-column label="客户端编码" prop="clientCode" width="130" />
-        <el-table-column label="客户端名称" prop="clientName" min-width="150" />
-        <el-table-column label="供应商通道编码" min-width="150">
-          <template #default="{ row }"><el-input v-model="row.providerChannelCode" /></template>
-        </el-table-column>
-        <el-table-column label="供应商通道名称" min-width="160">
-          <template #default="{ row }"><el-input v-model="row.channelName" /></template>
-        </el-table-column>
-        <el-table-column label="最低金额" width="145">
-          <template #default="{ row }"><el-input-number v-model="row.amountMin" :min="0" controls-position="right" style="width: 100%" /></template>
-        </el-table-column>
-        <el-table-column label="最高金额" width="145">
-          <template #default="{ row }"><el-input-number v-model="row.amountMax" :min="0" controls-position="right" style="width: 100%" /></template>
-        </el-table-column>
-        <el-table-column label="业务状态" width="90" align="center">
-          <template #default="{ row }"><el-tag :type="row.businessStatus === 1 ? 'success' : 'info'">{{ row.businessStatus === 1 ? '启用' : '停用' }}</el-tag></template>
-        </el-table-column>
-      </el-table>
-
-      <el-divider content-position="left">代付通道（客户端编码固定，供应商编码可编辑）</el-divider>
-      <el-table :data="payoutChannelRows" border size="small" max-height="260">
-        <el-table-column label="启用" width="70" align="center">
-          <template #default="{ row }"><el-checkbox :model-value="row.enabled === 1" @change="(value: boolean) => setChannelEnabled(row as ProviderChannelBindingVO, value)" /></template>
-        </el-table-column>
-        <el-table-column label="客户端编码" prop="clientCode" width="130" />
-        <el-table-column label="客户端名称" prop="clientName" min-width="150" />
-        <el-table-column label="供应商通道编码" min-width="150">
-          <template #default="{ row }"><el-input v-model="row.providerChannelCode" /></template>
-        </el-table-column>
-        <el-table-column label="供应商通道名称" min-width="160">
-          <template #default="{ row }"><el-input v-model="row.channelName" /></template>
-        </el-table-column>
-        <el-table-column label="最低金额" width="145">
-          <template #default="{ row }"><el-input-number v-model="row.amountMin" :min="0" controls-position="right" style="width: 100%" /></template>
-        </el-table-column>
-        <el-table-column label="最高金额" width="145">
-          <template #default="{ row }"><el-input-number v-model="row.amountMax" :min="0" controls-position="right" style="width: 100%" /></template>
-        </el-table-column>
-        <el-table-column label="业务状态" width="90" align="center">
-          <template #default="{ row }"><el-tag :type="row.businessStatus === 1 ? 'success' : 'info'">{{ row.businessStatus === 1 ? '启用' : '停用' }}</el-tag></template>
-        </el-table-column>
-      </el-table>
-
-      <div class="payout-bank-heading">
-        <div>
-          <strong>WITHDRAW_BANK 银行明细</strong>
-          <span>同一代付通道可维护多个银行编码；保存后三方路由按银行独立配置权重。</span>
-        </div>
-        <el-button link type="primary" :loading="payoutBankLoading" @click="loadPayoutBankRows()">
-          刷新银行目录
-        </el-button>
-      </div>
-      <el-alert
-        v-if="payoutBankHint"
-        :title="payoutBankHint"
-        type="info"
-        :closable="false"
-        show-icon
-        class="mb-2"
-      />
-      <el-table
-        v-if="payoutBankRows.length"
-        :data="payoutBankRows"
-        border
-        size="small"
-        max-height="320"
-        row-key="bankCode"
-      >
-        <el-table-column label="启用" width="68" align="center">
-          <template #default="{ row }">
-            <el-checkbox v-model="row.enabled" :true-value="1" :false-value="0" />
-          </template>
-        </el-table-column>
-        <el-table-column label="供应商" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.providerName }} / {{ row.providerCode }}</template>
-        </el-table-column>
-        <el-table-column label="商户编码" prop="merchantCode" width="130" />
-        <el-table-column label="客户端通道编码" width="130">
-          <template #default>WITHDRAW_BANK</template>
-        </el-table-column>
-        <el-table-column label="供应商通道编码" min-width="130">
-          <template #default="{ row }"><el-input v-model="row.providerChannelCode" /></template>
-        </el-table-column>
-        <el-table-column label="银行编码" prop="bankCode" width="110" />
-        <el-table-column label="银行名称" prop="bankName" min-width="170" show-overflow-tooltip />
-        <el-table-column label="最小限额" width="145">
-          <template #default="{ row }">
-            <el-input-number v-model="row.amountMin" :min="0" controls-position="right" style="width: 100%" />
-          </template>
-        </el-table-column>
-        <el-table-column label="最大限额" width="145">
-          <template #default="{ row }">
-            <el-input-number v-model="row.amountMax" :min="0" controls-position="right" style="width: 100%" />
-          </template>
-        </el-table-column>
-        <el-table-column label="来源" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag size="small" :type="row.configured ? 'success' : 'info'">
-              {{ row.configured ? '已配置' : row.catalogSource }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
       <template #footer>
         <el-button @click="accountDialog = false">取消</el-button>
         <el-button type="primary" @click="saveAccount">保存</el-button>
@@ -480,15 +379,13 @@
 </template>
 
 <script setup name="PaymentProviderCenter" lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import modal from '@/plugins/modal';
 import {
   listPaymentIpAllowlists,
   listPaymentProviders,
-  listPayoutBankOptions,
   changePaymentProviderStatus,
-  listProviderChannelOptions,
   listPaymentRanking,
   listProviderAccounts,
   listProviderChannels,
@@ -502,19 +399,16 @@ import {
   getWithdrawAuditPolicy,
   saveWithdrawAuditPolicy,
   saveProviderAccount,
-  savePayoutBanks,
-  saveProviderChannelBindings,
   saveProviderChannel,
   saveRouteCandidate,
+  deleteProviderAccount,
   testProviderAccount
 } from '@/api/finance/payment-provider';
 import type {
   IpAllowlistVO,
   PaymentProviderVO,
   PaymentRankingVO,
-  PayoutBankOptionVO,
   ProviderAccountVO,
-  ProviderChannelBindingVO,
   ProviderChannelVO,
   RouteBusinessOptionVO,
   RouteCandidateVO
@@ -543,13 +437,6 @@ const routeDialog = ref(false);
 const allowlistDialog = ref(false);
 const channelDialog = ref(false);
 const accountForm = reactive<Partial<ProviderAccountVO>>({});
-const depositChannelRows = ref<ProviderChannelBindingVO[]>([]);
-const payoutChannelRows = ref<ProviderChannelBindingVO[]>([]);
-const payoutBankRows = ref<PayoutBankOptionVO[]>([]);
-const payoutBankLoading = ref(false);
-const payoutBankHint = ref('');
-const payoutBusinessRefId = ref<number>();
-const payoutFocusBankCode = ref('');
 const routeForm = reactive<Partial<RouteCandidateVO>>({});
 const allowlistForm = reactive<Partial<IpAllowlistVO>>({});
 const channelForm = reactive<Partial<ProviderChannelVO>>({});
@@ -632,71 +519,8 @@ const loadAllowlists = async () => {
   allowlists.value = response.data ?? [];
 };
 
-const loadAccountChannelRows = async (providerId?: number | string, merchantId?: number | string) => {
-  if (!providerId) {
-    depositChannelRows.value = [];
-    payoutChannelRows.value = [];
-    return;
-  }
-  const [deposit, payout] = await Promise.all([
-    listProviderChannelOptions({ providerId, merchantId, operation: 'DEPOSIT' }),
-    listProviderChannelOptions({ providerId, merchantId, operation: 'PAYOUT' })
-  ]);
-  depositChannelRows.value = deposit.data ?? [];
-  payoutChannelRows.value = payout.data ?? [];
-};
-
-const loadPayoutBankRows = async (
-  providerId?: number | string,
-  merchantId?: number | string
-) => {
-  const effectiveProviderId = providerId
-    ?? providers.value.find((item) => item.providerCode === accountForm.providerCode)?.providerId;
-  if (!effectiveProviderId) {
-    payoutBankRows.value = [];
-    payoutBankHint.value = '请先选择供应商';
-    return;
-  }
-  payoutBankLoading.value = true;
-  payoutBankHint.value = '';
-  try {
-    const response = await listPayoutBankOptions({
-      providerId: effectiveProviderId,
-      merchantId,
-      currency: accountForm.currency || 'VND'
-    });
-    payoutBankRows.value = (response.data ?? []).map((row) => ({
-      ...row,
-      enabled: Number(row.enabled ?? 0),
-      amountMin: Number(row.amountMin ?? 0),
-      amountMax: Number(row.amountMax ?? 0)
-    }));
-    if (payoutBankRows.value.length === 0) {
-      payoutBankHint.value = '供应商未返回代付银行目录';
-    }
-  } catch (error) {
-    payoutBankRows.value = [];
-    payoutBankHint.value = error instanceof Error
-      ? error.message
-      : '供应商代付银行目录加载失败，请先保存账号或稍后重试';
-  } finally {
-    payoutBankLoading.value = false;
-  }
-};
-
-const focusPayoutBankFromRoute = () => {
-  if (!payoutFocusBankCode.value) return;
-  const target = payoutBankRows.value.find(
-    (row) => String(row.bankCode || '').toUpperCase() === payoutFocusBankCode.value.toUpperCase()
-  );
-  if (target) {
-    target.enabled = 1;
-  }
-};
-
 const openAccount = async (row?: ProviderAccountVO) => {
   Object.keys(accountForm).forEach((key) => delete (accountForm as Record<string, unknown>)[key]);
-  const firstProvider = providers.value[0];
   const source: Partial<ProviderAccountVO> = row ? {
     merchantId: row.merchantId,
     providerId: row.providerId,
@@ -717,8 +541,7 @@ const openAccount = async (row?: ProviderAccountVO) => {
     payoutNotifyUrl: row.payoutNotifyUrl,
     secretsVisible: row.secretsVisible
   } : {
-    providerId: firstProvider?.providerId,
-    providerCode: firstProvider?.providerCode,
+    providerCode: '',
     platform: 'go88',
     currency: 'VND',
     depositNotifyUrl: '',
@@ -742,26 +565,18 @@ const openAccount = async (row?: ProviderAccountVO) => {
   });
   Object.assign(accountForm, source);
   accountDialog.value = true;
-  await loadAccountChannelRows(source.providerId, source.merchantId);
-  await loadPayoutBankRows(source.providerId, source.merchantId);
-  focusPayoutBankFromRoute();
-  if (String(route.query.payout || '') === '1') {
-    await nextTick();
-    document.querySelector('.payout-bank-heading')?.scrollIntoView({ block: 'start' });
-  }
 };
 
 const saveAccount = async () => {
-  const provider = providers.value.find((item) =>
-    item.providerCode === accountForm.providerCode);
-  if (!provider || !accountForm.merchantCode?.trim() || !accountForm.merchantName?.trim()) {
+  const providerCode = accountForm.providerCode?.trim();
+  if (!providerCode || !accountForm.merchantCode?.trim() || !accountForm.merchantName?.trim()) {
     modal.msgWarning('请填写供应商编码、商户编码和商户名称');
     return;
   }
   const payload: Partial<ProviderAccountVO> = {
     merchantId: accountForm.merchantId,
-    providerId: provider.providerId,
-    providerCode: provider.providerCode,
+    providerCode,
+    providerName: providerCode,
     merchantCode: accountForm.merchantCode.trim(),
     merchantName: accountForm.merchantName.trim(),
     platform: accountForm.platform,
@@ -777,51 +592,21 @@ const saveAccount = async () => {
     depositNotifyUrl: accountForm.depositNotifyUrl,
     payoutNotifyUrl: accountForm.payoutNotifyUrl
   };
-  const saved = await saveProviderAccount(payload);
-  const merchantId = saved.data ?? accountForm.merchantId;
-  if (!merchantId) throw new Error('供应商账号保存后未返回账号 ID');
-  await Promise.all([
-    saveProviderChannelBindings({
-      merchantId,
-      operation: 'DEPOSIT',
-      items: depositChannelRows.value
-    }),
-    saveProviderChannelBindings({
-      merchantId,
-      operation: 'PAYOUT',
-      items: payoutChannelRows.value
-    })
-  ]);
-  const enabledPayoutBanks = payoutBankRows.value.filter(
-    (row) => (row.enabled === 1 || row.configured) && String(row.bankCode || '').trim()
-  );
-  if (enabledPayoutBanks.length > 0) {
-    await savePayoutBanks({
-      merchantId,
-      businessRefId: payoutBusinessRefId.value,
-      platform: accountForm.platform || 'go88',
-      currency: accountForm.currency || 'VND',
-      items: enabledPayoutBanks.map((row) => ({
-        withdrawChannelId: row.withdrawChannelId,
-        providerChannelId: row.providerChannelId,
-        providerChannelCode: row.providerChannelCode,
-        providerPayType: row.providerPayType,
-        bankCode: row.bankCode,
-        bankName: row.bankName,
-        amountMin: Number(row.amountMin ?? 0),
-        amountMax: Number(row.amountMax ?? 0),
-        enabled: row.enabled
-      }))
-    });
-  }
+  await saveProviderAccount(payload);
   modal.msgSuccess('保存成功');
   accountDialog.value = false;
+  await Promise.all([loadAccounts(), loadProviders()]);
+};
+
+const removeAccount = async (row: ProviderAccountVO) => {
+  await modal.confirm(
+    `确认物理删除供应商账号「${row.providerName || row.providerCode} / ${row.merchantCode}」？`
+  );
+  await deleteProviderAccount(row.merchantId);
+  modal.msgSuccess('供应商账号已删除，供应商主档保留');
   await loadAccounts();
 };
 
-const setChannelEnabled = (row: ProviderChannelBindingVO, enabled: boolean) => {
-  row.enabled = enabled ? 1 : 0;
-};
 const testAccount = async (row: ProviderAccountVO) => {
   const response = await testProviderAccount(row.merchantId);
   const result = response.data ?? {};
@@ -983,23 +768,7 @@ const toggleProvider = async (row: PaymentRankingVO, next: number) => {
 watch(accountDialog, (open) => {
   if (!open) {
     Object.keys(accountForm).forEach((key) => delete (accountForm as Record<string, unknown>)[key]);
-    depositChannelRows.value = [];
-    payoutChannelRows.value = [];
-    payoutBankRows.value = [];
-    payoutBankHint.value = '';
-    payoutBusinessRefId.value = undefined;
-    payoutFocusBankCode.value = '';
   }
-});
-
-watch(() => accountForm.providerCode, async (providerCode) => {
-  if (!accountDialog.value || !providerCode) return;
-  const provider = providers.value.find((item) => item.providerCode === providerCode);
-  if (!provider) return;
-  accountForm.providerId = provider.providerId;
-  await loadAccountChannelRows(provider.providerId, accountForm.merchantId);
-  await loadPayoutBankRows(provider.providerId, accountForm.merchantId);
-  focusPayoutBankFromRoute();
 });
 
 watch(() => allowlistForm.providerId, () => {
@@ -1013,11 +782,6 @@ const openAccountFromRoute = async () => {
   if (String(route.query.tab || '') === 'accounts') {
     activeTab.value = 'accounts';
   }
-  const businessRefId = Number(route.query.businessRefId || 0);
-  if (businessRefId > 0) {
-    payoutBusinessRefId.value = businessRefId;
-  }
-  payoutFocusBankCode.value = String(route.query.bankCode || '').trim();
   const action = String(route.query.action || '');
   if (action !== 'new' && action !== 'edit') return;
   const merchantId = Number(route.query.merchantId || 0);
@@ -1048,24 +812,6 @@ watch(routingScene, async () => {
 }
 .policy-form {
   max-width: 720px;
-}
-.payout-bank-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 14px 0 8px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--el-border-color);
-}
-.payout-bank-heading div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.payout-bank-heading span {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
 }
 :deep(.account-dialog .el-dialog__body) {
   max-height: calc(90vh - 120px);

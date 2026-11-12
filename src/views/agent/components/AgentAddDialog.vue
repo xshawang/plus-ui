@@ -1,6 +1,13 @@
 <template>
   <el-dialog :model-value="visible" title="新增代理" width="560px" append-to-body destroy-on-close @update:model-value="close">
     <el-form ref="formRef" :model="form" :rules="rules" label-width="140px">
+      <el-form-item label="代理类型" prop="agentType">
+        <el-radio-group v-model="form.agentType">
+          <el-radio :value="1">人人代理（只拿直属）</el-radio>
+          <el-radio :value="2">专业代理（无限极差）</el-radio>
+        </el-radio-group>
+        <div class="type-tip">创建后不可转换；有上级时必须与上级同一类型</div>
+      </el-form-item>
       <el-form-item label="上级代理">
         <el-radio-group v-model="form.hasParent" @change="onParentToggle">
           <el-radio :value="false">无上级</el-radio>
@@ -28,6 +35,9 @@
       </el-form-item>
       <el-form-item label="代理账号" prop="loginName">
         <el-input v-model="form.loginName" placeholder="请输入代理账号（4~32 位字母数字）" maxlength="32" />
+      </el-form-item>
+      <el-form-item label="关联会员UID(选填)">
+        <el-input v-model="form.memberUid" placeholder="已有会员转代理时填写；留空创建独立代理专属邀请码" maxlength="20" />
       </el-form-item>
       <el-form-item label="登录密码" prop="loginPassword">
         <el-input v-model="form.loginPassword" type="password" show-password placeholder="8~32 位，需包含字母与数字" maxlength="32" />
@@ -97,11 +107,13 @@ const form = reactive<AgentAddForm>({
   hasParent: false,
   currency: '',
   loginName: '',
+  memberUid: '',
   loginPassword: '',
   payPassword: ''
 });
 
 const rules: FormRules = {
+  agentType: [{ required: true, message: '请选择代理类型', trigger: 'change' }],
   currency: [{ required: true, message: '请选择代理币种', trigger: 'change' }],
   loginName: [
     { required: true, message: '请输入代理账号', trigger: 'blur' },
@@ -126,9 +138,11 @@ const resetForm = () => {
     return preferred ?? options[0];
   };
   form.hasParent = false;
+  form.agentType = 1;
   form.parentAgentId = undefined;
   form.currency = String(defaultOf(props.options.currencies)?.value ?? 'VND1:1');
   form.loginName = '';
+  form.memberUid = '';
   form.loginPassword = '';
   form.payPassword = '';
   form.modeId = Number(defaultOf(props.options.modes)?.value ?? 0) || undefined;
@@ -197,3 +211,12 @@ const submit = async () => {
   }
 };
 </script>
+
+<style scoped>
+.type-tip {
+  color: #909399;
+  font-size: 12px;
+  line-height: 18px;
+  width: 100%;
+}
+</style>

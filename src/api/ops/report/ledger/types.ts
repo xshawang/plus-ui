@@ -5,13 +5,19 @@
 export type LedgerRow = Record<string, any>;
 
 export interface LedgerQuery {
+  /** 会员UID */
+  uid?: number | string;
   /** 会员账号（模糊） */
   account?: string;
   /** 最后操作人（模糊） */
   operator?: string;
+  /** 业务单号（模糊） */
+  bizNo?: string;
+  /** 变动类型：1 发放入账 / 2 回收扣款 */
+  changeType?: number;
   /** 变动钱包：available/frozen/bonus */
   wallet?: string;
-  /** 账变大类：recharge/withdraw/transfer/activity/rebate/manual/commission/safe/bet */
+  /** 账变大类：recharge/withdraw/transfer/reward/activity/rebate/manual/commission/safe/bet */
   category?: string;
   currency?: string;
   /** 交易时间起（yyyy-MM-dd HH:mm:ss） */
@@ -31,6 +37,10 @@ export interface LedgerPage {
   subtotal: number;
   /** 当前筛选条件下变动金额总计（服务端算） */
   totalAmount: number;
+  /** 当前筛选条件下发放入账合计 */
+  creditAmount: number;
+  /** 当前筛选条件下回收扣款合计（正数） */
+  debitAmount: number;
 }
 
 export interface LedgerOption {

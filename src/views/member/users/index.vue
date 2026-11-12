@@ -237,6 +237,7 @@
           <template #default="{ row }">
             <div>{{ row.inviteName || '—' }}<span class="text-gray-400">（邀请人）</span></div>
             <div class="text-gray-400 text-sm">{{ row.parentAgentName || '—' }} / {{ row.topAgentName || '—' }}</div>
+            <div class="text-gray-400 text-sm">邀请码：{{ row.inviteCode || '—' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="注册IP / 设备" align="center" min-width="235" show-overflow-tooltip>

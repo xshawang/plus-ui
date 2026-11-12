@@ -9,6 +9,7 @@ import auth from '@/plugins/auth';
 import router, { constantRoutes, dynamicRoutes } from '@/router';
 import store from '@/store';
 import { createCustomNameComponent } from '@/utils/createCustomNameComponent';
+import { useUserStore } from '@/store/modules/user';
 
 // 匹配views里面所有的.vue文件，预建查找表避免每次 O(n) 扫描
 const modules = import.meta.glob('./../../views/**/*.vue');
@@ -66,7 +67,10 @@ export const usePermissionStore = defineStore('permission', () => {
       router.addRoute(route);
     });
     setRoutes(rewriteRoutes);
-    setSidebarRouters(constantRoutes.concat(sidebarRoutes));
+    const baseRoutes = useUserStore().agentId
+      ? constantRoutes.filter(route => route.path !== '' && route.path !== '/')
+      : constantRoutes;
+    setSidebarRouters(baseRoutes.concat(sidebarRoutes));
     setDefaultRoutes(sidebarRoutes);
     setTopbarRoutes(defaultRoutes);
     // 路由name重复检查

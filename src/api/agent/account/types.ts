@@ -27,6 +27,10 @@ export interface AgentAccountQuery extends PageQuery {
   registerSource?: string;
   currency?: string;
   status?: number;
+  /** 代理类型（代理线）：1 人人代理 2 专业代理 */
+  agentType?: number;
+  /** 代理等级 LV */
+  levelNo?: number;
 }
 
 /** 代理账号行 */
@@ -57,6 +61,9 @@ export interface AgentAccountVO {
   withdrawMethod?: number;
   withdrawMethodText?: string;
   registerSource?: string;
+  /** 代理线类型：1 人人 2 专业（不可互转） */
+  lineType?: number;
+  levelNo?: number | string;
   directCount?: number;
   otherCount?: number;
   subLayerCount?: number;
@@ -119,9 +126,13 @@ export interface AgentOptionsVO {
 /** 新增代理提交对象（新增弹窗 11 个字段） */
 export interface AgentAddForm {
   hasParent: boolean;
+  /** 代理类型：1 人人代理 2 专业代理（有上级时须与上级同线） */
+  agentType?: number;
   parentAgentId?: number | string;
   currency: string;
   loginName: string;
+  /** 关联已有会员 UID；留空时创建独立代理并生成专属归因码 */
+  memberUid?: string;
   loginPassword: string;
   payPassword?: string;
   modeId?: number;

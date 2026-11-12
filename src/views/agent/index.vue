@@ -2,21 +2,21 @@
   <div class="p-2 app-container agent-center-page">
     <el-card shadow="hover" class="search-panel">
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-        <el-tab-pane label="所有代理" name="all" />
-        <el-tab-pane label="顶层代理" name="top" />
-        <el-tab-pane name="pending">
+        <el-tab-pane :label="isAgent ? '我的团队' : '所有代理'" name="all" />
+        <el-tab-pane v-if="!isAgent" label="顶层代理" name="top" />
+        <el-tab-pane v-if="!isAgent" name="pending">
           <template #label>
             专业代理待审核
             <el-badge v-if="tabCounts.pending > 0" :value="tabCounts.pending" class="tab-badge" />
           </template>
         </el-tab-pane>
-        <el-tab-pane name="rejected">
+        <el-tab-pane v-if="!isAgent" name="rejected">
           <template #label>
             专业代理被拒绝
             <el-badge v-if="tabCounts.rejected > 0" :value="tabCounts.rejected" type="danger" class="tab-badge" />
           </template>
         </el-tab-pane>
-        <el-tab-pane name="approved">
+        <el-tab-pane v-if="!isAgent" name="approved">
           <template #label>
             专业代理已通过
             <el-badge v-if="tabCounts.approved > 0" :value="tabCounts.approved" type="success" class="tab-badge" />
@@ -81,7 +81,7 @@
               @keyup.enter="handleQuery"
             />
           </el-form-item>
-          <template v-if="advanced">
+          <template v-if="advanced && !isAgent">
             <el-form-item label="累计佣金">
               <el-input-number v-model="query.commissionMin" :min="0" :controls="false" placeholder="最小值" style="width: 110px" />
               <span class="range-sep">-</span>
@@ -104,7 +104,18 @@
               </el-select>
             </el-form-item>
           </template>
-          <el-form-item>
+          <el-form-item v-if="!isAgent">
+            <el-select v-model="query.agentType" placeholder="全部代理类型" clearable style="width: 140px">
+              <el-option label="人人代理" :value="1" />
+              <el-option label="专业代理" :value="2" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="!isAgent">
+            <el-select v-model="query.levelNo" placeholder="全部等级" clearable style="width: 120px">
+              <el-option v-for="n in 20" :key="n" :label="`LV${n}`" :value="n" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="!isAgent">
             <el-select v-model="query.withdrawMethod" placeholder="全部提现方式" clearable style="width: 170px">
               <el-option v-for="item in options.withdrawMethods" :key="item.value" :label="item.label" :value="Number(item.value)" />
             </el-select>
@@ -128,7 +139,7 @@
 
         <el-form-item>
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button v-if="!isApplyTab" icon="Filter" @click="advanced = !advanced">
+          <el-button v-if="!isApplyTab && !isAgent" icon="Filter" @click="advanced = !advanced">
             {{ advanced ? '收起高级搜索' : '高级搜索' }}
           </el-button>
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -155,6 +166,9 @@
         :loading="loading"
         :tab="activeTab"
         :options="options"
+        :agent-view="isAgent"
+        :can-manage-direct="isTopAgent"
+        :hide-other-count="isHumanLower"
         @row-action="handleRowAction"
         @bind-switch="handleBindSwitch"
         @selection-change="handleSelectionChange"
@@ -172,7 +186,7 @@
       <div v-if="!isApplyTab" class="summary-bar">
         <span class="summary-label">小计（当前页）</span>
         <span>直属数：{{ pageSubtotal.directCount }}</span>
-        <span>{{ isTopTab ? '代理总数' : '其他数' }}：{{ isTopTab ? pageSubtotal.agentTotal : pageSubtotal.otherCount }}</span>
+        <span v-if="!isHumanLower">{{ isTopTab ? '代理总数' : '其他数' }}：{{ isTopTab ? pageSubtotal.agentTotal : pageSubtotal.otherCount }}</span>
         <span v-if="isTopTab">下级总数：{{ pageSubtotal.subTotal }}</span>
         <span>累计佣金：{{ formatMoney(pageSubtotal.totalCommission) }}</span>
         <span>累计领取：{{ formatMoney(pageSubtotal.withdrawnAmount) }}</span>
@@ -188,15 +202,15 @@
         <el-button v-else link type="primary" @click="loadSummary">点击以计算总数</el-button>
       </div>
 
-      <div class="batch-bar">
+      <div v-if="!isAgent || isTopAgent" class="batch-bar">
         <el-checkbox v-model="selectCurrentPage" @change="toggleCurrentPage">全选当前页</el-checkbox>
         <el-select v-model="batchAction" placeholder="批量操作" style="width: 170px" @change="onBatchActionChange">
-          <el-option label="修改提现方式" value="withdrawMethod" />
+          <el-option v-if="!isAgent" label="修改提现方式" value="withdrawMethod" />
           <el-option label="修改直属层级" value="layer" />
           <el-option label="修改直属标签" value="label" />
           <el-option label="批量冻结" value="status0" />
           <el-option label="批量启用" value="status1" />
-          <el-option label="移出代理" value="remove" />
+          <el-option v-if="!isAgent" label="移出代理" value="remove" />
         </el-select>
         <el-select v-if="batchAction === 'withdrawMethod'" v-model="batchForm.withdrawMethod" placeholder="提现方式" style="width: 170px">
           <el-option v-for="item in options.withdrawMethods" :key="item.value" :label="item.label" :value="Number(item.value)" />
@@ -290,10 +304,15 @@ import {
 import { exportAgentApplies, getAgentApplyTabCounts, listApprovedApplies, listPendingApplies, listRejectedApplies } from '@/api/agent/apply';
 import type { AgentAccountQuery, AgentAccountVO, AgentOptionsVO, AgentSummaryVO } from '@/api/agent/account/types';
 import type { AgentApplyQuery, AgentApplyVO } from '@/api/agent/apply/types';
+import { useUserStore } from '@/store/modules/user';
 
 type AnyRow = AgentAccountVO & AgentApplyVO & Record<string, any>;
 
 const { loading, withLoading } = useLoading(true);
+const userStore = useUserStore();
+const isAgent = computed(() => Boolean(userStore.agentId));
+const isTopAgent = computed(() => isAgent.value && Boolean(userStore.agentTop));
+const isHumanLower = computed(() => isAgent.value && !userStore.agentTop && Number(userStore.agentType) === 1);
 const activeTab = ref('all');
 const advanced = ref(false);
 const dateRange = ref<[string, string] | null>(null);
@@ -425,6 +444,10 @@ const getList = async () => {
 };
 
 const loadTabCounts = async () => {
+  if (isAgent.value) {
+    tabCounts.value = { pending: 0, approved: 0, rejected: 0 };
+    return;
+  }
   try {
     const res: any = await getAgentApplyTabCounts();
     tabCounts.value = { pending: 0, approved: 0, rejected: 0, ...res?.data };
@@ -461,7 +484,9 @@ const handleTabChange = () => {
   selectedIds.value = [];
   setDefaultRange();
   getList();
-  loadTabCounts();
+  if (!isAgent.value) {
+    loadTabCounts();
+  }
 };
 
 const handleScopeChange = () => {
@@ -494,20 +519,26 @@ const resetQuery = () => {
 
 const refreshAll = () => {
   getList();
-  loadTabCounts();
+  if (!isAgent.value) {
+    loadTabCounts();
+  }
 };
 
 const afterWrite = (message: string) => {
   modal.msgSuccess(message || '操作成功');
   getList();
-  loadTabCounts();
+  if (!isAgent.value) {
+    loadTabCounts();
+  }
   loadSummary();
 };
 
 const afterApplyAudit = (message: string) => {
   modal.msgSuccess(message || '审核完成');
   getList();
-  loadTabCounts();
+  if (!isAgent.value) {
+    loadTabCounts();
+  }
   loadSummary();
 };
 
@@ -677,7 +708,7 @@ const handleExport = async () => {
   }
 };
 
-const formatMoney = (value?: number) => ((Number(value ?? 0) / 100).toFixed(2));
+const formatMoney = (value?: number) => String(value ?? 0);
 
 onMounted(async () => {
   setDefaultRange();

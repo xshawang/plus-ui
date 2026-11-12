@@ -14,6 +14,8 @@ const NProgress = ('default' in NProgressModule ? NProgressModule.default : NPro
 
 NProgress.configure({ showSpinner: false });
 const whiteList = ['/login', '/register', '/social-callback', '/register*', '/register/*'];
+const AGENT_HOME_PATH = '/agent/home';
+const isDefaultHomePath = (path: string) => path === '/' || path === '/index';
 
 const isWhiteList = (path: string) => {
   return whiteList.some(pattern => isPathMatch(pattern, path));
@@ -26,7 +28,7 @@ router.beforeEach(async (to, from) => {
     /* has token*/
     if (to.path === '/login') {
       NProgress.done();
-      return { path: '/' };
+      return { path: useUserStore().agentId ? AGENT_HOME_PATH : '/' };
     } else if (isWhiteList(to.path)) {
       return true;
     } else {
@@ -56,6 +58,12 @@ router.beforeEach(async (to, from) => {
               router.addRoute(route); // 动态添加可访问路由表
             }
           });
+          if (useUserStore().agentId && isDefaultHomePath(to.path)) {
+            return {
+              path: AGENT_HOME_PATH,
+              replace: true
+            };
+          }
           // hack方法 确保addRoutes已完成
           return {
             path: to.path,
@@ -67,6 +75,12 @@ router.beforeEach(async (to, from) => {
           };
         }
       } else {
+        if (useUserStore().agentId && isDefaultHomePath(to.path)) {
+          return {
+            path: AGENT_HOME_PATH,
+            replace: true
+          };
+        }
         return true;
       }
     }
