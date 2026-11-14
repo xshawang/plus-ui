@@ -29,22 +29,21 @@
       <el-divider content-position="left">币种与金额换算</el-divider>
       <el-form-item label="币种">
         <el-input v-model="form.currency" style="width: 200px" />
-        <span class="muted ml8">发送给 OneAPI 的币种，越南盾为 VND(K)</span>
+        <span class="muted ml8">以后台配置为准，例如 VND(K)、IDR(K)、BRL</span>
       </el-form-item>
       <el-form-item label="换算倍数">
-        <el-radio-group v-model="form.unitMultiplier">
-          <el-radio :value="1000">1000（K 单位：1K = 1000 VND）</el-radio>
-          <el-radio :value="1">1（不换算）</el-radio>
-        </el-radio-group>
+        <el-input-number v-model="form.unitMultiplier" :min="1" :max="1000000" :step="1" style="width: 180px" />
+        <span class="muted ml8">接口金额 × 倍数 = 本地 VND；K 币种通常填 1000，BRL 通常填 1</span>
       </el-form-item>
       <el-form-item label="返回余额取整">
-        <el-select v-model="form.balanceRoundMode" style="width: 160px"><el-option v-for="m in modes" :key="m.v" :label="m.l" :value="m.v" /></el-select>
+        <el-select v-model="form.balanceRoundMode" disabled style="width: 160px"><el-option v-for="m in modes" :key="m.v" :label="m.l" :value="m.v" /></el-select>
         <span class="muted ml8">小数位</span>
-        <el-input-number v-model="form.balanceScale" :min="0" :max="3" style="width: 110px" class="ml8" />
+        <el-input-number v-model="form.balanceScale" disabled :min="2" :max="2" style="width: 110px" class="ml8" />
+        <span class="muted">OneAPI 固定保留 2 位小数并向下取整</span>
       </el-form-item>
       <el-form-item label="入参非整数取整">
         <el-select v-model="form.amountRoundMode" style="width: 160px"><el-option v-for="m in modes" :key="m.v" :label="m.l" :value="m.v" /></el-select>
-        <span class="muted ml8">×1000 后不是整数时扣款、加款的取整方式</span>
+        <span class="muted ml8">× 换算倍数后不是整数时扣款、加款的取整方式</span>
       </el-form-item>
       <el-form-item label="默认有效投注比例">
         <el-input v-model="form.defaultValidRatio" placeholder='{"DEFAULT":100,"LIVE":100}' />
@@ -88,6 +87,7 @@ import type { VendorConfigVO } from '@/api/game/vendor/types';
 const loading = ref(false);
 const testing = ref(false);
 const form = reactive<Partial<VendorConfigVO>>({});
+const loaded = reactive({ currency: '', unitMultiplier: 0 });
 const modes = [{ v: 'CEILING', l: '向上取整' }, { v: 'FLOOR', l: '向下取整' }, { v: 'HALF_UP', l: '四舍五入' }];
 const langs = ['vi', 'zh', 'en', 'hk', 'th', 'id', 'pt', 'ko', 'ja'];
 
@@ -96,6 +96,8 @@ async function load() {
   try {
     const res: any = await getVendorConfig();
     Object.assign(form, res.data ?? {});
+    loaded.currency = form.currency ?? '';
+    loaded.unitMultiplier = Number(form.unitMultiplier ?? 0);
   } finally {
     loading.value = false;
   }
@@ -106,6 +108,30 @@ async function save() {
     ElMessage.warning('请填写站点地址');
     return;
   }
+  const currency = (form.currency ?? '').trim();
+  if (!/^[A-Za-z0-9()_.-]{1,16}$/.test(currency)) {
+    ElMessage.warning('币种须为 1~16 位字母、数字或 ()_.-');
+    return;
+  }
+  const unitMultiplier = Number(form.unitMultiplier);
+  if (!Number.isInteger(unitMultiplier) || unitMultiplier < 1 || unitMultiplier > 1000000) {
+    ElMessage.warning('换算倍数必须是 1~1000000 的整数');
+    return;
+  }
+  if (currency !== loaded.currency || unitMultiplier !== loaded.unitMultiplier) {
+    try {
+      await ElMessageBox.confirm(
+        `交易口径将从 ${loaded.currency || '-'} / ×${loaded.unitMultiplier || '-'} 改为 ${currency} / ×${unitMultiplier}。` +
+          '修改后新启动的游戏和所有钱包回调都会使用新口径；旧币种的进行中会话可能被 SC_WRONG_CURRENCY 拒绝。确定保存？',
+        '确认修改币种与换算倍率',
+        { type: 'warning' }
+      );
+    } catch {
+      return;
+    }
+  }
+  form.currency = currency;
+  form.unitMultiplier = unitMultiplier;
   await saveVendorConfig({ ...form });
   ElMessage.success('保存成功');
   load();
